@@ -1,0 +1,41 @@
+name: Validation
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: quiniela
+          POSTGRES_PASSWORD: quiniela
+          POSTGRES_DB: quiniela_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U quiniela -d quiniela_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://quiniela:quiniela@localhost:5432/quiniela_test
+      TEST_DATABASE_URL: postgresql://quiniela:quiniela@localhost:5432/quiniela_test
+      BETTER_AUTH_SECRET: ci-only-secret-that-is-at-least-32-characters
+      BETTER_AUTH_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10.28.2 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm db:migrate
+      - run: pnpm test:integration
+      - run: pnpm build
