@@ -1,3 +1,8 @@
+---
+name: testing
+description: Add or review tests for Quiniela business logic, persistence constraints, authorization, lifecycle, scoring, playoffs, and payments.
+---
+
 # Testing skill
 Use whenever changing business logic, persistence constraints, authorization, lifecycle, scoring, playoffs, or payments.
 

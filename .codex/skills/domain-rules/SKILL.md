@@ -1,3 +1,8 @@
+---
+name: domain-rules
+description: Implement or review Quiniela business rules for scoring, standings, lifecycle, H2H, groups, playoffs, prizes, payments, debt restrictions, and manual resolutions.
+---
+
 # Domain rules skill
 Use this skill whenever implementing or reviewing scoring, standings, lifecycle, H2H, groups, playoffs, prizes, payments, debt restrictions, or manual resolutions.
 

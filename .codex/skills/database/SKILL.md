@@ -1,3 +1,8 @@
+---
+name: database
+description: Implement or review the Quiniela persistence layer, including Drizzle schemas, PostgreSQL and Neon usage, migrations, repositories, constraints, indexes, and transactions.
+---
+
 # Database skill
 Use for schema, Drizzle, PostgreSQL/Neon, migrations, repositories, constraints, indexes, and transactions.
 

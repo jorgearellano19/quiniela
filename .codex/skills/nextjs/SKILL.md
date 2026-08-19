@@ -1,3 +1,8 @@
+---
+name: nextjs
+description: Implement or review the Quiniela Next.js foundation, including App Router, Server Components and Actions, Better Auth integration, environment boundaries, and frontend architecture.
+---
+
 # Next.js foundation skill
 Use for Next.js App Router, Server Components/Actions, Better Auth integration, environment boundaries, and frontend architecture.
 

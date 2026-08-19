@@ -1,3 +1,8 @@
+---
+name: application
+description: Implement or review application use cases, Server Actions, competition-scoped authorization, DTOs, queries, mutations, and audit orchestration in the Quiniela repository.
+---
+
 # Application use-case skill
 Use for Server Actions, application services/use cases, authorization, DTOs, mutations, queries, and auditing orchestration.
 
