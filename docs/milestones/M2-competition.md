@@ -16,12 +16,13 @@ The creator can create a Competition, see it in “My Competitions,” open it, 
 
 - `createCompetition`, `updateCompetition`, list-my-Competitions query, and Competition detail query.
 - Competition entity/configuration and lifecycle foundation needed by these operations.
+- Structured rules summary data, optional Admin-authored rules note, immutable Competition currency (default `MXN`), and `DRAFT/STARTED/COMPLETED` lifecycle types.
 - Creator's Competition-scoped Admin capability.
 - Domain, persistence, Application, transport, mobile-first UI, and tests.
 
 ## Out of scope
 
-- Participant invitation/join/approval and creator participation.
+- Participant invitation/join/approval, Competition start/completion, and creator participation.
 - Rounds, questions, payments, prizes, scoring, groups, and playoffs.
 - A global User role.
 
@@ -54,6 +55,7 @@ M2 depends on:
 - Administration is a Competition-scoped capability, never a global User role.
 - The creator becomes Admin; participation is independent.
 - Competition starts DRAFT and locked configuration cannot be silently mutated after start.
+- Currency is immutable after creation and money later uses integer minor units.
 
 ## Application use cases
 
@@ -115,9 +117,8 @@ Add approved `Competition` and minimal `CompetitionParticipant` membership neede
 
 ## Risks / implementation notes
 
-Choose the application-wide product ID and Drizzle enum strategies during planning, as permitted implementation decisions. Do not let the preliminary Competition status foundation invent undocumented completion transitions.
+Choose the application-wide product ID and Drizzle enum strategies during planning, as permitted implementation decisions. M3 owns the start transition after membership setup; M11 owns the explicit completion action and readiness validation.
 
 ## Open questions
 
-The approved documents state that Competition rules lock when the Admin starts the Competition, but do not define the complete Competition status enum or explicit transition operations. M2 may implement only the DRAFT/editability state needed by this slice; any start transition needs specification clarification before implementation.
-
+None.

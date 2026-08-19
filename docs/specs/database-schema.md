@@ -1,6 +1,6 @@
 # Database Schema — Quiniela MVP
 
-**Status:** APPROVED AND LOCKED  
+**Status:** APPROVED AND LOCKED — revised 2026-08-19
 **Provider:** Neon PostgreSQL  
 **ORM:** Drizzle
 
@@ -49,6 +49,12 @@ Competition
 ├── status
 ├── paymentsEnabled
 ├── maximumDebt
+├── currency
+├── rulesNote
+├── invitationTokenHash
+├── invitationRevokedAt
+├── startedAt
+├── completedAt
 ├── createdByUserId
 ├── createdAt
 └── updatedAt
@@ -63,6 +69,8 @@ GROUP_PLAYOFFS
 ```
 
 `maximumDebt` is nullable when no restriction is configured. Do not create payment obligations when payments are disabled.
+
+Competition lifecycle is `DRAFT → STARTED → COMPLETED`. Starting locks Competition rules and invalidates the reusable invitation token. Completion is an explicit Admin action after type-specific finalization/winner readiness and locks remaining configuration. Store only a secure hash of the opaque token. `currency` is immutable after creation, defaults to `MXN`, and all money uses integer minor units.
 
 ## 4. CompetitionParticipant
 
@@ -91,6 +99,8 @@ REMOVED
 ```
 
 Enforce at most one active participant record per User + Competition.
+
+Opening a valid invitation link requires authentication and shows rules before a join request creates or restores `PENDING`. Admin approval changes it to `ACTIVE`. Reuse the same membership row for rejection, removal, and a later request; do not create duplicate User + Competition rows.
 
 ## 5. Round
 
@@ -122,12 +132,15 @@ DRAFT → PUBLISHED → ACTIVE → FINISHED → FINALIZED
 - FINISHED: 24-hour Official Result correction window.
 - FINALIZED: Official Results immutable.
 
+Publication atomically records `publishedAt`, freezes configuration, and advances through PUBLISHED to ACTIVE so Answers open without a separate activation mutation. Complete required Official Results set `finishedAt` and FINISHED atomically. Effective finalization is derived from server time at `finishedAt + 24 hours`; `finalizedAt` may be materialized idempotently but cannot be the authority that extends the correction window.
+
 ## 6. Question
 
 ```text
 Question
 ├── id
-├── roundId
+├── roundId (nullable)
+├── playoffRoundId (nullable)
 ├── sequence
 ├── type
 ├── prompt
@@ -136,9 +149,9 @@ Question
 └── updatedAt
 ```
 
-`(roundId, sequence)` is unique.
+Exactly one of `roundId` or `playoffRoundId` must be present. Sequence is unique within the selected parent.
 
-Do not create one giant JSON structure for all question types. Use typed columns or type-specific tables where appropriate.
+Approved types are `MATCH_SCORE`, `CLOSEST_VALUE`, `OPTIONS`, `OPEN_TEXT`, and `EXACT_VALUE`. Do not create one giant JSON structure for all question types. Use typed columns or type-specific tables where appropriate. `OPTIONS` needs ordered option rows and one official correct option. `OPEN_TEXT` needs an explicit per-Answer Admin judgment. `CLOSEST_VALUE` and `EXACT_VALUE` use numeric typed values.
 
 For Match Questions, scores are numeric `homeScore` and `awayScore`, never only a string such as `"3-1"`.
 
@@ -182,6 +195,10 @@ For Match Questions, `homeScore` and `awayScore` are numeric.
 
 Official Results may be corrected during the 24-hour window after the Round enters FINISHED. After FINALIZED, corrections are rejected. Administrative corrections must be auditable.
 
+For `OPEN_TEXT`, persist the Admin's explicit correct/incorrect judgment per Answer with actor and timestamps; this is a source fact, not a derived score. Regular and PlayoffRound Results share the same correction rules.
+
+All submitted `OPEN_TEXT` Answers must have judgments before the parent can atomically enter FINISHED.
+
 ## 9. Scoring configuration
 
 Persist scoring configuration independently from Answers. It must support:
@@ -219,6 +236,8 @@ PlayoffRound
 ├── advancementMode
 ├── tiebreakerQuestionId
 ├── publishedAt
+├── finishedAt
+├── finalizedAt
 ├── createdAt
 └── updatedAt
 ```
@@ -235,6 +254,8 @@ TIEBREAKER_QUESTION
 Before publication, Admin may edit scoring rules, tiebreaker question, and advancement mode. After publication they are frozen.
 
 All Matchups in one PlayoffRound use the same `tiebreakerQuestionId`. Different PlayoffRounds may use different questions. Answers cannot exist for an unpublished PlayoffRound.
+
+PlayoffRounds own Questions through `Question.playoffRoundId` and use the same publication, deadline, automatic finish, 24-hour correction, and effective finalization model as regular Rounds. All participants answer the same Questions and share their Official Results.
 
 ## 11. PlayoffMatchup
 
@@ -271,7 +292,24 @@ CompetitionGroup
 CompetitionGroupParticipant
 ```
 
-Group standings use H2H Points as the first ranking criterion. If still tied after the approved H2H comparison, Admin resolves the tie. Never use insertion order or random ordering.
+The Admin manually assigns participants to groups. The system generates round-robin matchups inside each group. Group standings use H2H Points, Prediction Score, EXACT_SCORE, and H2H wins in that order; if still tied, Admin resolves the tie. Never use insertion order or random ordering.
+
+Persist an explicit regular-phase matchup source fact:
+
+```text
+H2HMatchup
+├── id
+├── competitionId
+├── roundId
+├── groupId (nullable)
+├── participantAId
+├── participantBId (nullable for a bye)
+├── position
+├── createdAt
+└── updatedAt
+```
+
+The system generates `LEAGUE_PLAYOFFS` round-robin matchups, including one bye per schedule slot when the participant count is odd. A win based on Round Prediction Score yields 3 H2H Points, a draw 1 each, and a loss 0; points and standings remain derived.
 
 ## 13. LEAGUE_PLAYOFFS regular phase
 
@@ -292,6 +330,8 @@ Ranking-based seeding:
 1. Prediction Score DESC
 2. EXACT_SCORE DESC
 3. Admin resolution if still tied
+
+Bracket positions pair the highest remaining seed against the lowest remaining seed (`1 vs 16`, `2 vs 15`, and so on). In a tied Playoff Matchup, `BEST_SEED` advances the lower-numbered/better seed.
 
 Persist enough source data to recompute rankings. Manual resolutions must be persisted and audited.
 
@@ -326,7 +366,9 @@ Payment
 └── updatedAt
 ```
 
-Partial payments are supported. Multiple payments may satisfy obligations. Payment allocation semantics must be explicit before final migration design.
+Partial payments, multiple payments, and overpayment credit are supported. Payments are participant-level contributions and are not allocated to individual obligations.
+
+`PaymentObligation.amount`, `Payment.amount`, and prize amounts use integer minor units in the Competition's immutable currency, which defaults to `MXN`.
 
 ## 16. Debt and restriction
 
@@ -337,6 +379,8 @@ Derive:
 ```text
 outstanding balance = payment obligations - recorded payments
 ```
+
+A negative outstanding balance is an allowed participant credit.
 
 Restriction is derived from:
 
@@ -511,9 +555,8 @@ Do not implement every future question type before the first vertical slice.
 2. Exact ID strategy.
 3. Drizzle enum strategy.
 4. Typed Question sub-tables vs explicit columns for current question families.
-5. Exact payment allocation semantics for partial payments covering multiple obligations.
-6. Generic audit-table strategy, if needed.
-7. Historical membership deletion/removal strategy.
+5. Generic audit-table strategy, if needed.
+6. Exact secure invitation-token generation/hash strategy.
 
 These are implementation decisions, not product decisions. Do not invent new product behavior while resolving them.
 
@@ -538,6 +581,7 @@ The schema is ready when:
 - Administrative changes are auditable.
 - Prediction Scores remain derived.
 - Migrations can be generated and reviewed safely.
+- Local development and database tests run against isolated Dockerized PostgreSQL without requiring Neon.
 
 ## Final principle
 

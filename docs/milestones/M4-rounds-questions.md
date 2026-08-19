@@ -15,14 +15,14 @@ Admins can draft rounds, questions, deadlines, and scoring rules, then publish a
 ## In scope
 
 - Create/update Round and create/update/remove Question while DRAFT.
-- Typed current question data, scoring configuration, deadlines, and unanswered penalty.
+- Typed `MATCH_SCORE`, `CLOSEST_VALUE`, `OPTIONS`, `OPEN_TEXT`, and `EXACT_VALUE` question data, scoring configuration, deadlines, and unanswered penalty.
 - `publishRound` and publication freeze.
-- Round lifecycle foundation through `PUBLISHED` only.
+- Round lifecycle foundation through atomic publication/ACTIVE open state.
 
 ## Out of scope
 
 - Participant Answers, Official Results, scoring calculations, standings, payments, and PlayoffRounds.
-- ACTIVE/FINISHED/FINALIZED behavior beyond types needed for forward compatibility.
+- Official Result-driven FINISHED and elapsed-time FINALIZED behavior beyond types needed for forward compatibility.
 - Speculative future question families.
 
 ## Dependencies
@@ -54,6 +54,7 @@ M4 depends on:
 - Lifecycle begins `DRAFT → PUBLISHED`; transitions are explicit, never unrestricted status assignment.
 - Questions and scoring rules are editable only in DRAFT and frozen at publication.
 - Match scores use numeric typed fields, not a single score string.
+- OPTIONS is single-select; EXACT_VALUE is exact numeric; CLOSEST_VALUE is numeric; OPEN_TEXT stores free text for later Admin judgment.
 - `(competitionId, sequence)` and `(roundId, sequence)` are unique; deadlines are absolute UTC timestamps.
 - Unanswered penalty is approved as `-1` or configurable `0`.
 
@@ -68,7 +69,7 @@ M4 depends on:
 
 ## Persistence impact
 
-Add `Round`, `Question`, typed question storage needed for approved current families, and scoring configuration scoped to Round. Add specified uniqueness/status indexes and foreign keys. Publishing must transactionally validate and freeze the aggregate. Do not add Answer or OfficialResult tables yet.
+Add `Round`, typed Question storage for all five approved families, ordered OPTIONS values, and scoring configuration scoped to Round. Add specified uniqueness/status indexes and foreign keys. Publishing must transactionally validate, freeze, and open the aggregate. Do not add Answer or OfficialResult tables yet.
 
 ## Authorization
 
@@ -96,7 +97,8 @@ Add `Round`, `Question`, typed question storage needed for approved current fami
 - [ ] Admin can create and edit a DRAFT Round.
 - [ ] Admin can create, edit, and remove typed Questions while DRAFT.
 - [ ] Valid scoring rules, penalty, and deadlines are persisted.
-- [ ] Publish atomically moves DRAFT to PUBLISHED.
+- [ ] Publish atomically records PUBLISHED freeze and moves the Round to ACTIVE.
+- [ ] ACTIVE Questions accept Answers until their individual absolute deadlines; no separate Admin activation is required.
 - [ ] Questions/scoring cannot change after publication.
 - [ ] Unauthorized and cross-Competition mutations fail.
 - [ ] Relevant tests, lint, typecheck, and build pass.
@@ -122,5 +124,4 @@ Select typed columns versus type-specific tables only for demonstrated question 
 
 ## Open questions
 
-The specs require typed question data but do not enumerate the complete MVP question-type catalog or exact fields beyond Match and `CLOSEST_VALUE`. Confirm the first supported families before final migration design. The actor/timing policy for `PUBLISHED → ACTIVE` is also unspecified and is deferred to M5.
-
+Exact numeric precision/range and maximum OPTIONS count are boundary-validation implementation decisions to settle in the M4 plan without changing scoring semantics.

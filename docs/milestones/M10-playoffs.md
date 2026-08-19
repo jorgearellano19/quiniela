@@ -14,8 +14,8 @@ Admins configure/publish PlayoffRounds and resolve matchups; participants see th
 
 ## In scope
 
-- Bracket and ranking-based seeding.
-- PlayoffRound/Matchup generation, round-specific scoring/tiebreaker/advancement configuration, and publication freeze.
+- Ranking-based high-vs-low bracket seeding (`1 vs 16`, `2 vs 15`, and so on).
+- PlayoffRound/Matchup generation; typed Questions, Answers, Official Results, deadlines, lifecycle; round-specific scoring/tiebreaker/advancement configuration; and publication freeze.
 - `BEST_SEED`, `TIEBREAKER_QUESTION`, advancement, explicit audited tie resolution, and champion.
 - Both LEAGUE_PLAYOFFS and GROUP_PLAYOFFS entrants.
 
@@ -52,15 +52,21 @@ M10 depends on:
 ## Domain rules / invariants
 
 - Each PlayoffRound independently owns scoring rules, tiebreaker Question, and advancement mode; publication freezes all.
-- All Matchups in one PlayoffRound share its tiebreaker Question; Answers require publication.
+- Each PlayoffRound owns the same five typed Question families and follows the regular Round publication, per-Question deadline, automatic finish, 24-hour correction, and effective-finalization rules.
+- All participants answer the same Questions; all Matchups share Official Results and the tiebreaker Question; Answers are participant-specific and require publication.
 - Ranking seeding is Prediction Score, EXACT_SCORE, then explicit Admin resolution.
+- Bracket pairing is highest remaining seed against lowest remaining seed.
+- BEST_SEED applies only after opponents tie on their PlayoffRound Prediction Score; the lower-numbered/better seed advances.
 - `BEST_SEED` and `TIEBREAKER_QUESTION` remain distinct; remaining tie is manual.
 - Every bracket has valid participant progression and exactly one final champion.
 
 ## Application use cases
 
 - `configurePlayoffRound`
+- Shared create/update/remove Question behavior for an unpublished PlayoffRound
 - `publishPlayoffRound`
+- `submitAnswer`, `updateAnswer`, and `getMyAnswers` for published PlayoffRounds
+- `recordOfficialResult`, `correctOfficialResult`, OPEN_TEXT judgment, score queries, automatic finish, and effective finalization for PlayoffRounds
 - `generateSeeding`
 - `generatePlayoffBracket`
 - `resolvePlayoffMatchup`
@@ -69,7 +75,7 @@ M10 depends on:
 
 ## Persistence impact
 
-Add `PlayoffRound`, `PlayoffMatchup`, round-scoped scoring/tiebreaker references, specified uniqueness, FKs, UTC/audit fields, and explicit manual decisions. Publishing, bracket generation, advancement, and resolution+audit use transactions. Winners remain derived except explicit approved manual decisions/source matchup result.
+Add `PlayoffRound`, `PlayoffMatchup`, PlayoffRound-owned Question linkage, shared typed Answer/OfficialResult support, lifecycle timestamps, round-scoped scoring/tiebreaker references, specified uniqueness, FKs, UTC/audit fields, and explicit manual decisions. Publishing, final-result finish, correction, bracket generation, advancement, and resolution+audit use transactions. Winners remain derived except explicit approved manual decisions/source matchup result.
 
 ## Authorization
 
@@ -87,16 +93,17 @@ Add `PlayoffRound`, `PlayoffMatchup`, round-scoped scoring/tiebreaker references
 
 ## Testing requirements
 
-- Cover freeze, both seeding modes, both advancement modes, shared tiebreaker, unpublished rejection, bracket integrity, and champion.
+- Cover freeze, high-vs-low seeding, both advancement modes, shared tiebreaker, unpublished rejection, every typed Question/Answer/Result path, deadlines/correction/finalization, bracket integrity, and champion.
 - Property-test one-winner/no-duplicate advancement invariants where practical.
 - Integration-test unique positions, FK scope, generation atomicity, and manual resolution audit.
 - E2E phase completion → seeding → bracket → publish → resolve → champion.
 
 ## Acceptance criteria
 
-- [ ] Both approved seeding approaches produce a valid bracket.
+- [ ] Ranking seeding orders Prediction Score, EXACT_SCORE, then Admin resolution and pairs highest against lowest.
 - [ ] PlayoffRound configuration differs by round and freezes on publication.
 - [ ] Unpublished PlayoffRounds cannot receive Answers.
+- [ ] Published PlayoffRounds support the same typed Questions, participant Answers, shared Official Results, deadlines, correction window, and effective finalization as regular Rounds.
 - [ ] Both advancement modes resolve according to approved rules.
 - [ ] Remaining ties require explicit audited Admin resolution.
 - [ ] Progression produces exactly one champion.
@@ -120,9 +127,8 @@ Add `PlayoffRound`, `PlayoffMatchup`, round-scoped scoring/tiebreaker references
 
 ## Risks / implementation notes
 
-Reuse M6 scoring through round-scoped configuration; do not create a second playoff scoring engine. Keep bracket writes atomic.
+Reuse M4–M6 Question, Answer, Result, lifecycle, and scoring behavior through PlayoffRound ownership; do not create a second playoff engine. Keep bracket writes atomic and idempotent.
 
 ## Open questions
 
-The specs name “bracket seeding” and “ranking-based seeding” but define ordering only for ranking-based seeding. Resolve bracket-seeding input/order and exact pairing layout before implementation. The approved meaning of `BEST_SEED` says better seed advances on the configured tie condition, but that condition/configuration is not fully specified.
-
+None.

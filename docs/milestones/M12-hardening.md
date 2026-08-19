@@ -16,6 +16,7 @@ Critical flows work reliably on mobile with clear loading, empty, validation, an
 
 - Critical E2E suite and final acceptance pass for all three Competition types.
 - Mobile-first UX, accessibility baseline, loading/empty/error states.
+- Tailwind semantic-token and source-owned shadcn component consistency review across mobile breakpoints.
 - Authorization/security, environment, migration, index/query/N+1, and regression review.
 - Deployment readiness and production operational documentation/configuration already justified by the MVP.
 
@@ -76,6 +77,7 @@ Audit every mutation for anonymous, capability, cross-participant, cross-Competi
 - Run the four critical E2E flows from `testing-strategy.md` plus complete paths for each Competition type.
 - Run the full domain/application/integration suite against isolated PostgreSQL.
 - Verify accessibility baseline, mobile breakpoints, failure/retry states, migration-from-empty, and production build.
+- Verify the documented Dockerized local setup from a clean checkout, including separate development/test databases and non-skipped integration tests.
 - Record actual validation results; never count skipped critical tests as passes.
 
 ## Acceptance criteria
@@ -112,4 +114,3 @@ Treat M12 as verification and defect correction. Any discovered missing business
 ## Open questions
 
 None.
-

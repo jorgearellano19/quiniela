@@ -15,7 +15,7 @@ Participants can see obligations, payments, and balance; Admins can record/corre
 ## In scope
 
 - Optional payment/maximum-debt configuration by Competition type.
-- Round fee obligations, participant debt/history, manual full/partial payments, and corrections.
+- Round fee obligations, participant debt/history, manual full/partial participant-level payments, overpayment credit, and corrections.
 - Derived balance, restriction for open/future Rounds, and automatic restoration.
 - Participant debt view, Admin overview, audit, and Round winner/prize association needed by payment flow.
 
@@ -52,6 +52,8 @@ M8 depends on:
 ## Domain rules / invariants
 
 - Balance is obligations minus recorded payments; current debt/restriction is not authoritative persisted state.
+- Payments are not allocated to obligations; a negative balance is allowed credit.
+- Competition currency is immutable, defaults to MXN, and amounts use integer minor units.
 - Restriction applies only when balance is strictly greater than `maximumDebt`, and only to open/future Rounds.
 - Balance at or below threshold restores eligibility automatically.
 - Restrictions never delete Answers or alter FINALIZED history.
@@ -69,7 +71,7 @@ M8 depends on:
 
 ## Persistence impact
 
-Add `PaymentObligation`, `Payment`, relevant Competition payment fields, and Round prize configuration needed here, with approved unique/index/FK constraints and UTC audit fields. Recording/correcting a payment plus audit is transactional. Do not persist current debt or restriction.
+Add `PaymentObligation`, participant-level `Payment`, relevant Competition payment fields, and Round prize configuration needed here, with approved unique/index/FK constraints, integer-minor-unit amounts, and UTC audit fields. Recording/correcting a payment plus audit is transactional. Do not persist allocation, current debt, or restriction.
 
 ## Authorization
 
@@ -88,7 +90,7 @@ Add `PaymentObligation`, `Payment`, relevant Competition payment fields, and Rou
 
 ## Testing requirements
 
-- Cover obligations, partial/multiple/corrected payments, threshold equality, restriction/restoration, and finalized-history preservation.
+- Cover obligations, partial/multiple/corrected payments, overpayment credit, threshold equality, restriction/restoration, and finalized-history preservation.
 - Property-test monotonic balance reduction for valid positive payments where practical.
 - Integration-test uniqueness, atomic payment+audit, actor/time, and Answer preservation.
 - E2E obligation → debt view → payment → automatic eligibility update.
@@ -97,6 +99,7 @@ Add `PaymentObligation`, `Payment`, relevant Competition payment fields, and Rou
 
 - [ ] Payments can be enabled/configured only as approved for Competition type.
 - [ ] Obligation and payment history derive the correct balance.
+- [ ] Payments remain participant-level, overpayment produces credit, and no allocation model is introduced.
 - [ ] Admin records and audits full/partial payments and corrections.
 - [ ] Restriction applies only above threshold to open/future Rounds.
 - [ ] Sufficient payment automatically restores Answer eligibility.
@@ -125,5 +128,4 @@ Eligibility must be evaluated at score/query time so correction or payment immed
 
 ## Open questions
 
-`database-schema.md` explicitly leaves allocation semantics for partial payments covering multiple obligations unresolved and requires them before final migration design. Resolve whether/how payments allocate across obligations before implementing M8 persistence.
-
+Exact correction UX (editing a record versus an auditable replacement/reversal representation) is an implementation/audit design choice; it must preserve before/after history and cannot change the approved participant-level balance semantics.

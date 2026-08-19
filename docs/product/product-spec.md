@@ -1,12 +1,16 @@
 # Quiniela App — Product Spec (MVP)
 
-> Approved product contract. Last updated: 2026-08-13. This version supersedes previous drafts.
+> Approved product contract. Last updated: 2026-08-19. This revision adds the approved MVP invitation, question-type, H2H, playoff-round, payment, local-development, and UI-foundation decisions and supersedes previous drafts.
 
 ## 1. Purpose
-Mobile-first web/PWA for football prediction competitions. It replaces the Admin workflow of Excel + WhatsApp while keeping the Admin as owner. It includes predictions, scoring, standings, H2H, playoffs, and optional manual payment/debt tracking. It is not a payment processor.
+Mobile-responsive web application for football prediction competitions. It replaces the Admin workflow of Excel + WhatsApp while keeping the Admin as owner. It includes predictions, scoring, standings, H2H, playoffs, and optional manual payment/debt tracking. It is not a payment processor.
 
-## 2. Users and ownership
+## 2. Users, ownership, and joining
 A global User can belong to multiple Competitions. Admin authorization is scoped to a Competition. A user may be Admin and Participant in the same Competition. While a Competition is DRAFT, the Admin may remove a participant who joined, including accidentally.
+
+For MVP, an Admin generates a reusable, opaque Competition invitation link. The link remains valid until the Competition starts and may be revoked earlier by the Admin. Opening it requires authentication. After authentication, the User sees the Competition rules and submits a join request. The request creates a `PENDING` membership; the Admin must approve it before the User becomes an `ACTIVE` Participant.
+
+The rules view contains both a structured summary of Competition configuration and an optional Admin-authored rules note. Viewing the rules before submitting the request is required, but MVP does not persist rule acceptance, require every Participant to accept before Competition start, or invalidate requests when DRAFT rules change.
 
 ## 3. Competition types
 ### LEAGUE
@@ -19,15 +23,27 @@ Regular phase is H2H, all participants play each other. Maximum 30 participants.
 Allowed participant counts: 8, 16, 32, 64. Group size is 4 or 8. One or two participants may advance from each group according to configuration, producing playoff fields of 4, 8, 16, or 32.
 
 ## 4. Competition lifecycle
-Competition starts in DRAFT. Once participants accept the rules and the Admin starts the Competition, competition rules are locked.
+Competition lifecycle is `DRAFT → STARTED → COMPLETED`, with explicit Admin start and completion actions. Starting invalidates the invitation link and locks Competition rules. MVP does not require every active Participant to record a separate rules acceptance before start. Participants may voluntarily leave only while the Competition is DRAFT; they cannot leave after it starts. Admin removals are explicit and audited and preserve historical records.
+
+The Admin may complete a Competition only when its required regular Rounds/phases are effectively FINALIZED and its required final winner is resolved: the League winner for LEAGUE, or the Playoff Champion for LEAGUE_PLAYOFFS/GROUP_PLAYOFFS. COMPLETED preserves read-only historical results and locks remaining administrative configuration.
 
 ## 5. Round lifecycle
 `DRAFT -> PUBLISHED -> ACTIVE -> FINISHED -> FINALIZED`.
 
-DRAFT: Questions and scoring rules are editable. PUBLISHED: Questions cannot be added/changed and scoring rules are frozen. FINISHED means all required Official Results exist and starts a 24-hour correction window. During the window the Admin may edit Official Results; affected derived scores/standings update immediately. After 24 hours the round becomes FINALIZED and Official Results are immutable.
+DRAFT: Questions and scoring rules are editable. Publishing the Round atomically performs `DRAFT → PUBLISHED → ACTIVE`: PUBLISHED freezes its Questions/scoring rules and ACTIVE opens its Questions for Answers. Each Question closes at its absolute deadline. A separate activation action is not required for MVP. FINISHED begins automatically when all required Official Results exist and starts a 24-hour correction window. During the window the Admin may edit Official Results; affected derived scores/standings update immediately. At `finishedAt + 24 hours`, the Round is effectively FINALIZED by server-authoritative time without requiring a background worker or Admin action, and Official Results are immutable.
 
 ## 6. Questions and Answers
-Questions belong to a Round. Match Questions use typed columns `homeScore` and `awayScore`. Answers are never deleted because of payment restrictions. A Playoff Round cannot have Answers before publication.
+Questions belong to either a regular Round or a Playoff Round. MVP Question types are:
+
+- `MATCH_SCORE`: numeric `homeScore` and `awayScore` prediction and Official Result.
+- `CLOSEST_VALUE`: numeric prediction and Official Result. Without `againstRival`, the closest participant or participants in the applicable Round scope receive the configured point; every participant tied at the closest distance receives it. With `againstRival`, the approved H2H rule applies.
+- `OPTIONS`: one selection from multiple configured options; one official correct option.
+- `OPEN_TEXT`: free-text Answer; the Admin manually marks each Answer correct or incorrect.
+- `EXACT_VALUE`: numeric Answer that scores only when it exactly matches the Official Result.
+
+Question data, Answers, and Official Results are typed. Answers are never deleted because of payment restrictions. A Playoff Round cannot have Answers before publication. All participants in a Playoff Round answer the same Questions and share the same Official Results, while Answers remain participant-specific.
+
+Every submitted `OPEN_TEXT` Answer must receive an Admin correct/incorrect judgment before all required Results are considered complete and the parent Round can automatically enter FINISHED.
 
 ## 7. Match scoring
 Match scoring is hierarchical, not cumulative: 1) EXACT_SCORE, 2) GOAL_DIFFERENCE if enabled for the Competition, 3) NORMAL_RESULT. If a higher rule succeeds, lower rules do not award additional points.
@@ -48,19 +64,23 @@ Prediction Score is derived from Answers, Official Results, scoring rules, penal
 
 H2H/Group standings tiebreak order: 1) H2H Points DESC, 2) Prediction Score DESC, 3) EXACT_SCORE DESC, 4) More H2H wins.
 
+Each regular H2H Round pairs a Participant with one opponent. The Participant with the higher Prediction Score for that Round receives 3 H2H Points and the opponent receives 0. If their Prediction Scores tie, each receives 1 H2H Point. `LEAGUE_PLAYOFFS` round-robin matchups are generated by the system; an odd participant count produces one bye per schedule slot. `GROUP_PLAYOFFS` group membership is assigned manually by the Admin, after which the system generates round-robin matchups within each group.
+
 ## 12. Tiebreaker Questions
 A Tiebreaker Question only counts when participants are tied in the relevant score. `tiebreakerQuestionId` belongs to each Playoff Round. All Matchups in that round use the same question; different rounds may use different questions. If it still leaves a complete tie, Admin resolves manually.
 
 ## 13. Playoffs
 Each Playoff Round independently configures Scoring Rules, Tiebreaker Question, and Advancement Mode. Advancement Mode is BEST_SEED or TIEBREAKER_QUESTION. These settings are editable until the round is published and frozen afterward.
 
-For ranking-based seeding: Prediction Score DESC, then EXACT_SCORE DESC, then Admin resolves any remaining tie. For GROUP_PLAYOFFS group advancement/seeding: H2H Points DESC; remaining tie is Admin-resolved.
+Playoff Rounds use the same Question, Answer, Official Result, deadline, publication, automatic finish, 24-hour correction, and effective finalization behavior as regular Rounds. They occur after the `LEAGUE_PLAYOFFS` round-robin phase or `GROUP_PLAYOFFS` group phase.
+
+Ranking-based seeding is: Prediction Score DESC, then EXACT_SCORE DESC, then Admin resolves any remaining tie. The bracket pairs the highest remaining seed with the lowest (`1 vs 16`, `2 vs 15`, and so on). Group standings and advancement use the full H2H order in §11 before Admin resolution. `BEST_SEED` means that when a Playoff Matchup remains tied on its H2H Prediction Score, the better seed advances. `TIEBREAKER_QUESTION` evaluates the shared Playoff Round tiebreaker Question instead; a remaining tie requires Admin resolution.
 
 ## 14. Payment tracking
 Payments are optional per Competition and are manual tracking only. No Stripe, PayPal, Mercado Pago, checkout, wallet, card processing, payment links, bank integrations, payment webhooks, financial ledger, or automatic prize settlement. Admin retains ownership.
 
 ### LEAGUE
-Optional: round fee and round-winner prize.
+Optional: round fee, round-winner prize, and league-winner prize.
 
 ### LEAGUE_PLAYOFFS
 Optional: round fee, round-winner prize, league-phase winner prize, playoff-champion prize.
@@ -70,7 +90,9 @@ Optional: playoff-champion prize.
 
 Admin configures each prize amount directly. The app may show the winner and configured prize amount but does not track whether the prize was physically paid.
 
-A round fee creates an obligation per applicable participant. Admin can record full or partial payments and correct payment records. Participants see their own amount owed, amount paid, and outstanding balance. Admin sees and manages participant payment status.
+A round fee creates an obligation per applicable participant. Admin can record full or partial payments and correct payment records. Payments are participant-level contributions and are not allocated to individual obligations. Participants see their own amount owed, amount paid, and outstanding balance. Admin sees and manages participant payment status. Overpayment is allowed and appears as a credit balance.
+
+Each Competition uses one immutable currency, defaulting to `MXN`. Monetary amounts are stored in integer minor units.
 
 ## 15. Debt restriction
 If enabled, Admin configures `maximumDebt`. If outstanding balance exceeds it, Admin may restrict the participant. Restriction affects only open and future rounds. Finalized rounds are never retroactively invalidated. Answers are not deleted. While restricted, affected Answers do not count toward scoring.
@@ -92,6 +114,8 @@ Important administrative mutations record `updatedAt` and `updatedBy`, including
 
 ## 19. Authentication and architecture constraints
 Use Better Auth minimally. Use Next.js App Router, Server Actions, Drizzle, PostgreSQL, and Neon initially. Supabase is an alternative provider, not a required dependency. Authorization is Competition-scoped.
+
+Local development uses Dockerized PostgreSQL and must not require a Neon database. The mobile-responsive UI foundation uses Tailwind CSS and source-owned shadcn/ui components added incrementally. Server Components remain the default; Client Components are limited to required interactivity. Installable/offline PWA behavior is not required for MVP.
 
 ## 20. MVP principles
 Keep infrastructure and dependencies minimal. Prefer derived scores over duplicated sources of truth. Do not implement V2 features early. Do not create new product/architecture documents when an existing document can be updated.

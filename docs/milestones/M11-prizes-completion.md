@@ -56,6 +56,7 @@ M11 depends on:
 - Round and league-phase winners reuse approved derived ordering; playoff champion is the final matchup winner.
 - Configured prize amount is separate from payments and has no transfer/status lifecycle.
 - Unresolved winners require explicit Admin decision; no hidden ordering.
+- Completion is an explicit Admin `STARTED → COMPLETED` action. It requires all applicable Rounds/phases effectively FINALIZED and the League winner or Playoff Champion resolved, then locks remaining configuration while preserving read-only history.
 
 ## Application use cases
 
@@ -65,7 +66,7 @@ M11 depends on:
 - `getLeagueWinner`
 - `getLeaguePhasePrizeWinner`
 - `getPlayoffChampion`
-- The minimum completion mutation/query once its approved lifecycle is clarified
+- `completeCompetition` and completion-readiness query
 
 ## Persistence impact
 
@@ -101,6 +102,7 @@ Complete `PrizeConfiguration` with Competition/type uniqueness as required by co
 - [ ] Final results use derived facts and explicit manual decisions.
 - [ ] No payout, settlement, or prize-paid state exists.
 - [ ] All three Competition types reach a usable final state.
+- [ ] Admin completion rejects unfinished/correctable Rounds, unresolved required winners, and incomplete playoffs.
 - [ ] Relevant tests, lint, typecheck, and build pass.
 
 ## Definition of Done
@@ -124,5 +126,4 @@ Reuse established winner services/queries rather than implementing prize-specifi
 
 ## Open questions
 
-The Competition lifecycle is only defined as starting DRAFT and locking rules when started; no terminal status, transition preconditions, or completion operation is approved. Resolve Competition completion semantics before implementing that portion. Also confirm whether `PrizeConfiguration` is unique per `(competitionId, type)`; the schema lists fields but not the constraint.
-
+Whether `PrizeConfiguration` uses an upsert over unique `(competitionId, type)` is an implementation decision; the configuration must expose at most one effective amount per approved type.

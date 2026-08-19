@@ -1,6 +1,6 @@
 # Implementation Specification — Quiniela MVP
 
-**Status:** APPROVED AND LOCKED
+**Status:** APPROVED AND LOCKED — revised 2026-08-19
 
 ## 1. Purpose
 
@@ -233,6 +233,8 @@ Supabase may be considered as an infrastructure alternative only if explicitly a
 
 Use Drizzle for persistence.
 
+Development and integration testing must run against isolated Dockerized PostgreSQL without requiring Neon credentials. Provide a health-checked Compose service, separate development/test databases, migration/setup commands, safe local example environment values, and clean-checkout instructions. Critical database tests must not be reported as passing when they were skipped for lack of a local test database.
+
 Database schema remains defined by `database-schema.md`.
 
 Do not introduce database tables merely to mirror application classes.
@@ -279,6 +281,10 @@ User-facing timestamps are converted to the User's timezone at presentation/appl
 Deadlines must be compared using server-authoritative time.
 
 Do not use browser local time as the source of truth for authorization or deadline enforcement.
+
+Publishing a regular Round or PlayoffRound opens its Questions until their individual deadlines. The final required Official Result automatically starts the 24-hour correction window. At `finishedAt + 24 hours`, server-authoritative reads and writes enforce effective finalization; no background worker or Admin action is required.
+
+Every submitted OPEN_TEXT Answer must have an Admin judgment before the parent has all required Results. Competition completion is an explicit Admin-authorized `STARTED → COMPLETED` mutation with type-specific finalization and winner/champion readiness checks.
 
 ## 15. Errors
 
@@ -437,6 +443,8 @@ The application tracks:
 
 When payment reduces debt to or below the configured threshold, eligibility is automatically restored.
 
+Payments are participant-level contributions with no obligation allocation. Overpayment creates credit. A Competition has one immutable currency, defaulting to `MXN`; store money in integer minor units.
+
 Payment restriction must never delete Answers.
 
 ## 22. Playoff implementation
@@ -449,6 +457,8 @@ TIEBREAKER_QUESTION
 ```
 
 PlayoffRound configuration remains editable until publication and frozen after publication.
+
+PlayoffRounds own typed Questions and use the same participant Answer, shared Official Result, deadline, publication, automatic finish, correction-window, and effective-finalization implementation as regular Rounds. Reuse the scoring engine and shared application behavior rather than creating a parallel implementation.
 
 Seeding must support:
 - bracket-based seeding;
@@ -540,6 +550,10 @@ Components must not calculate authoritative:
 - payment restrictions.
 
 The UI may perform non-authoritative presentation calculations for UX, but the server remains authoritative.
+
+The approved UI foundation is Tailwind CSS with source-owned shadcn/ui components added incrementally. Use semantic design tokens and mobile-first base styles. Prefer accessible shadcn primitives before custom interactive controls, but keep product visual design intentional rather than accepting registry defaults unchanged. Do not install the full component catalog upfront.
+
+Server Components remain the default. Client Components are limited to interaction that requires browser state or event handling. Installable/offline PWA behavior is not required; mobile-responsive web is sufficient for MVP.
 
 ## 27. State management
 
@@ -690,6 +704,8 @@ A feature is complete when:
 - build passes;
 - no unrelated regressions are introduced;
 - no locked specification was changed.
+- local database-dependent work is reproducible with Dockerized PostgreSQL when applicable.
+- mobile UI uses the approved Tailwind/shadcn foundation and meets applicable accessibility behavior.
 
 ## 34. Change management
 

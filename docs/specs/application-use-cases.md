@@ -1,6 +1,6 @@
 # Application Use Cases — Quiniela MVP
 
-**Status:** APPROVED AND LOCKED
+**Status:** APPROVED AND LOCKED — revised 2026-08-19
 
 ## 1. Purpose
 
@@ -100,6 +100,24 @@ Examples:
 - prize configuration;
 - competition-specific scoring configuration where still editable.
 
+## generateInvitationLink
+
+**Actor:** Admin
+
+Creates or rotates one reusable opaque invitation link for a DRAFT Competition. Store only its secure token hash. The Admin may revoke it; it otherwise expires when the Competition starts.
+
+## viewInvitation
+
+**Actor:** authenticated User
+
+Validates the invitation and returns the Competition name, structured rule/configuration summary, and optional Admin-authored rules note. Viewing does not create membership or persist rule acceptance.
+
+## requestToJoin
+
+**Actor:** authenticated User
+
+After the invitation rules have been displayed, creates or restores the caller's membership as `PENDING`. Never accept a client-provided User/Participant identity. Admin approval remains required.
+
 ## inviteParticipant
 
 **Actor:** Admin
@@ -130,9 +148,21 @@ During Competition DRAFT, an Admin may remove a participant who has already join
 
 **Actor:** Participant
 
-Leaves only when allowed by Competition lifecycle rules.
+Leaves only while the Competition is DRAFT. Reject after STARTED.
 
 Do not allow this operation to bypass historical integrity.
+
+## startCompetition
+
+**Actor:** Admin
+
+Moves `DRAFT → STARTED`, locks Competition rules, and invalidates the invitation link atomically. Validate Competition-type participant/configuration constraints. MVP does not require persisted rule acceptance by every Participant.
+
+## completeCompetition
+
+**Actor:** Admin
+
+Moves `STARTED → COMPLETED`. For LEAGUE, require all required Rounds effectively FINALIZED and the League winner resolved. For LEAGUE_PLAYOFFS/GROUP_PLAYOFFS, require all required regular/playoff phases effectively FINALIZED and the Playoff Champion resolved. Completion locks remaining administrative configuration and preserves read-only history.
 
 ---
 
@@ -189,29 +219,13 @@ Transactionally freezes:
 
 After publication, no new Questions may be added.
 
-## activateRound
+Publishing atomically advances through PUBLISHED to ACTIVE and opens Answers until each Question deadline; MVP has no separate Admin `activateRound` mutation.
 
-**Actor:** Admin/system according to lifecycle policy
+The write that records the final required Official Result automatically moves the Round to FINISHED and starts the 24-hour correction window.
 
-Moves PUBLISHED → ACTIVE.
+At `finishedAt + 24 hours`, server-authoritative time makes the Round effectively FINALIZED without an Admin action or background worker. An idempotent persistence update may materialize `finalizedAt`, but authorization must enforce the elapsed-time boundary independently.
 
-No Answer is valid before the Round reaches the state required by the Answer policy.
-
-## finishRound
-
-**Actor:** Admin/system
-
-Moves ACTIVE → FINISHED after the required final Official Result is available.
-
-Starts the 24-hour correction window.
-
-## finalizeRound
-
-**Actor:** Admin/system
-
-Moves FINISHED → FINALIZED after the correction window.
-
-After finalization:
+After effective finalization:
 - Official Results are immutable;
 - historical scoring is immutable.
 
@@ -231,6 +245,8 @@ Validate:
 - sequence;
 - deadline;
 - scoring compatibility.
+
+Approved types are `MATCH_SCORE`, `CLOSEST_VALUE`, `OPTIONS`, `OPEN_TEXT`, and `EXACT_VALUE`. The same use cases apply to Questions owned by a DRAFT regular Round or unpublished PlayoffRound.
 
 ## updateQuestion
 
@@ -257,7 +273,7 @@ Do not allow deletion once published.
 Preconditions:
 - authenticated User;
 - ACTIVE participant;
-- Round published/active according to lifecycle;
+- parent regular Round or PlayoffRound is published;
 - Question exists;
 - Question deadline has not passed;
 - participant is not payment-restricted;
@@ -315,11 +331,17 @@ Corrections must be audited.
 
 Dependent derived scores/standings are recalculated when queried or through the approved derived-state mechanism.
 
+## judgeOpenTextAnswer
+
+**Actor:** Admin
+
+Marks one `OPEN_TEXT` Answer correct or incorrect. The judgment is an auditable source fact with actor/time and may be corrected only while the parent regular Round or PlayoffRound remains within its correction policy.
+
+Every submitted OPEN_TEXT Answer must be judged before the final required Result can automatically finish the parent.
+
 ## finalizeResults
 
-**Actor:** Admin/system
-
-Finalizes the Round once the correction window has expired.
+An optional idempotent system operation may materialize effective finalization after the correction window, but elapsed server time is authoritative and no Admin mutation is required.
 
 ---
 
@@ -338,6 +360,8 @@ EXACT_SCORE
 ```
 
 and `CLOSEST_VALUE.againstRival` where applicable.
+
+Without `againstRival`, `CLOSEST_VALUE` compares all eligible Answers in the Round and awards the configured point to every participant tied at the closest distance. `OPTIONS` scores its official correct option, `EXACT_VALUE` requires numeric equality, and `OPEN_TEXT` uses the Admin's explicit correct/incorrect judgment.
 
 ## getPredictionScore
 
@@ -359,6 +383,8 @@ Prediction Score remains derived in MVP.
 Returns H2H Points for the requested scope.
 
 Prediction Score must not be substituted for H2H Points.
+
+For each regular H2H Round, higher Round Prediction Score awards 3 H2H Points to the winner and 0 to the loser; equal scores award 1 each.
 
 ---
 
@@ -442,6 +468,12 @@ Validate:
 - maximum `N - 1`;
 - no groups.
 
+## generateLeaguePhaseSchedule
+
+**Actor:** Admin/system
+
+Deterministically generates the all-play-all round-robin matchups. An odd participant count creates one bye in each schedule slot. Generation is idempotent and transactional.
+
 ## getLeaguePhasePrizeWinner
 
 Determine the participant with the highest Prediction Score across the League phase.
@@ -466,6 +498,8 @@ Editable before publication:
 - scoring rules;
 - tiebreaker Question;
 - advancement mode.
+
+It also creates/updates the PlayoffRound's Questions, typed configuration, deadlines, and Official Result requirements through the shared Question behavior.
 
 Advancement modes:
 
@@ -492,10 +526,7 @@ No Answers may exist for an unpublished PlayoffRound.
 **Actor:** Admin
 
 Supports:
-1. bracket seeding;
-2. ranking-based seeding.
-
-Ranking-based:
+ranking-based high-vs-low bracket seeding:
 
 ```text
 1. Prediction Score DESC
@@ -516,7 +547,8 @@ Validate bracket structure.
 Determines the winner according to the PlayoffRound's advancement mode.
 
 `BEST_SEED`:
-- better seed advances on the approved tie condition.
+- compare opponents' derived PlayoffRound Prediction Scores;
+- if tied, the lower-numbered/better seed advances.
 
 `TIEBREAKER_QUESTION`:
 - evaluate the configured tiebreaker Question.
@@ -553,11 +585,13 @@ Validate:
 
 ## generateGroups
 
-Creates group membership according to the approved grouping method.
+Persists the Admin's manual valid group assignments, then transactionally generates a round-robin schedule within each group.
 
 ## getGroupStandings
 
 Uses H2H Points as the primary ranking criterion.
+
+Then applies Prediction Score, EXACT_SCORE, and H2H wins in that order.
 
 If still tied under the approved comparison:
 - return unresolved state;
@@ -625,6 +659,8 @@ Returns payment status for participants, including:
 **Actor:** Admin
 
 Records a manual payment.
+
+Payments are participant-level contributions, are not allocated to obligations, and may exceed current debt to create a credit balance. Monetary amounts use integer minor units in the Competition's immutable currency, defaulting to `MXN`.
 
 When the resulting balance becomes:
 

@@ -4,8 +4,8 @@ These files are delivery contracts. Locked product and implementation specificat
 
 | Milestone | Name | Status | Depends On | Outcome |
 | --- | --- | --- | --- | --- |
-| M0 | Foundation | COMPLETED | — | Deployable technical foundation |
-| M1 | Authentication | READY | M0 | End-user authentication |
+| M0 | Foundation | READY (REOPENED) | — | Reproducible local and CI technical foundation |
+| M1 | Authentication | FUTURE | M0 | End-user authentication |
 | M2 | Competition | FUTURE | M1 | Admin creates and manages a Competition |
 | M3 | Participants & Membership | FUTURE | M2 | Contextual membership and authorization |
 | M4 | Rounds & Questions | FUTURE | M3 | Admin publishes a playable Round |
@@ -18,7 +18,7 @@ These files are delivery contracts. Locked product and implementation specificat
 | M11 | Prizes & Competition Completion | FUTURE | M8, M10 | Final winners and configured prizes |
 | M12 | MVP Hardening & Release Readiness | FUTURE | M11 | Production-ready MVP |
 
-The roadmap retains M0–M12. M8 and M9 can proceed independently after M7, but both are required before M11. Known specification questions are recorded in the affected milestone and must be resolved before that behavior is implemented.
+The roadmap retains M0–M12. M8 and M9 can proceed independently after M7, but both are required before M11. The 2026-08-19 specification revision resolves the previously blocking invitation, question-type, lifecycle, H2H/group, playoff, prize, payment, local-environment, and UI-foundation decisions. Remaining open items are implementation decisions unless a milestone explicitly says otherwise.
 
 ## Execution workflow
 
@@ -41,4 +41,3 @@ Review against `AGENTS.md`, the milestone, relevant locked specifications, and t
 ### Phase D — Close
 
 Mark a milestone `COMPLETED` only when its Definition of Done passes. Do not begin the next milestone automatically.
-

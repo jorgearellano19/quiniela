@@ -14,16 +14,17 @@ Users can enter an approved invitation/join flow; Admins can approve, reject, or
 
 ## In scope
 
-- Invite/join, pending membership, approval, rejection, and allowed removal.
-- Rejoin/reapproval behavior only where approved.
+- Reusable opaque invitation-link generation/rotation/revocation, authenticated invitation view, and rules-before-request flow.
+- Pending join request, approval, rejection, allowed removal, and same-row re-request/reapproval behavior.
 - `PENDING`, `ACTIVE`, `REJECTED`, and `REMOVED` membership states.
 - Admin + Participant capability coexistence and contextual authorization.
+- `startCompetition`, including rule lock and invitation invalidation.
 
 ## Out of scope
 
 - Rounds, questions, Answers, standings, payments, and Competition ownership transfer.
 - Global roles or client-authoritative membership checks.
-- Any invitation-code behavior not resolved by approved specifications.
+- Persisted per-participant rule acceptance/version gates, recipient-specific invitations, and invitations after Competition start.
 
 ## Dependencies
 
@@ -54,6 +55,10 @@ M3 depends on:
 - Admin and Participant capabilities can coexist.
 - At most one membership per User + Competition under the approved schema constraint.
 - DRAFT removal must preserve historical meaning and permit only approved reapproval behavior.
+- The reusable invitation requires login, shows structured rules plus the optional Admin note, and creates no membership until the User requests to join.
+- A join request is PENDING until Admin approval; viewing rules is not persisted acceptance in MVP.
+- Starting the Competition locks rules and invalidates the invitation; it does not require all Participants to record acceptance.
+- A Participant may voluntarily leave only while the Competition is DRAFT; post-start leave is rejected. Admin removal is explicit/audited and preserves history.
 
 ## Application use cases
 
@@ -62,10 +67,14 @@ M3 depends on:
 - `removeParticipant`
 - `leaveCompetition`
 - A reject-participant operation as part of the approved membership-state flow
+- `generateInvitationLink` / rotate/revoke invitation
+- `viewInvitation`
+- `requestToJoin`
+- `startCompetition`
 
 ## Persistence impact
 
-Complete `CompetitionParticipant` fields, capabilities, state, timestamps, unique `(competitionId, userId)`, status index, and removal audit fields/record where required. Use transactions for state changes plus audit when atomicity is required. Preserve records rather than cascading historical deletion.
+Complete `CompetitionParticipant` fields, capabilities, state, timestamps, unique `(competitionId, userId)`, status index, and removal audit fields/record where required. Add secure invitation-token hash/revocation/start fields. Use transactions for state changes plus audit when atomicity is required. Preserve and reactivate the same membership row rather than creating duplicate history rows.
 
 ## Authorization
 
@@ -87,14 +96,18 @@ Complete `CompetitionParticipant` fields, capabilities, state, timestamps, uniqu
 - Cover anonymous, Participant-only, Admin-only, Admin+Participant, cross-participant, and cross-Competition cases.
 - Integration-test uniqueness, preservation, state transitions, and audit actor/time.
 - E2E Competition setup: create → invite/join → approve.
+- Cover link reuse, authentication redirect/return, rules display before request, revocation, start expiry, and atomic start locking.
 
 ## Acceptance criteria
 
-- [ ] Approved join/invitation flow creates PENDING membership.
+- [ ] Admin can create/rotate/revoke one reusable opaque invitation link.
+- [ ] Authenticated invitees see structured rules and Admin note before requesting to join.
+- [ ] A join request creates/restores PENDING membership and still requires Admin approval.
 - [ ] Admin can approve or reject within their Competition.
 - [ ] DRAFT removal preserves the membership record and audit information.
 - [ ] Admin + Participant coexistence works.
 - [ ] Duplicate and cross-Competition membership actions are rejected.
+- [ ] Starting locks Competition rules and invalidates the invitation without requiring persisted Participant acceptance.
 - [ ] Relevant tests, lint, typecheck, and build pass.
 
 ## Definition of Done
@@ -118,5 +131,4 @@ Do not solve uniqueness by creating duplicate historical memberships. Model capa
 
 ## Open questions
 
-The locked specifications define an invitation use case and membership states but do not define Competition codes, token/code creation, expiry, reuse, recipient identification, or acceptance semantics. Resolve the intended invitation/join mechanism before implementing that portion of M3. They also do not fully define when `leaveCompetition` is allowed.
-
+None.

@@ -14,9 +14,9 @@ Admins can record/correct results within the approved window; participants see r
 
 ## In scope
 
-- Record/correct Official Results; finish/finalize Round; 24-hour correction window.
+- Record/correct Official Results; automatic finish/effective finalization; 24-hour correction window.
 - Audit Official Result corrections.
-- Pure scoring for `EXACT_SCORE`, `GOAL_DIFFERENCE`, `NORMAL_RESULT`, `CLOSEST_VALUE`, rival comparison, and unanswered penalties.
+- Pure scoring for `EXACT_SCORE`, `GOAL_DIFFERENCE`, `NORMAL_RESULT`, league-wide `CLOSEST_VALUE`, rival comparison, `OPTIONS`, `EXACT_VALUE`, manually judged `OPEN_TEXT`, and unanswered penalties.
 - Question and Round score queries/breakdown needed to verify scoring.
 
 ## Out of scope
@@ -52,22 +52,24 @@ M6 depends on:
 - Match scoring is hierarchical and non-cumulative: exact, then enabled signed goal difference, then normal result.
 - Goal difference preserves winner direction and excludes draws.
 - Rival closest-value exact wins; equal non-zero distance awards neither.
+- Without rival comparison, every eligible participant tied at the closest distance in the Round receives the point.
+- OPTIONS uses one official correct option, EXACT_VALUE requires numeric equality, and OPEN_TEXT uses an auditable Admin correct/incorrect judgment.
 - Unanswered is `-1` by default/configurable `0`; Tiebreaker unanswered is always `0`.
-- FINISHED requires all required results and begins exactly 24 hours; FINALIZED results are immutable.
+- The final required Result automatically sets FINISHED and begins exactly 24 hours; server-authoritative time makes the Round effectively FINALIZED at the boundary.
 - Scores are derived and reflect corrections; results are separate from Answers.
 
 ## Application use cases
 
 - `recordOfficialResult`
 - `correctOfficialResult`
-- `finishRound`
-- `finalizeResults` / `finalizeRound`
+- `judgeOpenTextAnswer`
+- Optional idempotent finalization materialization
 - `getQuestionScore`
 - `getPredictionScore`
 
 ## Persistence impact
 
-Add `OfficialResult`, unique `questionId`, typed result fields, actor/timestamps, and minimum audit persistence approved during design. Use transactions for correction plus audit and lifecycle mutations. Add no score/standing snapshots.
+Add `OfficialResult`, unique `questionId`, typed result fields, OPEN_TEXT Answer judgment facts, actor/timestamps, and minimum audit persistence approved during design. Use transactions for final-result automatic finish, correction/judgment plus audit, and optional idempotent finalization materialization. Add no score/standing snapshots.
 
 ## Authorization
 
@@ -93,10 +95,13 @@ Add `OfficialResult`, unique `questionId`, typed result fields, actor/timestamps
 ## Acceptance criteria
 
 - [ ] Admin can record each supported typed Official Result.
-- [ ] FINISHED starts only when required results exist.
+- [ ] Recording the final required Result atomically starts FINISHED.
 - [ ] Corrections within 24 hours are audited and immediately reflected.
 - [ ] Corrections at/after finalization are rejected.
+- [ ] Effective finalization is enforced from server time without requiring an Admin action or worker.
 - [ ] Every approved scoring rule and unanswered case is deterministic.
+- [ ] Every submitted OPEN_TEXT Answer is judged before automatic FINISHED.
+- [ ] Every equally closest non-rival participant receives the configured point.
 - [ ] Higher match rules never stack with lower ones.
 - [ ] No score snapshots are persisted.
 - [ ] Relevant tests, lint, typecheck, and build pass.
@@ -122,5 +127,4 @@ Keep audit scope small but sufficient for actor, time, resource, action, and cor
 
 ## Open questions
 
-None beyond the M4 question-type catalog decision, which must already be resolved for supported result types.
-
+None.

@@ -1,6 +1,6 @@
 # Domain Model — Quiniela MVP
 
-**Status:** APPROVED AND LOCKED
+**Status:** APPROVED AND LOCKED — revised 2026-08-19
 
 ## Purpose
 
@@ -47,6 +47,18 @@ REMOVED
 
 A User cannot have duplicate active participation in the same Competition. Admin authorization is always Competition-scoped.
 
+An Admin may create one reusable opaque invitation link for a DRAFT Competition. It can be revoked and otherwise expires when the Competition starts. An authenticated User opening the link must be shown the structured Competition configuration and optional Admin-authored rules note before submitting a join request. Submission creates or restores a `PENDING` membership; only Admin approval makes it `ACTIVE`. Merely viewing the rules is not a persisted acceptance gate in MVP.
+
+Competition lifecycle for MVP includes explicit operations rather than unrestricted status assignment:
+
+```text
+DRAFT → STARTED → COMPLETED
+```
+
+Starting locks Competition rules and invalidates the invitation link. MVP does not require every Participant to record rule acceptance before start. Participants may voluntarily leave only in DRAFT; post-start departure is rejected. Admin removal is explicit and audited and preserves historical records.
+
+Completion is an explicit Admin action. LEAGUE requires every required Round to be effectively FINALIZED and the League winner resolved. LEAGUE_PLAYOFFS and GROUP_PLAYOFFS require every required regular/playoff phase to be effectively FINALIZED and the Playoff Champion resolved. COMPLETED locks remaining administrative configuration and retains read-only history.
+
 ## Round lifecycle
 
 ```text
@@ -55,21 +67,21 @@ DRAFT → PUBLISHED → ACTIVE → FINISHED → FINALIZED
 
 **DRAFT:** Admin may add/edit Questions and scoring rules.
 
-**PUBLISHED:** Questions and scoring rules are frozen.
+**PUBLISHED:** Questions and scoring rules are frozen. The publish operation immediately and atomically continues to ACTIVE.
 
-**ACTIVE:** Answers may be submitted subject to deadlines and payment eligibility.
+**ACTIVE:** Answers are accepted until each Question's deadline. MVP has no separate Admin activation action.
 
-**FINISHED:** The last required Official Result has been recorded. A 24-hour correction window begins.
+**FINISHED:** The last required Official Result has been recorded, which automatically finishes the Round and begins a 24-hour correction window.
 
-**FINALIZED:** Official Results and historical scoring are immutable.
+**FINALIZED:** At `finishedAt + 24 hours`, server-authoritative time makes Official Results and historical scoring immutable. No background worker or Admin action is required for the rule to apply.
 
 Do not expose a generic unrestricted `setStatus()` operation; transitions must be explicit and validated.
 
 ## Questions, Answers, and Official Results
 
-A Question belongs to exactly one Round. Question-specific data is typed. Match Questions use numeric `homeScore` and `awayScore`, not only strings.
+A Question belongs to exactly one regular Round or PlayoffRound. Question-specific data is typed. Approved MVP types are `MATCH_SCORE`, `CLOSEST_VALUE`, `OPTIONS`, `OPEN_TEXT`, and `EXACT_VALUE`. Match Questions use numeric `homeScore` and `awayScore`, not only strings. `OPTIONS` is single-select and owns multiple configured options plus one official correct option. `EXACT_VALUE` uses numeric Answer/Result values. `OPEN_TEXT` stores free text and an Admin's explicit correct/incorrect judgment for each Answer.
 
-An Answer belongs to `Participant + Question`. Only one active Answer exists for that combination. `submittedAt` is the original submission time and must not reset when edited. The client may receive safe capability information such as `canEdit`, but not internal reasons for non-editability.
+An Answer belongs to `Participant + Question`. Only one active Answer exists for that combination. `submittedAt` is the original submission time and must not reset when edited. The client may receive safe capability information such as `canEdit`, but not internal reasons for non-editability. Every submitted `OPEN_TEXT` Answer requires an Admin correct/incorrect judgment before its parent Round has all required Results and can automatically finish.
 
 Payment restriction never deletes Answers.
 
@@ -106,6 +118,8 @@ A draw never qualifies as GOAL_DIFFERENCE.
 ## CLOSEST_VALUE
 
 Without `againstRival`, compare the participant's distance to the official value.
+
+Without `againstRival`, compare all eligible participant Answers in the applicable Round scope. Every participant tied at the closest distance receives the configured point.
 
 With `againstRival = true`, compare H2H opponents.
 
@@ -172,6 +186,16 @@ Group ranking starts with H2H Points. If the approved H2H comparison remains tie
 
 ## H2H and Group standings
 
+For each regular H2H Round, compare the two opponents' derived Prediction Scores for that Round:
+
+```text
+win  = 3 H2H Points
+draw = 1 H2H Point each
+loss = 0 H2H Points
+```
+
+The system generates the `LEAGUE_PLAYOFFS` round-robin schedule. With an odd participant count, each schedule slot has one bye. For `GROUP_PLAYOFFS`, the Admin manually assigns valid group membership and the system generates the round-robin schedule within each group.
+
 Ordering:
 
 ```text
@@ -199,15 +223,11 @@ BEST_SEED
 TIEBREAKER_QUESTION
 ```
 
-A PlayoffRound owns its `tiebreakerQuestionId`. All Matchups in that PlayoffRound use the same tiebreaker Question. Answers cannot exist for an unpublished PlayoffRound.
+A PlayoffRound owns Questions, Answers, Official Results, scoring configuration, deadlines, lifecycle timestamps, and its `tiebreakerQuestionId`. All participants in the round answer the same Questions, all Matchups use the same Official Results and tiebreaker Question, and Answers remain participant-specific. Answers cannot exist for an unpublished PlayoffRound. Publication, deadline closure, automatic finish, the 24-hour correction window, and effective finalization follow the regular Round rules.
 
 ## Playoff seeding and advancement
 
-Two approved seeding options:
-1. Bracket seeding.
-2. Ranking-based seeding.
-
-Ranking-based seeding:
+Approved bracket seeding ranks:
 
 ```text
 1. Prediction Score DESC
@@ -215,7 +235,9 @@ Ranking-based seeding:
 3. Admin resolution if tied
 ```
 
-With `BEST_SEED`, the better seed advances according to the configured playoff rule.
+Seeding orders Prediction Score DESC, then EXACT_SCORE DESC, then explicit Admin resolution. Bracket pairing is highest remaining seed against lowest remaining seed (`1 vs 16`, `2 vs 15`, and so on).
+
+With `BEST_SEED`, when the opponents' Playoff Round Prediction Scores tie, the better seed advances.
 
 With `TIEBREAKER_QUESTION`, the configured PlayoffRound tiebreaker Question determines advancement. If it still produces an unresolved tie, Admin resolves it explicitly. The domain must never silently choose a winner.
 
@@ -287,6 +309,8 @@ Outstanding debt is derived:
 sum(payment obligations) - sum(recorded payments)
 ```
 
+Payments are participant-level contributions and are not allocated to individual obligations. Overpayment is allowed and yields a negative outstanding balance (credit). A Competition has one immutable currency, defaulting to `MXN`, and monetary amounts use integer minor units.
+
 If `outstandingDebt > maximumDebt`, the participant may be restricted from open/future Rounds according to the approved payment rules. The restriction does not delete Answers, alter finalized history, or transfer Competition ownership.
 
 When payment reduces debt to `outstandingDebt <= maximumDebt`, the participant automatically becomes eligible again.
@@ -325,11 +349,10 @@ Lifecycle operations should include explicit operations such as:
 
 ```text
 publishRound()
-activateRound()
-finishRound()
-finalizeRound()
 publishPlayoffRound()
 ```
+
+For MVP, publication opens Answers, complete required Results finish automatically, and elapsed server time finalizes effectively.
 
 Payment operations:
 

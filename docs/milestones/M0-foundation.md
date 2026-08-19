@@ -2,11 +2,11 @@
 
 ## Status
 
-`COMPLETED`
+`READY (REOPENED)`
 
 ## Goal
 
-Provide a buildable, testable technical base on which vertical Quiniela features can be added safely.
+Provide a reproducible local and CI technical base on which vertical Quiniela features can be added safely.
 
 ## User-visible outcome
 
@@ -17,14 +17,17 @@ A minimal mobile-first landing page and Better Auth endpoint build successfully;
 - Next.js App Router and React foundation.
 - Strict TypeScript, ESLint, Prettier, Vitest, and CI validation.
 - Drizzle/PostgreSQL connection, migration runner, and Neon-compatible configuration.
+- Docker Compose PostgreSQL with separate local development and test databases, health check, and deterministic setup/reset commands.
 - Better Auth email/password foundation and owned identity tables.
 - Server-only environment validation and safe application-error mapping.
+- Tailwind CSS and source-owned shadcn/ui foundation with semantic design tokens and mobile-first conventions.
 
 ## Out of scope
 
 - End-user sign-up/sign-in UI and protected pages.
 - Competition authorization or any business-domain feature/table.
 - Production deployment and E2E browser flows.
+- Installable/offline PWA behavior and speculative UI component catalogs.
 
 ## Dependencies
 
@@ -67,47 +70,56 @@ Authentication transport exists, but Competition-scoped authorization is intenti
 - Auth-only Drizzle schema and migration.
 - Environment and error foundations.
 - Unit/integration test configuration and PostgreSQL-backed CI workflow.
+- Health-checked local PostgreSQL Compose service; documented up/down/migrate/reset/test workflow from a clean checkout.
+- Separate development/test connection examples that never target production Neon.
+- Tailwind/shadcn project configuration, global semantic tokens, and only the minimal base components required for the application shell.
+- Documented UI strategy: Server Components by default, Client Components for necessary interaction, mobile-first styling, accessible primitives, and incremental component installation.
 
 ## Testing requirements
 
 - Environment parsing rejects invalid PostgreSQL configuration.
 - Unknown errors map to a safe response.
 - Isolated PostgreSQL integration verifies migrated auth tables.
+- Local database tests run against the Dockerized test database and fail clearly if required setup is absent; they are not reported as passing when skipped.
+- The local migration workflow succeeds from an empty development and test database.
 - Format, lint, typecheck, tests, and build remain runnable.
 
 ## Acceptance criteria
 
 - [x] Auth-only migration was generated.
 - [x] Better Auth is wired through Infrastructure.
-- [x] Unit tests pass.
-- [x] lint and typecheck pass.
-- [x] production build passes.
+- [ ] Dockerized local development and test databases are available and documented.
+- [ ] A clean checkout can start PostgreSQL, apply migrations, and run integration tests locally without Neon.
+- [ ] Tailwind CSS and minimal shadcn/ui foundations are configured with semantic tokens.
+- [ ] UI architecture and incremental component strategy are documented in the repository setup guidance.
+- [ ] Unit and required integration tests pass without critical skips.
+- [ ] lint and typecheck pass.
+- [ ] production build passes.
 - [x] CI provisions an isolated PostgreSQL database.
 
 ## Definition of Done
 
-- [x] Scope implemented.
+- [ ] Scope implemented.
 - [x] Out-of-scope functionality was not introduced.
 - [x] Approved domain rules preserved.
 - [x] Authorization was not incorrectly modeled as global auth roles.
-- [x] Relevant tests added.
+- [ ] Relevant tests added.
 - [x] No duplicated business logic.
 - [x] No locked specification modified.
-- [x] lint passes.
-- [x] typecheck passes.
-- [x] unit tests pass.
-- [x] build passes.
-- [x] milestone code review completed.
+- [ ] lint passes.
+- [ ] typecheck passes.
+- [ ] tests pass without critical database skips.
+- [ ] build passes.
+- [ ] milestone code review completed.
 
 ## Risks / implementation notes
 
-Local integration tests skip when `TEST_DATABASE_URL` is absent; CI applies migrations and runs them against isolated PostgreSQL. `pnpm check` does not itself apply migrations, so a fresh integration environment must run `pnpm db:migrate` first.
+The original M0 implementation allowed local integration tests to skip when `TEST_DATABASE_URL` was absent and provided no local PostgreSQL service. That made the completed status non-reproducible. The reopened work must preserve the existing CI service while adding an equivalent local workflow. Tailwind/shadcn is a source-owned component foundation, not authorization to install every registry component or duplicate domain behavior in UI code.
 
 ## Open questions
 
-None.
+Exact shadcn visual preset, typography, and initial component list are implementation/design choices to approve during the M0 plan; they do not change product behavior.
 
 ## M0 REVIEW FINDINGS
 
-The implemented dependency direction is consistent with the approved architecture. Application and Domain modules do not yet exist because no product behavior exists. No serious architecture violation was found.
-
+The implemented dependency direction remains consistent with the approved architecture. M0 was reopened on 2026-08-19 because local PostgreSQL and the approved UI foundation were missing from its delivery contract and implementation.

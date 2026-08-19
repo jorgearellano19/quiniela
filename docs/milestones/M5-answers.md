@@ -16,7 +16,7 @@ Participants can open a Round, answer its Questions, revisit saved Answers, and 
 
 - Participant Round/question view and `getMyAnswers`.
 - `submitAnswer` and `updateAnswer` with typed validation.
-- Round activation behavior needed to open Answers.
+- Published regular Round answer behavior for all five approved typed Question families.
 - Deadline, membership, ownership, and server-authoritative editability.
 - Original `submittedAt` preservation and unanswered representation without fake rows.
 
@@ -55,12 +55,12 @@ M5 depends on:
 - Only one Answer exists per Question + Participant.
 - `submittedAt` is set once; editing changes `updatedAt`, not original submission time.
 - Server time, persisted Round state, deadline, membership, and ownership determine editability.
+- Atomic publication leaves the Round ACTIVE and opens Answers; every Question closes independently at its absolute deadline.
 - Missing Answers remain absent rows; unanswered penalties are calculated later.
 - The client may receive `canEdit`, never sensitive denial reasons.
 
 ## Application use cases
 
-- `activateRound`
 - `submitAnswer`
 - `updateAnswer`
 - `getMyAnswers`
@@ -121,5 +121,4 @@ Use a server-authoritative clock. Keep Answer persistence type-specific without 
 
 ## Open questions
 
-Approved documents variously say Answers require a Round to be PUBLISHED/ACTIVE and do not define who or what activates it. Resolve whether submission begins at PUBLISHED or only ACTIVE, and the actor/timing policy for `activateRound`, before implementation.
-
+None.

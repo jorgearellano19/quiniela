@@ -120,4 +120,3 @@ Do not persist derived convenience columns. Design the unresolved-result shape f
 ## Open questions
 
 The approved schema requires manual decisions to be persisted but leaves the generic audit/decision table strategy open. Resolve the smallest consistent persistence design during planning; this is an implementation decision, not new product behavior.
-
