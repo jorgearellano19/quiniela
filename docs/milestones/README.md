@@ -4,7 +4,7 @@ These files are delivery contracts. Locked product and implementation specificat
 
 | Milestone | Name | Status | Depends On | Outcome |
 | --- | --- | --- | --- | --- |
-| M0 | Foundation | READY (REOPENED) | — | Reproducible local and CI technical foundation |
+| M0 | Foundation | COMPLETED | — | Reproducible local and CI technical foundation |
 | M1 | Authentication | FUTURE | M0 | End-user authentication |
 | M2 | Competition | FUTURE | M1 | Admin creates and manages a Competition |
 | M3 | Participants & Membership | FUTURE | M2 | Contextual membership and authorization |

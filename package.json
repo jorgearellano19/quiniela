@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "dev:local": "pnpm db:setup && pnpm dev",
     "build": "next build",
     "start": "next start",
     "format": "prettier --write .",
@@ -17,21 +18,32 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --exclude '**/*.integration.test.ts'",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:integration:local": "node --env-file=.env.local ./node_modules/vitest/vitest.mjs run --config vitest.integration.config.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/infrastructure/db/migrate.ts",
+    "db:migrate:local": "tsx --env-file=.env.local src/infrastructure/db/migrate.ts",
+    "db:migrate:test": "tsx --env-file=.env.local src/infrastructure/db/migrate.ts --test",
+    "db:up": "docker compose up --detach --wait",
+    "db:down": "docker compose down",
+    "db:setup": "pnpm db:up && pnpm db:migrate:local && pnpm db:migrate:test",
+    "db:reset": "docker compose down --volumes && pnpm db:setup",
     "db:studio": "drizzle-kit studio",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration && pnpm build"
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration && pnpm build",
+    "check:local": "pnpm db:setup && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration:local && pnpm build"
   },
   "dependencies": {
     "better-auth": "1.7.1",
+    "clsx": "2.1.1",
     "drizzle-orm": "0.45.2",
     "next": "16.3.1",
     "postgres": "3.4.9",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "tailwind-merge": "3.6.0",
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
     "@types/node": "26.2.0",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
@@ -39,6 +51,7 @@
     "eslint": "9.39.5",
     "eslint-config-next": "16.3.1",
     "prettier": "3.9.6",
+    "tailwindcss": "4.3.3",
     "tsx": "4.23.12",
     "typescript": "6.0.3",
     "vitest": "4.1.11"

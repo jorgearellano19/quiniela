@@ -2,7 +2,7 @@
 
 ## Status
 
-`READY (REOPENED)`
+`COMPLETED`
 
 ## Goal
 
@@ -88,29 +88,29 @@ Authentication transport exists, but Competition-scoped authorization is intenti
 
 - [x] Auth-only migration was generated.
 - [x] Better Auth is wired through Infrastructure.
-- [ ] Dockerized local development and test databases are available and documented.
-- [ ] A clean checkout can start PostgreSQL, apply migrations, and run integration tests locally without Neon.
-- [ ] Tailwind CSS and minimal shadcn/ui foundations are configured with semantic tokens.
-- [ ] UI architecture and incremental component strategy are documented in the repository setup guidance.
-- [ ] Unit and required integration tests pass without critical skips.
-- [ ] lint and typecheck pass.
-- [ ] production build passes.
+- [x] Dockerized local development and test databases are available and documented.
+- [x] A clean checkout can start PostgreSQL, apply migrations, and run integration tests locally without Neon.
+- [x] Tailwind CSS and minimal shadcn/ui foundations are configured with semantic tokens.
+- [x] UI architecture and incremental component strategy are documented in the repository setup guidance.
+- [x] Unit and required integration tests pass without critical skips.
+- [x] lint and typecheck pass.
+- [x] production build passes.
 - [x] CI provisions an isolated PostgreSQL database.
 
 ## Definition of Done
 
-- [ ] Scope implemented.
+- [x] Scope implemented.
 - [x] Out-of-scope functionality was not introduced.
 - [x] Approved domain rules preserved.
 - [x] Authorization was not incorrectly modeled as global auth roles.
-- [ ] Relevant tests added.
+- [x] Relevant tests added.
 - [x] No duplicated business logic.
 - [x] No locked specification modified.
-- [ ] lint passes.
-- [ ] typecheck passes.
-- [ ] tests pass without critical database skips.
-- [ ] build passes.
-- [ ] milestone code review completed.
+- [x] lint passes.
+- [x] typecheck passes.
+- [x] tests pass without critical database skips.
+- [x] build passes.
+- [x] milestone code review completed.
 
 ## Risks / implementation notes
 
@@ -123,3 +123,5 @@ Exact shadcn visual preset, typography, and initial component list are implement
 ## M0 REVIEW FINDINGS
 
 The implemented dependency direction remains consistent with the approved architecture. M0 was reopened on 2026-08-19 because local PostgreSQL and the approved UI foundation were missing from its delivery contract and implementation.
+
+The reopened scope was completed on 2026-08-19. A clean Docker volume now creates separate development and test databases, applies the auth-only migration to both, and runs the required integration test without skips. The frontend now uses the approved Tailwind CSS and Radix Nova shadcn/ui foundation with semantic tokens, system typography, and one source-owned Card component. Full local validation and milestone code review passed without introducing product tables or workflows.
