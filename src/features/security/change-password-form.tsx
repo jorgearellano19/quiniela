@@ -3,6 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/infrastructure/auth/auth-client";
 
@@ -16,7 +23,7 @@ export function ChangePasswordForm({
   const [pending, setPending] = useState(false);
   return (
     <form
-      className="flex max-w-md flex-col gap-4"
+      className="flex flex-col gap-5"
       onSubmit={async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -53,36 +60,60 @@ export function ChangePasswordForm({
       }}
     >
       {required ? (
-        <p>Debes reemplazar la contraseña temporal antes de continuar.</p>
+        <Alert>
+          <AlertTitle>Cambio obligatorio</AlertTitle>
+          <AlertDescription>
+            Reemplaza la contraseña temporal antes de continuar.
+          </AlertDescription>
+        </Alert>
       ) : null}
-      {message ? <p role="alert">{message}</p> : null}
-      <Input
-        autoComplete="current-password"
-        name="currentPassword"
-        placeholder="Contraseña actual"
-        required
-        type="password"
-      />
-      <Input
-        autoComplete="new-password"
-        minLength={8}
-        maxLength={128}
-        name="newPassword"
-        placeholder="Nueva contraseña"
-        required
-        type="password"
-      />
-      <Input
-        autoComplete="new-password"
-        minLength={8}
-        maxLength={128}
-        name="confirmation"
-        placeholder="Confirmar contraseña"
-        required
-        type="password"
-      />
-      <Button disabled={pending}>
-        {pending ? "Guardando…" : "Cambiar contraseña"}
+      {message ? (
+        <Alert variant="destructive">
+          <AlertTitle>No se cambió la contraseña</AlertTitle>
+          <AlertDescription>{message}</AlertDescription>
+        </Alert>
+      ) : null}
+      <FieldGroup>
+        <Field>
+          <FieldLabel htmlFor="current-password">Contraseña actual</FieldLabel>
+          <Input
+            autoComplete="current-password"
+            id="current-password"
+            name="currentPassword"
+            required
+            type="password"
+          />
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="new-password">Nueva contraseña</FieldLabel>
+          <Input
+            autoComplete="new-password"
+            id="new-password"
+            minLength={8}
+            maxLength={128}
+            name="newPassword"
+            required
+            type="password"
+          />
+          <FieldDescription>Usa entre 8 y 128 caracteres.</FieldDescription>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="password-confirmation">
+            Confirmar nueva contraseña
+          </FieldLabel>
+          <Input
+            autoComplete="new-password"
+            id="password-confirmation"
+            minLength={8}
+            maxLength={128}
+            name="confirmation"
+            required
+            type="password"
+          />
+        </Field>
+      </FieldGroup>
+      <Button disabled={pending} type="submit">
+        {pending ? "Guardando…" : "Guardar contraseña"}
       </Button>
     </form>
   );

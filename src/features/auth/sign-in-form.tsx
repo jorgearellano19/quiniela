@@ -103,7 +103,7 @@ export function SignInForm() {
         </Field>
       </FieldGroup>
       <Button disabled={pending} type="submit">
-        {pending ? "Iniciando sesión…" : "Entrar a mi quiniela"}
+        {pending ? "Iniciando sesión…" : "Iniciar sesión"}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
         ¿Aún no tienes cuenta?{" "}
