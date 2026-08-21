@@ -1,5 +1,9 @@
 export type ApplicationErrorCode =
-  "INTERNAL_ERROR" | "INVALID_INPUT" | "UNAUTHENTICATED" | "UNAUTHORIZED";
+  | "INTERNAL_ERROR"
+  | "INVALID_INPUT"
+  | "TOO_MANY_REQUESTS"
+  | "UNAUTHENTICATED"
+  | "UNAUTHORIZED";
 export class ApplicationError extends Error {
   constructor(
     readonly code: ApplicationErrorCode,

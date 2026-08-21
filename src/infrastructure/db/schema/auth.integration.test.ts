@@ -15,12 +15,14 @@ describe("authentication migration", () => {
     await client.end();
   });
 
-  it("creates only the Better Auth foundation tables", async () => {
+  it("creates the approved Better Auth and security tables", async () => {
     const result = await client.unsafe<{ table_name: string }[]>(
       "select table_name from information_schema.tables where table_schema = 'public' order by table_name",
     );
     expect(result.map(({ table_name }) => table_name)).toEqual([
       "account",
+      "auth_security_event",
+      "rate_limit",
       "session",
       "user",
       "verification",

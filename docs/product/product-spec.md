@@ -1,6 +1,6 @@
 # Quiniela App — Product Spec (MVP)
 
-> Approved product contract. Last updated: 2026-08-19. This revision adds the approved MVP invitation, question-type, H2H, playoff-round, payment, local-development, and UI-foundation decisions and supersedes previous drafts.
+> Approved product contract. Last updated: 2026-08-20. This revision additionally defines platform operation, operator-assisted recovery, and authentication abuse controls.
 
 ## 1. Purpose
 Mobile-responsive web application for football prediction competitions. It replaces the Admin workflow of Excel + WhatsApp while keeping the Admin as owner. It includes predictions, scoring, standings, H2H, playoffs, and optional manual payment/debt tracking. It is not a payment processor.
@@ -114,6 +114,10 @@ Important administrative mutations record `updatedAt` and `updatedBy`, including
 
 ## 19. Authentication and architecture constraints
 Use Better Auth minimally. Use Next.js App Router, Server Actions, Drizzle, PostgreSQL, and Neon initially. Supabase is an alternative provider, not a required dependency. Authorization is Competition-scoped.
+
+The global Better Auth `platform_operator` role exists only for account support and never grants Competition capability. Operators may perform exact-email lookup, suspend/restore accounts, revoke sessions, issue server-generated temporary passwords after manual verification, and view authentication-security events. They may not browse users, impersonate, delete users, change roles through the UI, choose permanent passwords, or access private Competition data.
+
+MVP password recovery is operator-assisted because email delivery is not included. A temporary password expires after 15 minutes, revokes existing sessions, and permits access only to mandatory password replacement. Suspended accounts cannot authenticate. Credential endpoints are persistently rate-limited and return safe, non-enumerating errors. Email delivery, backup codes, 2FA, CAPTCHA, and authentication E2E coverage are deferred.
 
 Local development uses Dockerized PostgreSQL and must not require a Neon database. The mobile-responsive UI foundation uses Tailwind CSS and source-owned shadcn/ui components added incrementally. Server Components remain the default; Client Components are limited to required interactivity. Installable/offline PWA behavior is not required for MVP.
 

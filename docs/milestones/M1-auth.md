@@ -2,7 +2,7 @@
 
 ## Status
 
-`READY`
+`COMPLETED`
 
 ## Goal
 
@@ -75,33 +75,32 @@ Use the existing Better Auth tables. Generate a migration only if the installed 
 
 ## Acceptance criteria
 
-- [ ] A new User can sign up with valid credentials.
-- [ ] A User can sign in and retrieve their server-side session.
-- [ ] Anonymous access to the protected area is rejected or redirected.
-- [ ] A User can sign out and loses protected access.
-- [ ] Invalid credentials produce a safe error.
-- [ ] Relevant tests, lint, typecheck, and build pass.
+- [x] A new User can sign up with valid credentials.
+- [x] A User can sign in and retrieve their server-side session.
+- [x] Anonymous access to the protected area is rejected or redirected.
+- [x] A User can sign out and loses protected access.
+- [x] Invalid credentials produce a safe error.
+- [x] Relevant tests, lint, typecheck, and build pass.
 
 ## Definition of Done
 
-- [ ] Scope implemented.
-- [ ] Out-of-scope functionality was not introduced.
-- [ ] Approved domain rules preserved.
-- [ ] Authorization enforced server-side.
-- [ ] Relevant tests added.
-- [ ] No duplicated business logic.
-- [ ] No locked specification modified.
-- [ ] lint passes.
-- [ ] typecheck passes.
-- [ ] tests pass.
-- [ ] build passes.
-- [ ] milestone code review completed.
+- [x] Scope implemented.
+- [x] Out-of-scope functionality was not introduced.
+- [x] Approved domain rules preserved.
+- [x] Authorization enforced server-side.
+- [x] Relevant tests added.
+- [x] No duplicated business logic.
+- [x] No locked specification modified.
+- [x] lint passes.
+- [x] typecheck passes.
+- [x] tests pass.
+- [x] build passes.
+- [x] milestone code review completed.
 
 ## Risks / implementation notes
 
-Keep Better Auth integration minimal. Do not create a global role or a second user/session model.
+M1 itself created no global role. The later approved M1.1 milestone adds only the Better Auth `platform_operator` support role and explicitly keeps it separate from Competition authorization.
 
 ## Open questions
 
 None.
-

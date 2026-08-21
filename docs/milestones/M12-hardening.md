@@ -14,7 +14,7 @@ Critical flows work reliably on mobile with clear loading, empty, validation, an
 
 ## In scope
 
-- Critical E2E suite and final acceptance pass for all three Competition types.
+- Critical E2E suite for authentication security and all three Competition types, plus the final acceptance pass.
 - Mobile-first UX, accessibility baseline, loading/empty/error states.
 - Tailwind semantic-token and source-owned shadcn component consistency review across mobile breakpoints.
 - Authorization/security, environment, migration, index/query/N+1, and regression review.
@@ -74,7 +74,7 @@ Audit every mutation for anonymous, capability, cross-participant, cross-Competi
 
 ## Testing requirements
 
-- Run the four critical E2E flows from `testing-strategy.md` plus complete paths for each Competition type.
+- Run the deferred M1.1 authentication E2E flows (sign-up/sign-in/sign-out, suspension, temporary-password replacement, and rate-limit feedback), the four critical flows from `testing-strategy.md`, and complete paths for each Competition type.
 - Run the full domain/application/integration suite against isolated PostgreSQL.
 - Verify accessibility baseline, mobile breakpoints, failure/retry states, migration-from-empty, and production build.
 - Verify the documented Dockerized local setup from a clean checkout, including separate development/test databases and non-skipped integration tests.
@@ -83,6 +83,7 @@ Audit every mutation for anonymous, capability, cross-participant, cross-Competi
 ## Acceptance criteria
 
 - [ ] Critical setup, Round, payment, and playoff E2E flows pass.
+- [ ] Deferred M1.1 authentication-security E2E flows pass.
 - [ ] LEAGUE, LEAGUE_PLAYOFFS, and GROUP_PLAYOFFS pass final acceptance.
 - [ ] Authorization/security audit has no unresolved critical finding.
 - [ ] Mobile, loading, empty, error, and accessibility baselines pass.

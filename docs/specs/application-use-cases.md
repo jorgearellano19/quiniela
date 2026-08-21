@@ -48,6 +48,10 @@ Never trust a client-provided participant ID as authorization.
 
 A User who is both Admin and Participant may invoke either capability.
 
+`platform_operator` is a global Better Auth role used only for account-support operations; it never satisfies a Competition authorization check. Approved operations are exact-email security lookup, account suspension/restoration, target-session revocation, and issuance of a server-generated 15-minute temporary password after recording a verification method and non-sensitive note. Active operators cannot be targeted through application operations, role grant/revoke is CLI-only, and every mutation is audited.
+
+Temporary-password issuance replaces the previous credential and revokes all sessions transactionally. The resulting session may access only password replacement and sign-out until the user supplies the temporary password as the current password and chooses a permanent replacement.
+
 ## 4. Error handling
 
 Use stable application/domain error categories.

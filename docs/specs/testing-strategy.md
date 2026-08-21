@@ -36,6 +36,8 @@ Prefer many focused domain tests + targeted application/integration tests + few 
 ## Authorization coverage
 Every mutation must cover anonymous rejection, Participant-only capabilities, Admin capabilities, Admin+Participant coexistence, cross-participant denial, and cross-Competition denial. Frontend visibility is never authorization.
 
+Authentication-security coverage must verify least-privilege Platform Operator permissions, no implied Competition authority, active-operator targeting denial, suspension/session revocation, temporary-password expiry and forced replacement, audit redaction, and atomic persistent rate limits.
+
 ## Integration coverage
 Verify important database constraints, foreign keys, historical preservation, and transaction atomicity for publishing, bracket generation, payments + audit, Official Result corrections + audit, and manual resolutions + audit.
 
@@ -52,6 +54,8 @@ Use small factories/builders with sensible defaults and explicit overrides rathe
 Use an isolated test database/schema. Never run tests against production Neon data. Apply migrations before integration tests and clean up deterministically. Local development provides Dockerized PostgreSQL with separate development/test databases. Critical database tests must fail with a clear setup error rather than be counted as passing when the test database is unavailable.
 
 ## Critical E2E flows
+
+Authentication-security E2E coverage is explicitly deferred to M12. M1.1 uses unit, route/component, and PostgreSQL integration tests for the same security boundaries.
 1. Competition setup: create → invite/join → approve.
 2. Round: create → questions/scoring → publish → answers → official results → finish → standings/winner.
 3. Payment: obligation → participant debt view → Admin payment → balance/restriction update.

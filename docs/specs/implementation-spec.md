@@ -212,6 +212,10 @@ Never treat authentication as authorization.
 
 Every Competition mutation must validate Competition-scoped permissions.
 
+Better Auth owns the global `platform_operator` role and account suspension. Configure a custom least-privilege Admin-plugin access controller; never use its default full-power admin role. Application use cases own operator lookup, recovery, audit orchestration, and the rule that active operators cannot be targeted.
+
+Browser credential submissions use Better Auth HTTP endpoints so request rate limiting applies. Store atomic counters in PostgreSQL, trust only deployment-controlled `x-real-ip`, and map HTTP 429 to safe retry feedback. Limits are sign-in 5/IP/minute, signup 3/IP/10 minutes, password change 5/IP/15 minutes, and temporary-password issuance 3/target/hour and 20/operator/hour.
+
 A User may simultaneously be:
 
 ```text

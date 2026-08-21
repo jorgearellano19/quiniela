@@ -8,6 +8,8 @@ Define the application domain independently from Next.js, React, Drizzle, Neon, 
 
 The domain owns entities, invariants, lifecycle rules, scoring, standings, playoff advancement, payment eligibility, prize winner determination, and explicit Admin resolutions. It must not know how data is stored or how requests reach the application.
 
+Authentication identity may include the global `platform_operator` support role. This is not a Quiniela Competition role and can never imply Competition Admin or Participant capability. Temporary-password state, account suspension, sessions, and authentication-security audit records belong to the authentication/application boundary rather than the Competition domain.
+
 ## Core principles
 
 - Competition is the primary business boundary.

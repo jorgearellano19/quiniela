@@ -66,6 +66,17 @@ The required integration suite fails with setup guidance when `TEST_DATABASE_URL
 
 CI independently provisions PostgreSQL, applies the same committed migrations, and runs the complete validation sequence.
 
+## Local platform operator
+
+After creating a normal user through sign-up, grant or revoke local Platform Operator access with an audited reason:
+
+```bash
+pnpm operator:grant --email operator@example.com --actor local-owner --reason "Initial operator"
+pnpm operator:revoke --email operator@example.com --actor local-owner --reason "Access removed"
+```
+
+These package commands intentionally load `.env.local`. Production operator changes must run with the production environment supplied explicitly; never copy local or test credentials into a deployment.
+
 ## Architecture
 
 Presentation depends on Application, which depends on the framework-independent Domain. Infrastructure provides authentication and persistence. M0 contains only Better Auth's required tables—Competition and other product behavior belong to later milestones.

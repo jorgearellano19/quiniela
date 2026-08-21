@@ -12,11 +12,14 @@
 - Persist source facts; derive Prediction Scores, standings, winners, debt, and restrictions.
 - Store timestamps in UTC; presentation converts them to the user's timezone.
 - Better Auth owns authentication identity tables.
+- Better Auth also owns the global platform role, suspension, temporary-password state, sessions, and rate-limit counters approved in M1.1.
 - Competition membership is separate from global User identity.
 - The same User may be Admin and Participant in the same Competition.
 - MVP has manual payment tracking only; no external payment provider.
 
 ## 2. Core relationship model
+
+Authentication security extends Better Auth User with role, ban, and temporary-password fields; extends Session with the Admin-plugin field; and adds Better Auth's `rate_limit` table. A focused append-only `auth_security_event` records actor, target, action, reason/verification method, and UTC time without credentials, tokens, hashes, or raw IP addresses.
 
 ```text
 Better Auth User

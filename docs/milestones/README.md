@@ -5,8 +5,9 @@ These files are delivery contracts. Locked product and implementation specificat
 | Milestone | Name | Status | Depends On | Outcome |
 | --- | --- | --- | --- | --- |
 | M0 | Foundation | COMPLETED | — | Reproducible local and CI technical foundation |
-| M1 | Authentication | FUTURE | M0 | End-user authentication |
-| M2 | Competition | FUTURE | M1 | Admin creates and manages a Competition |
+| M1 | Authentication | COMPLETED | M0 | End-user authentication |
+| M1.1 | Authentication Security | COMPLETED | M1 | Secure recovery and platform operations |
+| M2 | Competition | FUTURE | M1.1 | Admin creates and manages a Competition |
 | M3 | Participants & Membership | FUTURE | M2 | Contextual membership and authorization |
 | M4 | Rounds & Questions | FUTURE | M3 | Admin publishes a playable Round |
 | M5 | Answers | FUTURE | M4 | Participants submit and edit predictions |
@@ -18,7 +19,7 @@ These files are delivery contracts. Locked product and implementation specificat
 | M11 | Prizes & Competition Completion | FUTURE | M8, M10 | Final winners and configured prizes |
 | M12 | MVP Hardening & Release Readiness | FUTURE | M11 | Production-ready MVP |
 
-The roadmap retains M0–M12. M8 and M9 can proceed independently after M7, but both are required before M11. The 2026-08-19 specification revision resolves the previously blocking invitation, question-type, lifecycle, H2H/group, playoff, prize, payment, local-environment, and UI-foundation decisions. Remaining open items are implementation decisions unless a milestone explicitly says otherwise.
+The roadmap retains the base M0–M12 sequence and inserts M1.1 as the approved security prerequisite for M2. M8 and M9 can proceed independently after M7, but both are required before M11. The 2026-08-20 specification revision also locks platform-operation, recovery, and authentication-abuse decisions. Remaining open items are implementation decisions unless a milestone explicitly says otherwise.
 
 ## Execution workflow
 

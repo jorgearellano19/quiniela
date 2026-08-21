@@ -3,8 +3,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-heading: ui-sans-serif, system-ui, sans-serif;
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-heading:
+    "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --font-sans: "Avenir Next", Avenir, "Segoe UI", sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -46,30 +47,30 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --background: oklch(0.974 0.013 91.5);
+  --foreground: oklch(0.235 0.025 155);
+  --card: oklch(0.995 0.007 91.5);
+  --card-foreground: oklch(0.235 0.025 155);
+  --popover: oklch(0.995 0.007 91.5);
+  --popover-foreground: oklch(0.235 0.025 155);
+  --primary: oklch(0.31 0.083 153);
+  --primary-foreground: oklch(0.974 0.013 91.5);
+  --secondary: oklch(0.92 0.035 91.5);
+  --secondary-foreground: oklch(0.27 0.04 153);
+  --muted: oklch(0.94 0.02 91.5);
+  --muted-foreground: oklch(0.48 0.025 155);
+  --accent: oklch(0.9 0.05 91.5);
+  --accent-foreground: oklch(0.27 0.04 153);
+  --destructive: oklch(0.55 0.19 28);
+  --border: oklch(0.855 0.025 91.5);
+  --input: oklch(0.855 0.025 91.5);
+  --ring: oklch(0.48 0.09 153);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  --radius: 0.7rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -120,8 +121,84 @@
   }
   body {
     @apply bg-background text-foreground;
+    min-width: 20rem;
   }
   html {
     @apply font-sans;
+  }
+
+  ::selection {
+    color: var(--primary-foreground);
+    background: var(--primary);
+  }
+}
+
+@layer components {
+  .auth-stage {
+    background-image:
+      linear-gradient(
+        to right,
+        color-mix(in oklch, var(--border) 35%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in oklch, var(--border) 35%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 3rem 3rem;
+  }
+
+  .auth-card {
+    box-shadow: 0 1.5rem 5rem
+      color-mix(in oklch, var(--primary) 12%, transparent);
+  }
+
+  .auth-editorial::before {
+    position: absolute;
+    inset: 7% -20% auto auto;
+    width: 75%;
+    aspect-ratio: 1;
+    content: "";
+    border: 1px solid
+      color-mix(in oklch, var(--primary-foreground) 22%, transparent);
+    border-radius: 999px;
+  }
+
+  .auth-editorial::after {
+    position: absolute;
+    inset: 50% 0 auto;
+    content: "";
+    border-top: 1px solid
+      color-mix(in oklch, var(--primary-foreground) 18%, transparent);
+  }
+
+  .match-dot {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    flex: none;
+    background: var(--destructive);
+    border-radius: 999px;
+    box-shadow: 0 0 0 0.3rem
+      color-mix(in oklch, var(--destructive) 18%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .auth-card {
+    animation: card-arrival 420ms ease-out both;
+  }
+
+  @keyframes card-arrival {
+    from {
+      opacity: 0;
+      transform: translateY(0.75rem);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
