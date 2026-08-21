@@ -19,10 +19,10 @@ export default async function AuthLayout({
         </div>
         <div className="relative max-w-xl">
           <p className="mb-5 text-sm font-medium tracking-[0.22em] uppercase opacity-70">
-            Cada marcador cuenta
+            Cada pronóstico cuenta
           </p>
           <p className="font-heading text-6xl leading-[0.98] tracking-[-0.045em] text-balance xl:text-7xl">
-            Tu fútbol. Tus pronósticos. Una tabla sin discusiones.
+            Tus pronósticos. Tu competencia. Resultados claros.
           </p>
         </div>
         <div className="relative grid grid-cols-3 gap-4 text-xs tracking-wide uppercase opacity-75">

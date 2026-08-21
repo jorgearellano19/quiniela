@@ -30,11 +30,11 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           </div>
           <CardTitle>
             <h1 className="font-heading text-4xl leading-none tracking-tight">
-              Vuelve a la cancha.
+              Vuelve a competir
             </h1>
           </CardTitle>
           <CardDescription>
-            Inicia sesión para entrar a tu área de Quiniela.
+            Inicia sesión para entrar a tus quinielas.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">

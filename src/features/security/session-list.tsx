@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { authClient } from "@/infrastructure/auth/auth-client";
 
 type SessionSummary = Readonly<{
@@ -20,25 +21,36 @@ export function SessionList() {
   }, []);
 
   return (
-    <section className="mt-10 max-w-xl">
-      <h2 className="font-heading text-2xl">Sesiones activas</h2>
-      {message ? (
-        <p className="mt-2" role="status">
-          {message}
+    <section aria-labelledby="sessions-title" className="flex flex-col gap-4">
+      <div>
+        <h2 className="font-heading text-2xl" id="sessions-title">
+          Sesiones activas
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Revisa los dispositivos con acceso a tu cuenta.
         </p>
+      </div>
+      {message ? (
+        <Alert>
+          <AlertDescription role="status">{message}</AlertDescription>
+        </Alert>
       ) : null}
-      <ul className="mt-4 space-y-3">
+      <ul className="flex flex-col gap-3">
         {sessions.map((session) => (
           <li
-            className="flex items-center justify-between gap-4 rounded-lg border p-3"
+            className="flex flex-col items-stretch gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
             key={session.token}
           >
-            <div>
+            <div className="min-w-0">
               <p className="text-sm">
                 {session.userAgent || "Dispositivo desconocido"}
               </p>
               <p className="text-xs text-muted-foreground">
-                Actualizada {new Date(session.updatedAt).toLocaleString()}
+                Actualizada{" "}
+                {new Intl.DateTimeFormat("es-MX", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                }).format(new Date(session.updatedAt))}
               </p>
             </div>
             <Button

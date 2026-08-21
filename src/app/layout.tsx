@@ -4,7 +4,7 @@ import "./styles.css";
 
 export const metadata: Metadata = {
   title: "Quiniela",
-  description: "Mobile-first football prediction competitions.",
+  description: "Crea, comparte y compite en quinielas de pronósticos.",
 };
 export default function RootLayout({
   children,
