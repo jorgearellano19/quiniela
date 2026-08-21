@@ -1,9 +1,6 @@
 "use server";
 
-import type {
-  SecurityUser,
-  VerificationMethod,
-} from "@/application/auth-security/use-cases";
+import type { VerificationMethod } from "@/application/auth-security/use-cases";
 import {
   findSecurityUser,
   issueTemporaryPassword,
@@ -14,16 +11,7 @@ import {
 import { getServerSession } from "@/infrastructure/auth/session";
 import { authSecurityRepository } from "@/infrastructure/auth/security-repository";
 import { toSafeError } from "@/lib/errors/application-error";
-
-export type OperatorState = Readonly<{
-  status: "idle" | "success" | "error";
-  message?: string;
-  user?: SecurityUser;
-  temporaryPassword?: string;
-  temporaryPasswordExpiresAt?: string;
-}>;
-
-export const initialOperatorState: OperatorState = { status: "idle" };
+import type { OperatorState } from "./operator-state";
 
 async function actor() {
   const current = await getServerSession();

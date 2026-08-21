@@ -3,11 +3,8 @@
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  findUserAction,
-  initialOperatorState,
-  operatorMutationAction,
-} from "./operator-actions";
+import { findUserAction, operatorMutationAction } from "./operator-actions";
+import { initialOperatorState } from "./operator-state";
 
 export function OperatorConsole() {
   const [search, searchAction, searching] = useActionState(
