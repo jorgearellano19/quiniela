@@ -23,11 +23,11 @@ export default function SignUpPage() {
           </div>
           <CardTitle>
             <h1 className="font-heading text-4xl leading-none tracking-tight">
-              Arma tu jugada.
+              Empieza a competir
             </h1>
           </CardTitle>
           <CardDescription>
-            Crea tu cuenta para empezar a participar en tus quinielas.
+            Crea tu cuenta y prepárate para compartir tus pronósticos.
           </CardDescription>
         </CardHeader>
         <CardContent>

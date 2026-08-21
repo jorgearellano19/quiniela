@@ -12,6 +12,7 @@ Before changing behavior, consult the relevant product and architecture document
 
 - `docs/product/` — approved product/business rules.
 - `docs/architecture/` — approved technical architecture.
+- `docs/product/product-design.md` — canonical UI, visual design, and product-content guidance.
 
 Do not invent business rules when documentation already defines them. Do not silently change sealed decisions. If a requested change conflicts with approved documentation, identify the conflict and ask before implementing it.
 
@@ -161,6 +162,8 @@ Do not build a large audit-log system unless explicitly requested.
 ## Frontend
 
 Mobile-first.
+
+Before creating or modifying presentation, styling, or user-facing content, read and follow `docs/product/product-design.md`. Product and business rules remain authoritative whenever they conflict with a visual or content decision.
 
 Prefer Server Components by default and Client Components only where interactivity requires them.
 
