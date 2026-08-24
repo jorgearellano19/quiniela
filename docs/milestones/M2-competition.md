@@ -133,9 +133,9 @@ Choose the application-wide product ID and Drizzle enum strategies during planni
 - M4 owns rounds, questions, scoring configuration, and publication freeze.
 - M8 adds payment configuration while preserving the M2 `MXN` currency invariant.
 - M11 owns Competition completion and final read-only results.
-- No M2.1 is currently required. The reproducible managed-environment Turbopack
-  worker restriction is handled by the supported webpack production builder.
-  Any later isolated hardening milestone must contain no new product behavior.
+- No M2.1 is currently required. Production builds use Next.js's default
+  Turbopack builder. Any later isolated hardening milestone must contain no new
+  product behavior.
 
 ## Open questions
 
