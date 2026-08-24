@@ -7,7 +7,7 @@ These files are delivery contracts. Locked product and implementation specificat
 | M0 | Foundation | COMPLETED | — | Reproducible local and CI technical foundation |
 | M1 | Authentication | COMPLETED | M0 | End-user authentication |
 | M1.1 | Authentication Security | COMPLETED | M1 | Secure recovery and platform operations |
-| M2 | Competition | FUTURE | M1.1 | Admin creates and manages a Competition |
+| M2 | Competition | COMPLETED | M1.1 | Admin creates and manages a Competition |
 | M3 | Participants & Membership | FUTURE | M2 | Contextual membership and authorization |
 | M4 | Rounds & Questions | FUTURE | M3 | Admin publishes a playable Round |
 | M5 | Answers | FUTURE | M4 | Participants submit and edit predictions |

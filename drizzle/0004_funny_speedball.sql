@@ -1,0 +1,2 @@
+ALTER TABLE "competition" ADD CONSTRAINT "competition_name_nonblank" CHECK (length(trim("competition"."name")) > 0);--> statement-breakpoint
+ALTER TABLE "competition" ADD CONSTRAINT "competition_currency_mxn" CHECK ("competition"."currency" = 'MXN');

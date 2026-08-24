@@ -22,6 +22,20 @@
       "when": 1787274586663,
       "tag": "0002_closed_manta",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1787349028397,
+      "tag": "0003_orange_galactus",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787349095951,
+      "tag": "0004_funny_speedball",
+      "breakpoints": true
     }
   ]
 }

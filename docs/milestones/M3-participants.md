@@ -29,7 +29,7 @@ Users can enter an approved invitation/join flow; Admins can approve, reject, or
 ## Dependencies
 
 M3 depends on:
-- M1
+- M1.1
 - M2
 
 ## Relevant specifications
@@ -96,6 +96,8 @@ Complete `CompetitionParticipant` fields, capabilities, state, timestamps, uniqu
 - Cover anonymous, Participant-only, Admin-only, Admin+Participant, cross-participant, and cross-Competition cases.
 - Integration-test uniqueness, preservation, state transitions, and audit actor/time.
 - E2E Competition setup: create → invite/join → approve.
+- Reuse the M2 create/list/detail routes as the start of that E2E flow; do not
+  create parallel Competition setup infrastructure.
 - Cover link reuse, authentication redirect/return, rules display before request, revocation, start expiry, and atomic start locking.
 
 ## Acceptance criteria

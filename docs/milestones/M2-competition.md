@@ -2,7 +2,7 @@
 
 ## Status
 
-`FUTURE`
+`COMPLETED`
 
 ## Goal
 
@@ -30,7 +30,7 @@ The creator can create a Competition, see it in “My Competitions,” open it, 
 
 M2 depends on:
 - M0
-- M1
+- M1.1
 
 ## Relevant specifications
 
@@ -56,6 +56,12 @@ M2 depends on:
 - The creator becomes Admin; participation is independent.
 - Competition starts DRAFT and locked configuration cannot be silently mutated after start.
 - Currency is immutable after creation and money later uses integer minor units.
+- M2 configuration consists only of name, Competition type, optional rules note,
+  lifecycle, and immutable `MXN` currency.
+- Suspended accounts remain governed by Better Auth session revocation. Sessions
+  requiring forced password replacement cannot access Competition operations.
+- The global `platform_operator` role grants no Competition access; authorization
+  is resolved only from persisted Competition membership.
 
 ## Application use cases
 
@@ -88,36 +94,48 @@ Add approved `Competition` and minimal `CompetitionParticipant` membership neede
 - Unit-test type/configuration and lifecycle edit invariants.
 - Integration-test uniqueness, foreign keys, and atomic creator membership.
 - Cover anonymous, non-member, Admin, cross-Competition, and forged-ID cases.
-- E2E the create → list → view path if E2E infrastructure is justified here.
+- Competition E2E infrastructure is deferred to M3's complete
+  create → invite → join → approve flow.
 
 ## Acceptance criteria
 
-- [ ] An authenticated User can create a valid Competition.
-- [ ] Creation atomically establishes Competition-scoped Admin capability.
-- [ ] The User sees only authorized Competitions in their list.
-- [ ] Admin can view and edit allowed configuration.
-- [ ] Non-Admin and cross-Competition mutations are rejected.
-- [ ] No global role or future feature table is introduced.
-- [ ] Relevant tests, lint, typecheck, and build pass.
+- [x] An authenticated User can create a valid Competition.
+- [x] Creation atomically establishes Competition-scoped Admin capability.
+- [x] The User sees only authorized Competitions in their list.
+- [x] Admin can view and edit allowed configuration.
+- [x] Non-Admin and cross-Competition mutations are rejected.
+- [x] No global role or future feature table is introduced.
+- [x] Relevant tests, lint, typecheck, and build pass.
 
 ## Definition of Done
 
-- [ ] Scope implemented.
-- [ ] Out-of-scope functionality was not introduced.
-- [ ] Approved domain rules preserved.
-- [ ] Authorization enforced server-side.
-- [ ] Relevant tests added.
-- [ ] No duplicated business logic.
-- [ ] No locked specification modified.
-- [ ] lint passes.
-- [ ] typecheck passes.
-- [ ] tests pass.
-- [ ] build passes.
-- [ ] milestone code review completed.
+- [x] Scope implemented.
+- [x] Out-of-scope functionality was not introduced.
+- [x] Approved domain rules preserved.
+- [x] Authorization enforced server-side.
+- [x] Relevant tests added.
+- [x] No duplicated business logic.
+- [x] No locked specification modified.
+- [x] lint passes.
+- [x] typecheck passes.
+- [x] tests pass.
+- [x] build passes.
+- [x] milestone code review completed.
 
 ## Risks / implementation notes
 
 Choose the application-wide product ID and Drizzle enum strategies during planning, as permitted implementation decisions. M3 owns the start transition after membership setup; M11 owns the explicit completion action and readiness validation.
+
+## Follow-on routing
+
+- M3 extends the existing unique membership row with participant capability/state,
+  owns invitation/join/approval/removal, and adds the deferred Competition E2E flow.
+- M4 owns rounds, questions, scoring configuration, and publication freeze.
+- M8 adds payment configuration while preserving the M2 `MXN` currency invariant.
+- M11 owns Competition completion and final read-only results.
+- No M2.1 is currently required. The reproducible managed-environment Turbopack
+  worker restriction is handled by the supported webpack production builder.
+  Any later isolated hardening milestone must contain no new product behavior.
 
 ## Open questions
 
