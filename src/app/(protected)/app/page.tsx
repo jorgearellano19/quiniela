@@ -52,18 +52,12 @@ export default async function AppHomePage() {
               <CardHeader>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="secondary">{item.statusLabel}</Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {item.currency}
-                  </span>
+                  <span className="text-xs text-muted-foreground">{item.currency}</span>
                 </div>
-                <CardTitle className="font-heading text-2xl">
-                  {item.name}
-                </CardTitle>
+                <CardTitle className="font-heading text-2xl">{item.name}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  {item.typeLabel}
-                </p>
+                <p className="text-sm text-muted-foreground">{item.typeLabel}</p>
                 <p className="mt-3 text-xs text-muted-foreground">
                   Actualizada{" "}
                   {new Intl.DateTimeFormat("es-MX", {
@@ -91,8 +85,8 @@ export default async function AppHomePage() {
             </EmptyMedia>
             <EmptyTitle>Aún no tienes quinielas</EmptyTitle>
             <EmptyDescription>
-              Crea una quiniela para configurar sus reglas. Las quinielas a las
-              que te unas también aparecerán aquí.
+              Crea una quiniela para configurar sus reglas. Las quinielas a las que te
+              unas también aparecerán aquí.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>

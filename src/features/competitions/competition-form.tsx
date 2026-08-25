@@ -28,10 +28,7 @@ export function CompetitionForm({
   action,
   initial,
 }: {
-  action: (
-    state: CompetitionFormState,
-    data: FormData,
-  ) => Promise<CompetitionFormState>;
+  action: (state: CompetitionFormState, data: FormData) => Promise<CompetitionFormState>;
   initial?: { name: string; type: CompetitionType; rulesNote: string | null };
 }) {
   const [state, formAction, pending] = useActionState(action, initialState);
@@ -57,10 +54,7 @@ export function CompetitionForm({
         </Field>
         <Field data-invalid={Boolean(state.fieldErrors?.type)}>
           <FieldLabel htmlFor="type">Tipo de competencia</FieldLabel>
-          <Select
-            name="type"
-            {...(initial?.type ? { defaultValue: initial.type } : {})}
-          >
+          <Select name="type" {...(initial?.type ? { defaultValue: initial.type } : {})}>
             <SelectTrigger
               id="type"
               aria-invalid={Boolean(state.fieldErrors?.type)}
@@ -71,12 +65,8 @@ export function CompetitionForm({
             <SelectContent>
               <SelectGroup>
                 <SelectItem value="LEAGUE">Liga</SelectItem>
-                <SelectItem value="LEAGUE_PLAYOFFS">
-                  Liga con eliminatorias
-                </SelectItem>
-                <SelectItem value="GROUP_PLAYOFFS">
-                  Grupos con eliminatorias
-                </SelectItem>
+                <SelectItem value="LEAGUE_PLAYOFFS">Liga con eliminatorias</SelectItem>
+                <SelectItem value="GROUP_PLAYOFFS">Grupos con eliminatorias</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -85,9 +75,7 @@ export function CompetitionForm({
         <Field data-invalid={Boolean(state.fieldErrors?.rulesNote)}>
           <FieldLabel htmlFor="rulesNote">
             Nota de reglas{" "}
-            <span className="font-normal text-muted-foreground">
-              (opcional)
-            </span>
+            <span className="font-normal text-muted-foreground">(opcional)</span>
           </FieldLabel>
           <Textarea
             id="rulesNote"

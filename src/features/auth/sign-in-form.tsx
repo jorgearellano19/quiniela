@@ -3,12 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/infrastructure/auth/auth-client";
@@ -16,7 +11,7 @@ import { signInSchema } from "@/lib/validation/auth";
 import { AuthFormAlert } from "./auth-form-alert";
 import { initialAuthActionState } from "./auth-state";
 
-export function SignInForm() {
+export function SignInForm({ returnTo = "/app" }: { returnTo?: string }) {
   const router = useRouter();
   const [state, setState] = useState(initialAuthActionState);
   const [pending, setPending] = useState(false);
@@ -58,7 +53,7 @@ export function SignInForm() {
           setPending(false);
           return;
         }
-        router.push("/app");
+        router.push(returnTo);
         router.refresh();
       }}
     >
@@ -67,9 +62,7 @@ export function SignInForm() {
         <Field data-invalid={Boolean(emailErrors?.length)}>
           <FieldLabel htmlFor="sign-in-email">Correo electrónico</FieldLabel>
           <Input
-            aria-describedby={
-              emailErrors?.length ? "sign-in-email-error" : undefined
-            }
+            aria-describedby={emailErrors?.length ? "sign-in-email-error" : undefined}
             aria-invalid={Boolean(emailErrors?.length)}
             autoComplete="email"
             id="sign-in-email"
@@ -96,10 +89,7 @@ export function SignInForm() {
             required
             type="password"
           />
-          <FieldError
-            id="sign-in-password-error"
-            errors={toErrors(passwordErrors)}
-          />
+          <FieldError id="sign-in-password-error" errors={toErrors(passwordErrors)} />
         </Field>
       </FieldGroup>
       <Button disabled={pending} type="submit">
@@ -109,7 +99,7 @@ export function SignInForm() {
         ¿Aún no tienes cuenta?{" "}
         <Link
           className="font-medium text-primary underline-offset-4 hover:underline"
-          href="/sign-up"
+          href={`/sign-up${returnTo !== "/app" ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`}
         >
           Créala aquí
         </Link>

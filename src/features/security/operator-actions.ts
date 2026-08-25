@@ -48,29 +48,16 @@ export async function findUserAction(_state: OperatorState, data: FormData) {
   });
 }
 
-export async function operatorMutationAction(
-  _state: OperatorState,
-  data: FormData,
-) {
+export async function operatorMutationAction(_state: OperatorState, data: FormData) {
   return safe(async () => {
     const currentActor = await actor();
     const targetId = value(data, "targetId");
     const reason = value(data, "reason");
     const operation = value(data, "operation");
     if (operation === "suspend") {
-      await suspendSecurityUser(
-        authSecurityRepository,
-        currentActor,
-        targetId,
-        reason,
-      );
+      await suspendSecurityUser(authSecurityRepository, currentActor, targetId, reason);
     } else if (operation === "restore") {
-      await restoreSecurityUser(
-        authSecurityRepository,
-        currentActor,
-        targetId,
-        reason,
-      );
+      await restoreSecurityUser(authSecurityRepository, currentActor, targetId, reason);
     } else if (operation === "revoke-sessions") {
       await revokeSecurityUserSessions(
         authSecurityRepository,
@@ -79,22 +66,14 @@ export async function operatorMutationAction(
         reason,
       );
     } else if (operation === "temporary-password") {
-      const issued = await issueTemporaryPassword(
-        authSecurityRepository,
-        currentActor,
-        {
-          targetId,
-          reason,
-          verificationMethod: value(
-            data,
-            "verificationMethod",
-          ) as VerificationMethod,
-        },
-      );
+      const issued = await issueTemporaryPassword(authSecurityRepository, currentActor, {
+        targetId,
+        reason,
+        verificationMethod: value(data, "verificationMethod") as VerificationMethod,
+      });
       return {
         status: "success",
-        message:
-          "Contraseña temporal emitida. Solo se mostrará en esta respuesta.",
+        message: "Contraseña temporal emitida. Solo se mostrará en esta respuesta.",
         temporaryPassword: issued.temporaryPassword,
         temporaryPasswordExpiresAt: issued.expiresAt.toISOString(),
       };

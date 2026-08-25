@@ -38,9 +38,7 @@ export default async function ProtectedAppLayout({
               </Link>
             ) : null}
             <div className="max-w-44 text-right sm:max-w-60">
-              <p className="truncate text-sm font-medium">
-                {session.user.name}
-              </p>
+              <p className="truncate text-sm font-medium">{session.user.name}</p>
               <p className="truncate text-xs text-muted-foreground">
                 {session.user.email}
               </p>
@@ -49,9 +47,7 @@ export default async function ProtectedAppLayout({
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
-        {children}
-      </main>
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">{children}</main>
     </div>
   );
 }

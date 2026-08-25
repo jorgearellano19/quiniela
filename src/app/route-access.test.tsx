@@ -63,9 +63,9 @@ describe("authentication route access", () => {
 
   it("rejects anonymous access to the protected layout", async () => {
     getServerSession.mockResolvedValue(null);
-    await expect(
-      ProtectedAppLayout({ children: null as ReactNode }),
-    ).rejects.toThrow("REDIRECT:/sign-in");
+    await expect(ProtectedAppLayout({ children: null as ReactNode })).rejects.toThrow(
+      "REDIRECT:/sign-in",
+    );
   });
 
   it("renders protected content for an authenticated session", async () => {
@@ -80,16 +80,14 @@ describe("authentication route access", () => {
       ...session,
       user: { ...session.user, passwordChangeRequired: true },
     });
-    await expect(
-      ProtectedAppLayout({ children: <p>Protegido</p> }),
-    ).rejects.toThrow("REDIRECT:/account/change-password");
+    await expect(ProtectedAppLayout({ children: <p>Protegido</p> })).rejects.toThrow(
+      "REDIRECT:/account/change-password",
+    );
   });
 
   it("redirects authenticated users away from auth screens", async () => {
     getServerSession.mockResolvedValue(session);
-    await expect(AuthLayout({ children: null })).rejects.toThrow(
-      "REDIRECT:/app",
-    );
+    await expect(AuthLayout({ children: null })).rejects.toThrow("REDIRECT:/app");
   });
 
   it("allows anonymous users to render auth screens", async () => {

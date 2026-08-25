@@ -6,27 +6,24 @@ import {
 } from "./competition";
 const now = new Date("2026-08-21T12:00:00.000Z");
 describe("Competition", () => {
-  it.each(COMPETITION_TYPES)(
-    "creates approved type %s as DRAFT in MXN",
-    (type) => {
-      const value = createCompetition({
-        id: "id",
-        name: "  La copa  ",
-        type,
-        actorUserId: "user",
-        now,
-      });
-      expect(value).toMatchObject({
-        name: "La copa",
-        type,
-        status: "DRAFT",
-        currency: "MXN",
-        rulesNote: null,
-        createdByUserId: "user",
-        updatedByUserId: "user",
-      });
-    },
-  );
+  it.each(COMPETITION_TYPES)("creates approved type %s as DRAFT in MXN", (type) => {
+    const value = createCompetition({
+      id: "id",
+      name: "  La copa  ",
+      type,
+      actorUserId: "user",
+      now,
+    });
+    expect(value).toMatchObject({
+      name: "La copa",
+      type,
+      status: "DRAFT",
+      currency: "MXN",
+      rulesNote: null,
+      createdByUserId: "user",
+      updatedByUserId: "user",
+    });
+  });
   it("normalizes and edits optional configuration in DRAFT", () => {
     const value = createCompetition({
       id: "id",

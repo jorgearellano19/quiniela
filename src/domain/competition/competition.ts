@@ -1,8 +1,4 @@
-export const COMPETITION_TYPES = [
-  "LEAGUE",
-  "LEAGUE_PLAYOFFS",
-  "GROUP_PLAYOFFS",
-] as const;
+export const COMPETITION_TYPES = ["LEAGUE", "LEAGUE_PLAYOFFS", "GROUP_PLAYOFFS"] as const;
 export type CompetitionType = (typeof COMPETITION_TYPES)[number];
 export const COMPETITION_STATUSES = ["DRAFT", "STARTED", "COMPLETED"] as const;
 export type CompetitionStatus = (typeof COMPETITION_STATUSES)[number];
@@ -19,6 +15,9 @@ export type Competition = Readonly<{
   updatedByUserId: string;
   createdAt: Date;
   updatedAt: Date;
+  invitationTokenHash: string | null;
+  invitationInvalidatedAt: Date | null;
+  startedAt: Date | null;
 }>;
 
 export class CompetitionDomainError extends Error {}
@@ -59,6 +58,9 @@ export function createCompetition(input: {
     updatedByUserId: input.actorUserId,
     createdAt: now,
     updatedAt: now,
+    invitationTokenHash: null,
+    invitationInvalidatedAt: null,
+    startedAt: null,
   };
 }
 

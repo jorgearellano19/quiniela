@@ -10,7 +10,13 @@ import { SignUpForm } from "@/features/auth/sign-up-form";
 
 export const metadata: Metadata = { title: "Crear cuenta · Quiniela" };
 
-export default function SignUpPage() {
+export default async function SignUpPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ returnTo?: string }>;
+}) {
+  const requested = (await searchParams).returnTo;
+  const returnTo = requested?.startsWith("/invite/") ? requested : "/app";
   return (
     <div className="auth-card">
       <Card>
@@ -31,7 +37,7 @@ export default function SignUpPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <SignUpForm />
+          <SignUpForm returnTo={returnTo} />
         </CardContent>
       </Card>
     </div>

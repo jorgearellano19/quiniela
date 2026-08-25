@@ -31,9 +31,7 @@ export function OperatorConsole() {
         className="flex flex-col gap-3 sm:flex-row sm:items-end"
       >
         <Field className="flex-1">
-          <FieldLabel htmlFor="operator-email">
-            Correo electrónico exacto
-          </FieldLabel>
+          <FieldLabel htmlFor="operator-email">Correo electrónico exacto</FieldLabel>
           <Input
             autoComplete="off"
             id="operator-email"
@@ -43,9 +41,7 @@ export function OperatorConsole() {
             type="email"
           />
         </Field>
-        <Button disabled={searching}>
-          {searching ? "Buscando…" : "Buscar cuenta"}
-        </Button>
+        <Button disabled={searching}>{searching ? "Buscando…" : "Buscar cuenta"}</Button>
       </form>
       {search.message ? (
         <Alert variant="destructive">
@@ -74,12 +70,7 @@ export function OperatorConsole() {
                   <FieldLabel htmlFor="operator-reason">
                     Motivo o nota de verificación
                   </FieldLabel>
-                  <Input
-                    id="operator-reason"
-                    maxLength={500}
-                    name="reason"
-                    required
-                  />
+                  <Input id="operator-reason" maxLength={500} name="reason" required />
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="verification-method">
@@ -125,9 +116,7 @@ export function OperatorConsole() {
             </form>
             {mutation.message ? (
               <Alert className="mt-4">
-                <AlertDescription role="status">
-                  {mutation.message}
-                </AlertDescription>
+                <AlertDescription role="status">{mutation.message}</AlertDescription>
               </Alert>
             ) : null}
             {mutation.temporaryPassword ? (
@@ -135,9 +124,7 @@ export function OperatorConsole() {
                 className="mt-3 rounded-lg border border-primary bg-primary/5 p-3"
                 role="status"
               >
-                <p className="text-xs text-muted-foreground">
-                  Expira en 15 minutos
-                </p>
+                <p className="text-xs text-muted-foreground">Expira en 15 minutos</p>
                 <code className="break-all text-lg font-semibold">
                   {mutation.temporaryPassword}
                 </code>

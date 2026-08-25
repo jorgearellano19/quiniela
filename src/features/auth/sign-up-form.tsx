@@ -3,12 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/infrastructure/auth/auth-client";
@@ -53,7 +48,7 @@ const fieldCopy: ReadonlyArray<
   },
 ];
 
-export function SignUpForm() {
+export function SignUpForm({ returnTo = "/app" }: { returnTo?: string }) {
   const router = useRouter();
   const [state, setState] = useState(initialAuthActionState);
   const [pending, setPending] = useState(false);
@@ -98,7 +93,7 @@ export function SignUpForm() {
           setPending(false);
           return;
         }
-        router.push("/app");
+        router.push(returnTo);
         router.refresh();
       }}
     >
@@ -118,12 +113,8 @@ export function SignUpForm() {
                 autoComplete={autoComplete}
                 id={inputId}
                 inputMode={type === "email" ? "email" : undefined}
-                maxLength={
-                  field === "name" ? 80 : field === "email" ? 320 : 128
-                }
-                minLength={
-                  field === "name" ? 2 : type === "password" ? 8 : undefined
-                }
+                maxLength={field === "name" ? 80 : field === "email" ? 320 : 128}
+                minLength={field === "name" ? 2 : type === "password" ? 8 : undefined}
                 name={field}
                 placeholder={placeholder}
                 required
@@ -144,7 +135,7 @@ export function SignUpForm() {
         ¿Ya tienes cuenta?{" "}
         <Link
           className="font-medium text-primary underline-offset-4 hover:underline"
-          href="/sign-in"
+          href={`/sign-in${returnTo !== "/app" ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`}
         >
           Inicia sesión
         </Link>

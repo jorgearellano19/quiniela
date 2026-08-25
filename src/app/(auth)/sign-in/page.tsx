@@ -12,11 +12,12 @@ import { SignInForm } from "@/features/auth/sign-in-form";
 export const metadata: Metadata = { title: "Iniciar sesión · Quiniela" };
 
 type SignInPageProps = Readonly<{
-  searchParams: Promise<{ signedOut?: string }>;
+  searchParams: Promise<{ signedOut?: string; returnTo?: string }>;
 }>;
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
-  const { signedOut } = await searchParams;
+  const { signedOut, returnTo: requested } = await searchParams;
+  const returnTo = requested?.startsWith("/invite/") ? requested : "/app";
 
   return (
     <div className="auth-card">
@@ -33,19 +34,15 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
               Vuelve a competir
             </h1>
           </CardTitle>
-          <CardDescription>
-            Inicia sesión para entrar a tus quinielas.
-          </CardDescription>
+          <CardDescription>Inicia sesión para entrar a tus quinielas.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           {signedOut === "1" ? (
             <Alert>
-              <AlertDescription>
-                Tu sesión se cerró correctamente.
-              </AlertDescription>
+              <AlertDescription>Tu sesión se cerró correctamente.</AlertDescription>
             </Alert>
           ) : null}
-          <SignInForm />
+          <SignInForm returnTo={returnTo} />
         </CardContent>
       </Card>
     </div>

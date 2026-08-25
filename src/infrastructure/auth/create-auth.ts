@@ -121,8 +121,7 @@ export function createAuth(
           if (
             existingUser?.banned ||
             (existingUser?.passwordChangeRequired &&
-              (!existingUser.expiresAt ||
-                existingUser.expiresAt.getTime() <= Date.now()))
+              (!existingUser.expiresAt || existingUser.expiresAt.getTime() <= Date.now()))
           ) {
             throw new APIError("UNAUTHORIZED", {
               message: "Invalid email or password.",

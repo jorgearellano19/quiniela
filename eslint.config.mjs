@@ -5,10 +5,19 @@ import nextTypescript from "eslint-config-next/typescript";
 export default defineConfig([
   ...nextCoreWebVitals,
   ...nextTypescript,
-  globalIgnores([
-    ".next/**",
-    ".codex/worktrees/**",
-    "drizzle/**",
-    "next-env.d.ts",
-  ]),
+  {
+    rules: {
+      "max-len": [
+        "error",
+        {
+          code: 100,
+          ignoreComments: false,
+          ignoreStrings: true,
+          ignoreTemplateLiterals: true,
+          ignoreUrls: true,
+        },
+      ],
+    },
+  },
+  globalIgnores([".next/**", ".codex/worktrees/**", "drizzle/**", "next-env.d.ts"]),
 ]);

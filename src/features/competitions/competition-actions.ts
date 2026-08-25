@@ -36,12 +36,9 @@ function formError(error: unknown) {
     ? "No fue posible completar la operación. Inténtalo de nuevo."
     : safe.message;
 }
-function validate(
-  value: ReturnType<typeof input>,
-): CompetitionFormState | null {
+function validate(value: ReturnType<typeof input>): CompetitionFormState | null {
   const fieldErrors: NonNullable<CompetitionFormState["fieldErrors"]> = {};
-  if (!value.name.trim())
-    fieldErrors.name = "Escribe un nombre para la quiniela.";
+  if (!value.name.trim()) fieldErrors.name = "Escribe un nombre para la quiniela.";
   else if (value.name.trim().length > 120)
     fieldErrors.name = "Usa 120 caracteres o menos.";
   if (!value.type) fieldErrors.type = "Selecciona un tipo de competencia.";
@@ -65,8 +62,7 @@ export async function createCompetitionAction(
   if (invalid) return invalid;
   let id: string;
   try {
-    id = (await createCompetition(competitionRepository, currentActor, value))
-      .id;
+    id = (await createCompetition(competitionRepository, currentActor, value)).id;
   } catch (error) {
     return { message: formError(error) };
   }

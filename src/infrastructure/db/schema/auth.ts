@@ -20,21 +20,15 @@ export const user = pgTable("user", {
   banned: boolean("banned").default(false).notNull(),
   banReason: text("ban_reason"),
   banExpires: timestamp("ban_expires", { withTimezone: true }),
-  passwordChangeRequired: boolean("password_change_required")
-    .default(false)
-    .notNull(),
+  passwordChangeRequired: boolean("password_change_required").default(false).notNull(),
   temporaryPasswordIssuedAt: timestamp("temporary_password_issued_at", {
     withTimezone: true,
   }),
   temporaryPasswordExpiresAt: timestamp("temporary_password_expires_at", {
     withTimezone: true,
   }),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const session = pgTable(
@@ -43,12 +37,8 @@ export const session = pgTable(
     id: text("id").primaryKey(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     token: text("token").notNull().unique(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     ipAddress: text("ip_address"),
     userAgent: text("user_agent"),
     impersonatedBy: text("impersonated_by"),
@@ -80,18 +70,11 @@ export const account = pgTable(
     }),
     scope: text("scope"),
     password: text("password"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("account_issuer_account_unique").on(
-      table.issuer,
-      table.accountId,
-    ),
+    uniqueIndex("account_issuer_account_unique").on(table.issuer, table.accountId),
     index("account_user_id_idx").on(table.userId),
   ],
 );
@@ -103,12 +86,8 @@ export const verification = pgTable(
     identifier: text("identifier").notNull(),
     value: text("value").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
@@ -138,9 +117,7 @@ export const authSecurityEvent = pgTable(
     action: text("action").notNull(),
     reason: text("reason"),
     verificationMethod: text("verification_method"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     index("auth_security_event_target_created_idx").on(

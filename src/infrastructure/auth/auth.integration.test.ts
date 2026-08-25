@@ -60,8 +60,7 @@ function jsonRequest(path: string, body: object, cookie?: string) {
 
 function sessionCookie(response: Response): string {
   const value = response.headers.get("set-cookie");
-  if (!value)
-    throw new Error("Expected Better Auth to issue a session cookie.");
+  if (!value) throw new Error("Expected Better Auth to issue a session cookie.");
   return value.split(";", 1)[0] ?? "";
 }
 
@@ -73,10 +72,7 @@ async function signUp(email = "persona@ejemplo.com", name = "Persona Usuaria") {
   });
 }
 
-async function signIn(
-  email = "persona@ejemplo.com",
-  suppliedPassword = password,
-) {
+async function signIn(email = "persona@ejemplo.com", suppliedPassword = password) {
   return jsonRequest("/sign-in/email", {
     email,
     password: suppliedPassword,
@@ -94,10 +90,7 @@ describe("Better Auth email and password flow", () => {
   });
 
   it("signs up and retrieves the server-side session across requests", async () => {
-    const signUpResponse = await signUp(
-      "  PERSONA@EJEMPLO.COM ",
-      "  Persona Usuaria  ",
-    );
+    const signUpResponse = await signUp("  PERSONA@EJEMPLO.COM ", "  Persona Usuaria  ");
     expect(signUpResponse.status).toBe(200);
     expect(signUpResponse.headers.get("set-cookie")).toBeNull();
 
@@ -142,10 +135,7 @@ describe("Better Auth email and password flow", () => {
   it("signs in with valid credentials and rejects invalid credentials", async () => {
     expect((await signUp()).status).toBe(200);
 
-    const invalidResponse = await signIn(
-      "persona@ejemplo.com",
-      "password-incorrecto",
-    );
+    const invalidResponse = await signIn("persona@ejemplo.com", "password-incorrecto");
     expect(invalidResponse.ok).toBe(false);
     expect(await invalidResponse.text()).not.toContain("stack");
 
@@ -216,9 +206,7 @@ describe("Better Auth email and password flow", () => {
     await sql`update ${sql("account")} set password = ${temporaryHash} where user_id = (select id from ${sql("user")} where email = 'persona@ejemplo.com')`;
     await sql`update ${sql("user")} set password_change_required = true, temporary_password_issued_at = now(), temporary_password_expires_at = now() + interval '15 minutes' where email = 'persona@ejemplo.com'`;
 
-    const cookie = sessionCookie(
-      await signIn("persona@ejemplo.com", temporaryPassword),
-    );
+    const cookie = sessionCookie(await signIn("persona@ejemplo.com", temporaryPassword));
     const changed = await jsonRequest(
       "/change-password",
       {
@@ -252,9 +240,7 @@ describe("Better Auth email and password flow", () => {
     `;
     if (!operator || !target) throw new Error("Expected test users.");
 
-    const targetCookie = sessionCookie(
-      await signIn("target@example.com", password),
-    );
+    const targetCookie = sessionCookie(await signIn("target@example.com", password));
     expect(targetCookie).toContain("session_token");
     const issued = await securityRepository.issueTemporaryPassword({
       actorId: operator.id,

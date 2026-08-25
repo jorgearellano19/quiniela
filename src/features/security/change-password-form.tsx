@@ -4,20 +4,11 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/infrastructure/auth/auth-client";
 
-export function ChangePasswordForm({
-  required = false,
-}: {
-  required?: boolean;
-}) {
+export function ChangePasswordForm({ required = false }: { required?: boolean }) {
   const router = useRouter();
   const [message, setMessage] = useState<string>();
   const [pending, setPending] = useState(false);
@@ -35,9 +26,7 @@ export function ChangePasswordForm({
           newPassword.length > 128 ||
           newPassword !== confirmation
         ) {
-          setMessage(
-            "La contraseña debe tener entre 8 y 128 caracteres y coincidir.",
-          );
+          setMessage("La contraseña debe tener entre 8 y 128 caracteres y coincidir.");
           return;
         }
         setPending(true);

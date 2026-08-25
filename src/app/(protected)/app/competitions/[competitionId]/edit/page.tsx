@@ -21,11 +21,7 @@ export default async function EditCompetitionPage({
 }) {
   const { competitionId } = await params;
   const actor = await requireCompetitionPageActor();
-  const detail = await getCompetitionDetail(
-    competitionRepository,
-    actor,
-    competitionId,
-  );
+  const detail = await getCompetitionDetail(competitionRepository, actor, competitionId);
   if (!detail?.canEdit) redirect(`/app/competitions/${competitionId}`);
   const action = updateCompetitionAction.bind(null, competitionId);
   return (

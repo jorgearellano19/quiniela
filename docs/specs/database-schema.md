@@ -55,7 +55,7 @@ Competition
 ├── currency
 ├── rulesNote
 ├── invitationTokenHash
-├── invitationRevokedAt
+├── invitationInvalidatedAt
 ├── startedAt
 ├── completedAt
 ├── createdByUserId
@@ -84,8 +84,10 @@ CompetitionParticipant
 ├── userId
 ├── role/capabilities
 ├── status
-├── joinedAt
+├── requestedAt
 ├── approvedAt
+├── statusChangedAt
+├── updatedByUserId
 ├── createdAt
 └── updatedAt
 ```
@@ -101,9 +103,11 @@ REJECTED
 REMOVED
 ```
 
-Enforce at most one active participant record per User + Competition.
+Enforce exactly one reusable membership row per User + Competition. Creator rows are backfilled to `ACTIVE` with creator attribution.
 
 Opening a valid invitation link requires authentication and shows rules before a join request creates or restores `PENDING`. Admin approval changes it to `ACTIVE`. Reuse the same membership row for rejection, removal, and a later request; do not create duplicate User + Competition rows.
+
+Append `CompetitionParticipantEvent` rows for each real `REQUESTED`, `APPROVED`, `REJECTED`, `REMOVED`, or `LEFT` transition with membership, actor, previous/next status, and UTC timestamp. Idempotent retries create no event.
 
 ## 5. Round
 

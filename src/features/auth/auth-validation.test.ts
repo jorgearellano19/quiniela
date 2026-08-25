@@ -13,8 +13,7 @@ describe("authentication validation", () => {
 
   it("rejects invalid emails and password boundaries", () => {
     expect(
-      signInSchema.safeParse({ email: "no-es-correo", password: "corta" })
-        .success,
+      signInSchema.safeParse({ email: "no-es-correo", password: "corta" }).success,
     ).toBe(false);
     expect(
       signInSchema.safeParse({

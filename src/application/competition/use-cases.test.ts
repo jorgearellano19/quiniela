@@ -7,9 +7,12 @@ import {
   type CompetitionRepository,
   updateCompetition,
 } from "./use-cases";
-function fixture(
-  overrides: Partial<Competition & { isAdmin: boolean }> = {},
-): Competition & { isAdmin: boolean } {
+type CompetitionMembership = Competition & {
+  isAdmin: boolean;
+  membershipStatus: "PENDING" | "ACTIVE" | "REJECTED" | "REMOVED";
+};
+
+function fixture(overrides: Partial<CompetitionMembership> = {}): CompetitionMembership {
   return {
     id: "00000000-0000-4000-8000-000000000001",
     name: "Copa",
@@ -21,20 +24,22 @@ function fixture(
     updatedByUserId: "owner",
     createdAt: new Date(),
     updatedAt: new Date(),
+    invitationTokenHash: null,
+    invitationInvalidatedAt: null,
+    startedAt: null,
     isAdmin: true,
+    membershipStatus: "ACTIVE",
     ...overrides,
   };
 }
-function repository(rows: Array<Competition & { isAdmin: boolean }> = []) {
+function repository(rows: CompetitionMembership[] = []) {
   const created: Competition[] = [];
   const repo: CompetitionRepository = {
     async createWithAdmin(value) {
       created.push(value);
     },
     async listForUser(userId) {
-      return rows.filter(
-        (row) => row.isAdmin && row.createdByUserId === userId,
-      );
+      return rows.filter((row) => row.isAdmin && row.createdByUserId === userId);
     },
     async findForUser(id, userId) {
       return (

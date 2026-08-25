@@ -2,7 +2,7 @@
 
 ## Status
 
-`FUTURE`
+`IN PROGRESS`
 
 ## Goal
 
@@ -19,6 +19,7 @@ Users can enter an approved invitation/join flow; Admins can approve, reject, or
 - `PENDING`, `ACTIVE`, `REJECTED`, and `REMOVED` membership states.
 - Admin + Participant capability coexistence and contextual authorization.
 - `startCompetition`, including rule lock and invitation invalidation.
+- Creator initialization as `ADMIN + ACTIVE PARTICIPANT`; DRAFT-only leave/removal; status visibility in “Mis quinielas”; and Admin roster name/email.
 
 ## Out of scope
 
@@ -59,10 +60,12 @@ M3 depends on:
 - A join request is PENDING until Admin approval; viewing rules is not persisted acceptance in MVP.
 - Starting the Competition locks rules and invalidates the invitation; it does not require all Participants to record acceptance.
 - A Participant may voluntarily leave only while the Competition is DRAFT; post-start leave is rejected. Admin removal is explicit/audited and preserves history.
+- A User with no membership row, or with `REJECTED` or `REMOVED` status, may request again through a valid invitation. Repeated `PENDING` requests are idempotent and `ACTIVE` duplicates are rejected.
+- Starting requires no pending requests and ACTIVE counts of at least 1 for LEAGUE, 2–30 for LEAGUE_PLAYOFFS, or exactly 8/16/32/64 for GROUP_PLAYOFFS. Starting freezes the roster.
+- `isAdmin` is independent of participant status. Leaving or removal does not remove Admin authority.
 
 ## Application use cases
 
-- `inviteParticipant`
 - `approveParticipant`
 - `removeParticipant`
 - `leaveCompetition`
@@ -102,30 +105,30 @@ Complete `CompetitionParticipant` fields, capabilities, state, timestamps, uniqu
 
 ## Acceptance criteria
 
-- [ ] Admin can create/rotate/revoke one reusable opaque invitation link.
-- [ ] Authenticated invitees see structured rules and Admin note before requesting to join.
-- [ ] A join request creates/restores PENDING membership and still requires Admin approval.
-- [ ] Admin can approve or reject within their Competition.
-- [ ] DRAFT removal preserves the membership record and audit information.
-- [ ] Admin + Participant coexistence works.
-- [ ] Duplicate and cross-Competition membership actions are rejected.
-- [ ] Starting locks Competition rules and invalidates the invitation without requiring persisted Participant acceptance.
+- [x] Admin can create/rotate/revoke one reusable opaque invitation link.
+- [x] Authenticated invitees see structured rules and Admin note before requesting to join.
+- [x] A join request creates/restores PENDING membership and still requires Admin approval.
+- [x] Admin can approve or reject within their Competition.
+- [x] DRAFT removal preserves the membership record and audit information.
+- [x] Admin + Participant coexistence works.
+- [x] Duplicate and cross-Competition membership actions are rejected.
+- [x] Starting locks Competition rules and invalidates the invitation without requiring persisted Participant acceptance.
 - [ ] Relevant tests, lint, typecheck, and build pass.
 
 ## Definition of Done
 
-- [ ] Scope implemented.
-- [ ] Out-of-scope functionality was not introduced.
-- [ ] Approved domain rules preserved.
-- [ ] Authorization enforced server-side.
-- [ ] Relevant tests added.
-- [ ] No duplicated business logic.
-- [ ] No locked specification modified.
-- [ ] lint passes.
-- [ ] typecheck passes.
-- [ ] tests pass.
+- [x] Scope implemented.
+- [x] Out-of-scope functionality was not introduced.
+- [x] Approved domain rules preserved.
+- [x] Authorization enforced server-side.
+- [x] Relevant tests added.
+- [x] No duplicated business logic.
+- [x] No locked specification modified outside the explicitly authorized M3 corrections.
+- [x] lint passes.
+- [x] typecheck passes.
+- [x] tests pass.
 - [ ] build passes.
-- [ ] milestone code review completed.
+- [x] milestone code review completed.
 
 ## Risks / implementation notes
 
@@ -133,4 +136,4 @@ Do not solve uniqueness by creating duplicate historical memberships. Model capa
 
 ## Open questions
 
-None.
+The standard Turbopack production build remains blocked in the current execution environment because its CSS worker cannot bind an internal port (`Operation not permitted`). The same source passes `next build --webpack`; keep M3 `IN PROGRESS` until the standard `pnpm build` passes in CI or an unrestricted environment.

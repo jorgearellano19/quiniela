@@ -5,6 +5,8 @@ node_modules/
 .env.*.local
 !.env.example
 coverage/
+playwright-report/
+test-results/
 .DS_Store
 *.tsbuildinfo
 .codex/worktrees/

@@ -6,9 +6,7 @@ export const metadata: Metadata = {
   title: "Quiniela",
   description: "Crea, comparte y compite en quinielas de pronósticos.",
 };
-export default function RootLayout({
-  children,
-}: Readonly<{ children: ReactNode }>) {
+export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="es">
       <body>{children}</body>

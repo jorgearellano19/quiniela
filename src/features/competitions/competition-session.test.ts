@@ -20,9 +20,7 @@ describe("Competition page session boundary", () => {
 
   it("redirects anonymous access independently of the layout", async () => {
     getServerSession.mockResolvedValue(null);
-    await expect(requireCompetitionPageActor()).rejects.toThrow(
-      "REDIRECT:/sign-in",
-    );
+    await expect(requireCompetitionPageActor()).rejects.toThrow("REDIRECT:/sign-in");
   });
 
   it("redirects forced-password access independently of the layout", async () => {

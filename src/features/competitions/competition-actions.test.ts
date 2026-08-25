@@ -24,10 +24,7 @@ vi.mock("@/infrastructure/competition/competition-repository", () => ({
   competitionRepository: {},
 }));
 
-import {
-  createCompetitionAction,
-  updateCompetitionAction,
-} from "./competition-actions";
+import { createCompetitionAction, updateCompetitionAction } from "./competition-actions";
 
 function data(values: Record<string, string>) {
   const formData = new FormData();
@@ -94,8 +91,6 @@ describe("Competition Server Actions", () => {
       ),
     ).rejects.toThrow("REDIRECT:/app/competitions/competition-id?updated=1");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/app");
-    expect(mocks.revalidatePath).toHaveBeenCalledWith(
-      "/app/competitions/competition-id",
-    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/app/competitions/competition-id");
   });
 });

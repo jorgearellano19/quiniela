@@ -24,8 +24,8 @@ export default function NewCompetitionPage() {
           Crea tu quiniela
         </h1>
         <p className="mt-4 text-muted-foreground">
-          Define la base. La moneda será MXN y podrás editar estas reglas
-          mientras siga en borrador.
+          Define la base. La moneda será MXN y podrás editar estas reglas mientras siga en
+          borrador.
         </p>
       </div>
       <Card>

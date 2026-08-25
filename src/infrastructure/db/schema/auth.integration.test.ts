@@ -24,6 +24,7 @@ describe("authentication migration", () => {
       "auth_security_event",
       "competition",
       "competition_participant",
+      "competition_participant_event",
       "rate_limit",
       "session",
       "user",

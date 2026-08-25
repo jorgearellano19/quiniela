@@ -19,6 +19,8 @@
     "test": "vitest run --exclude '**/*.integration.test.ts'",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:integration:local": "node --env-file=.env.local ./node_modules/vitest/vitest.mjs run --config vitest.integration.config.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:local": "node --env-file=.env.local ./node_modules/@playwright/test/cli.js test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/infrastructure/db/migrate.ts",
     "db:migrate:local": "tsx --env-file=.env.local src/infrastructure/db/migrate.ts",
@@ -31,7 +33,7 @@
     "operator:grant": "tsx --env-file=.env.local scripts/operator-role.ts grant",
     "operator:revoke": "tsx --env-file=.env.local scripts/operator-role.ts revoke",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration && pnpm build",
-    "check:local": "pnpm db:setup && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration:local && pnpm build"
+    "check:local": "pnpm db:setup && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:integration:local && pnpm test:e2e:local && pnpm build"
   },
   "dependencies": {
     "better-auth": "1.7.1",
@@ -48,6 +50,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "26.2.0",
     "@types/react": "19.2.18",

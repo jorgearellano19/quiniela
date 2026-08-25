@@ -6,7 +6,7 @@
 Mobile-responsive web application for football prediction competitions. It replaces the Admin workflow of Excel + WhatsApp while keeping the Admin as owner. It includes predictions, scoring, standings, H2H, playoffs, and optional manual payment/debt tracking. It is not a payment processor.
 
 ## 2. Users, ownership, and joining
-A global User can belong to multiple Competitions. Admin authorization is scoped to a Competition. A user may be Admin and Participant in the same Competition. While a Competition is DRAFT, the Admin may remove a participant who joined, including accidentally.
+A global User can belong to multiple Competitions. Admin authorization is scoped to a Competition. The creator is initialized as both Admin and ACTIVE Participant. Admin capability remains independent of participant status. While a Competition is DRAFT, the Admin may remove a participant who joined, including accidentally, and an ACTIVE Participant may voluntarily leave. Rejected and removed users may request again only through a valid invitation.
 
 For MVP, an Admin generates a reusable, opaque Competition invitation link. The link remains valid until the Competition starts and may be revoked earlier by the Admin. Opening it requires authentication. After authentication, the User sees the Competition rules and submits a join request. The request creates a `PENDING` membership; the Admin must approve it before the User becomes an `ACTIVE` Participant.
 
@@ -25,7 +25,7 @@ Allowed participant counts: 8, 16, 32, 64. Group size is 4 or 8. One or two part
 ## 4. Competition lifecycle
 Competition lifecycle is `DRAFT → STARTED → COMPLETED`, with explicit Admin start and completion actions. Starting invalidates the invitation link and locks Competition rules. MVP does not require every active Participant to record a separate rules acceptance before start. Participants may voluntarily leave only while the Competition is DRAFT; they cannot leave after it starts. Admin removals are explicit and audited and preserve historical records.
 
-The Admin may complete a Competition only when its required regular Rounds/phases are effectively FINALIZED and its required final winner is resolved: the League winner for LEAGUE, or the Playoff Champion for LEAGUE_PLAYOFFS/GROUP_PLAYOFFS. COMPLETED preserves read-only historical results and locks remaining administrative configuration.
+Starting requires no pending requests and a playable ACTIVE roster: at least 1 for LEAGUE, 2–30 for LEAGUE_PLAYOFFS, and exactly 8, 16, 32, or 64 for GROUP_PLAYOFFS. Starting freezes the roster. The Admin may complete a Competition only when its required regular Rounds/phases are effectively FINALIZED and its required final winner is resolved: the League winner for LEAGUE, or the Playoff Champion for LEAGUE_PLAYOFFS/GROUP_PLAYOFFS. COMPLETED preserves read-only historical results and locks remaining administrative configuration.
 
 ## 5. Round lifecycle
 `DRAFT -> PUBLISHED -> ACTIVE -> FINISHED -> FINALIZED`.

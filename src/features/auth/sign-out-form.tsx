@@ -9,10 +9,7 @@ import { signOutAction } from "./auth-actions";
 import { initialAuthActionState } from "./auth-state";
 
 export function SignOutForm() {
-  const [state, formAction] = useActionState(
-    signOutAction,
-    initialAuthActionState,
-  );
+  const [state, formAction] = useActionState(signOutAction, initialAuthActionState);
 
   return (
     <form action={formAction} className="flex flex-col items-end gap-2">

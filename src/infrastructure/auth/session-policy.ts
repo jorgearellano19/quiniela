@@ -3,10 +3,7 @@ export type TemporarySessionState = Readonly<{
   temporaryPasswordExpiresAt?: Date | string | null | undefined;
 }>;
 
-export function isTemporarySessionUsable(
-  user: TemporarySessionState,
-  now = new Date(),
-) {
+export function isTemporarySessionUsable(user: TemporarySessionState, now = new Date()) {
   if (!user.passwordChangeRequired) return true;
   const expiresAt = user.temporaryPasswordExpiresAt;
   if (!expiresAt) return false;

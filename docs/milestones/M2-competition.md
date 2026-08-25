@@ -22,7 +22,7 @@ The creator can create a Competition, see it in “My Competitions,” open it, 
 
 ## Out of scope
 
-- Participant invitation/join/approval, Competition start/completion, and creator participation.
+- Participant invitation/join/approval and Competition start/completion. M3 revises creator initialization so the creator is also an ACTIVE Participant.
 - Rounds, questions, payments, prizes, scoring, groups, and playoffs.
 - A global User role.
 
@@ -53,7 +53,7 @@ M2 depends on:
 
 - Competition is the business/authorization boundary.
 - Administration is a Competition-scoped capability, never a global User role.
-- The creator becomes Admin; participation is independent.
+- The creator becomes a Competition-scoped Admin and ACTIVE Participant atomically.
 - Competition starts DRAFT and locked configuration cannot be silently mutated after start.
 - Currency is immutable after creation and money later uses integer minor units.
 - M2 configuration consists only of name, Competition type, optional rules note,
@@ -72,7 +72,7 @@ M2 depends on:
 
 ## Persistence impact
 
-Add approved `Competition` and minimal `CompetitionParticipant` membership needed to represent creator Admin capability, with foreign keys to Better Auth User, uniqueness/indexes from `database-schema.md`, UTC timestamps, and a transaction for Competition plus creator membership. Do not add later feature tables.
+Add approved `Competition` and minimal `CompetitionParticipant` membership needed to represent creator Admin and ACTIVE Participant capabilities, with foreign keys to Better Auth User, uniqueness/indexes from `database-schema.md`, UTC timestamps, and a transaction for Competition plus creator membership. Do not add later feature tables.
 
 ## Authorization
 

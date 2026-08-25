@@ -72,7 +72,7 @@ Never expose:
 
 **Actor:** authenticated User
 
-Creates a Competition and establishes the creator as Admin.
+Creates a Competition and establishes the creator as Admin and ACTIVE Participant.
 
 Input:
 - name;
@@ -82,8 +82,7 @@ Input:
 
 Rules:
 - validate type-specific configuration;
-- creator becomes Admin;
-- creator may also participate independently.
+- creator becomes Admin and ACTIVE Participant in the same membership row.
 
 Returns:
 - Competition;
@@ -122,19 +121,11 @@ Validates the invitation and returns the Competition name, structured rule/confi
 
 After the invitation rules have been displayed, creates or restores the caller's membership as `PENDING`. Never accept a client-provided User/Participant identity. Admin approval remains required.
 
-## inviteParticipant
-
-**Actor:** Admin
-
-Creates/invites a prospective Competition Participant.
-
-The User must not become an active participant until the approved invitation/acceptance flow is completed.
-
 ## approveParticipant
 
 **Actor:** Admin
 
-Moves a pending participant to ACTIVE.
+Moves a pending participant to ACTIVE while DRAFT.
 
 Validate Competition participant limits and type-specific constraints.
 
@@ -160,7 +151,7 @@ Do not allow this operation to bypass historical integrity.
 
 **Actor:** Admin
 
-Moves `DRAFT → STARTED`, locks Competition rules, and invalidates the invitation link atomically. Validate Competition-type participant/configuration constraints. MVP does not require persisted rule acceptance by every Participant.
+Moves `DRAFT → STARTED`, locks Competition rules and roster, and invalidates the invitation link atomically. Reject pending requests. Require ACTIVE counts of at least 1 for LEAGUE, 2–30 for LEAGUE_PLAYOFFS, or exactly 8/16/32/64 for GROUP_PLAYOFFS. MVP does not require persisted rule acceptance by every Participant.
 
 ## completeCompetition
 

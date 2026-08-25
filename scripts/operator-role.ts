@@ -16,12 +16,7 @@ for (let index = 3; index < process.argv.length; index += 2) {
 const email = args.get("email")?.trim().toLowerCase();
 const actor = args.get("actor")?.trim();
 const reason = args.get("reason")?.trim();
-if (
-  !email ||
-  !actor ||
-  !reason ||
-  !["grant", "revoke"].includes(operation ?? "")
-) {
+if (!email || !actor || !reason || !["grant", "revoke"].includes(operation ?? "")) {
   throw new Error(
     "Usage: pnpm operator:<grant|revoke> --email <email> --actor <label> --reason <reason>",
   );

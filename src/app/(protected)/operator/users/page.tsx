@@ -19,8 +19,8 @@ export default async function OperatorUsersPage() {
             Operación de plataforma
           </h1>
           <p className="mt-4 text-muted-foreground">
-            Busca una cuenta por correo exacto para realizar acciones de
-            seguridad autorizadas.
+            Busca una cuenta por correo exacto para realizar acciones de seguridad
+            autorizadas.
           </p>
         </div>
         <OperatorConsole />

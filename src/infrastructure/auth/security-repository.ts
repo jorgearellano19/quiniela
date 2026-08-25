@@ -168,17 +168,11 @@ export function createAuthSecurityRepository(
           .update(account)
           .set({ password: passwordHash, updatedAt: now })
           .where(
-            and(
-              eq(account.userId, input.targetId),
-              eq(account.providerId, "credential"),
-            ),
+            and(eq(account.userId, input.targetId), eq(account.providerId, "credential")),
           )
           .returning({ id: account.id });
         if (!changed.length) {
-          throw new ApplicationError(
-            "INVALID_INPUT",
-            "La cuenta no usa contraseña.",
-          );
+          throw new ApplicationError("INVALID_INPUT", "La cuenta no usa contraseña.");
         }
         await tx
           .update(user)

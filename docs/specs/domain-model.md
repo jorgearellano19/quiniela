@@ -47,9 +47,9 @@ REJECTED
 REMOVED
 ```
 
-A User cannot have duplicate active participation in the same Competition. Admin authorization is always Competition-scoped.
+A User has at most one membership row per Competition. The creator starts as `ADMIN + ACTIVE PARTICIPANT`. Admin capability is independent from participant status and survives leave/removal. Admin authorization is always Competition-scoped.
 
-An Admin may create one reusable opaque invitation link for a DRAFT Competition. It can be revoked and otherwise expires when the Competition starts. An authenticated User opening the link must be shown the structured Competition configuration and optional Admin-authored rules note before submitting a join request. Submission creates or restores a `PENDING` membership; only Admin approval makes it `ACTIVE`. Merely viewing the rules is not a persisted acceptance gate in MVP.
+An Admin may create one reusable opaque invitation link for a DRAFT Competition. It can be revoked and otherwise expires when the Competition starts. An authenticated User opening the link must be shown the structured Competition configuration and optional Admin-authored rules note before submitting a join request. No row, `REJECTED`, or `REMOVED` becomes `PENDING`; repeated `PENDING` is idempotent; `ACTIVE` duplicates are rejected. Only Admin approval makes it `ACTIVE`. Merely viewing the rules is not a persisted acceptance gate in MVP.
 
 Competition lifecycle for MVP includes explicit operations rather than unrestricted status assignment:
 
@@ -57,7 +57,7 @@ Competition lifecycle for MVP includes explicit operations rather than unrestric
 DRAFT → STARTED → COMPLETED
 ```
 
-Starting locks Competition rules and invalidates the invitation link. MVP does not require every Participant to record rule acceptance before start. Participants may voluntarily leave only in DRAFT; post-start departure is rejected. Admin removal is explicit and audited and preserves historical records.
+Starting locks Competition rules and roster and invalidates the invitation link. It requires no pending requests and ACTIVE counts of at least 1 for LEAGUE, 2–30 for LEAGUE_PLAYOFFS, or exactly 8/16/32/64 for GROUP_PLAYOFFS. MVP does not require every Participant to record rule acceptance before start. Participants may voluntarily leave only in DRAFT; post-start departure is rejected. Admin removal is DRAFT-only, explicit and audited, and preserves historical records.
 
 Completion is an explicit Admin action. LEAGUE requires every required Round to be effectively FINALIZED and the League winner resolved. LEAGUE_PLAYOFFS and GROUP_PLAYOFFS require every required regular/playoff phase to be effectively FINALIZED and the Playoff Champion resolved. COMPLETED locks remaining administrative configuration and retains read-only history.
 

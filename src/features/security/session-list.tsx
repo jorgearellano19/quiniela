@@ -42,9 +42,7 @@ export function SessionList() {
             key={session.token}
           >
             <div className="min-w-0">
-              <p className="text-sm">
-                {session.userAgent || "Dispositivo desconocido"}
-              </p>
+              <p className="text-sm">{session.userAgent || "Dispositivo desconocido"}</p>
               <p className="text-xs text-muted-foreground">
                 Actualizada{" "}
                 {new Intl.DateTimeFormat("es-MX", {
@@ -58,8 +56,7 @@ export function SessionList() {
                 const result = await authClient.revokeSession({
                   token: session.token,
                 });
-                if (result.error)
-                  setMessage("No fue posible revocar la sesión.");
+                if (result.error) setMessage("No fue posible revocar la sesión.");
                 else {
                   setSessions((current) =>
                     current.filter(({ token }) => token !== session.token),
