@@ -2,7 +2,7 @@
 
 ## Status
 
-`FUTURE`
+`IN PROGRESS`
 
 ## Goal
 
@@ -51,12 +51,30 @@ M4 depends on:
 
 ## Domain rules / invariants
 
-- Lifecycle begins `DRAFT → PUBLISHED`; transitions are explicit, never unrestricted status assignment.
+- DRAFT Rounds may be prepared while a Competition is DRAFT or STARTED. Publication
+  requires a STARTED Competition; a COMPLETED Competition rejects every Round mutation.
+- Publication atomically records `publishedAt` and persists ACTIVE after passing through
+  PUBLISHED. Repeating publication for the same ACTIVE Round is idempotent.
+- Multiple ACTIVE Rounds are valid; each Question closes independently at its deadline.
 - Questions and scoring rules are editable only in DRAFT and frozen at publication.
+- Competition typed scoring defaults remain editable through STARTED for unpublished
+  inheriting Questions. Questions may override them; publication snapshots effective
+  scoring.
+- Round start is the default answer deadline; Questions use it or a custom UTC deadline.
+- `MATCH_SCORE` has distinct home/away labels and no prompt. OPTIONS use ordered chips.
+- Round and Question sequences define display order and use accessible reorder controls.
+- Round names are unique within a Competition after trimming and case folding. Admins may
+  hard-delete a DRAFT Round and its DRAFT Questions; published/ACTIVE Rounds are preserved.
 - Match scores use numeric typed fields, not a single score string.
 - OPTIONS is single-select; EXACT_VALUE is exact numeric; CLOSEST_VALUE is numeric; OPEN_TEXT stores free text for later Admin judgment.
 - `(competitionId, sequence)` and `(roundId, sequence)` are unique; deadlines are absolute UTC timestamps.
-- Unanswered penalty is approved as `-1` or configurable `0`.
+- Scoring is configured per Question. Match defaults are 3/2/1, other Questions default
+  to 1 point, and the Round-wide unanswered penalty defaults to -1 and accepts only -1/0.
+- Award values are integers 1–100. Match hierarchy requires EXACT_SCORE > enabled
+  GOAL_DIFFERENCE > NORMAL_RESULT. OPTIONS contains 2–20 uniquely labelled ordered
+  values. CLOSEST_VALUE rival mode is invalid for LEAGUE.
+- Draft sequences are positive and unique but may contain gaps. Publication requires at
+  least one complete Question and deadlines strictly after server-authoritative time.
 
 ## Application use cases
 
@@ -65,11 +83,18 @@ M4 depends on:
 - `createQuestion`
 - `updateQuestion`
 - `removeQuestion`
+- `deleteRound`
+- `reorderRounds`
+- `reorderQuestions`
+- `updateCompetitionQuestionScoringDefaults`
 - `publishRound`
 
 ## Persistence impact
 
-Add `Round`, typed Question storage for all five approved families, ordered OPTIONS values, and scoring configuration scoped to Round. Add specified uniqueness/status indexes and foreign keys. Publishing must transactionally validate, freeze, and open the aggregate. Do not add Answer or OfficialResult tables yet.
+Add `Round`, required regular-Round-owned Questions, ordered OPTIONS values, and one-to-one
+typed Question scoring configuration. Publishing and Question mutations lock/recheck the
+parent Round transactionally. M10 adds PlayoffRound ownership; M5 adds Answers; M6 adds
+Official Results and scoring. Do not add any of those early.
 
 ## Authorization
 
@@ -90,33 +115,35 @@ Add `Round`, typed Question storage for all five approved families, ordered OPTI
 - Unit-test valid and invalid publication transitions and configuration freeze.
 - Integration-test uniqueness, typed match data, and atomic publish behavior.
 - Cover every mutation's authorization matrix.
-- E2E is optional here; the full Round critical flow is completed in M6.
+- Mobile E2E covers drafting, all five Question types, publication, and the read-only ACTIVE
+  state. M6 extends that flow through Answers, Results, scoring, and finish.
 
 ## Acceptance criteria
 
-- [ ] Admin can create and edit a DRAFT Round.
-- [ ] Admin can create, edit, and remove typed Questions while DRAFT.
-- [ ] Valid scoring rules, penalty, and deadlines are persisted.
-- [ ] Publish atomically records PUBLISHED freeze and moves the Round to ACTIVE.
-- [ ] ACTIVE Questions accept Answers until their individual absolute deadlines; no separate Admin activation is required.
-- [ ] Questions/scoring cannot change after publication.
-- [ ] Unauthorized and cross-Competition mutations fail.
+- [x] Admin can create and edit a DRAFT Round.
+- [x] Admin can create, edit, and remove typed Questions while DRAFT.
+- [x] Valid scoring rules, penalty, and deadlines are persisted.
+- [x] Publish atomically records PUBLISHED freeze and moves the Round to ACTIVE.
+- [x] ACTIVE establishes the open state that M5 consumes until each Question deadline; no
+  separate Admin activation is required.
+- [x] Questions/scoring cannot change after publication.
+- [x] Unauthorized and cross-Competition mutations fail.
 - [ ] Relevant tests, lint, typecheck, and build pass.
 
 ## Definition of Done
 
-- [ ] Scope implemented.
-- [ ] Out-of-scope functionality was not introduced.
-- [ ] Approved domain rules preserved.
-- [ ] Authorization enforced server-side.
-- [ ] Relevant tests added.
-- [ ] No duplicated business logic.
-- [ ] No locked specification modified.
-- [ ] lint passes.
-- [ ] typecheck passes.
-- [ ] tests pass.
+- [x] Scope implemented.
+- [x] Out-of-scope functionality was not introduced.
+- [x] Approved domain rules preserved.
+- [x] Authorization enforced server-side.
+- [x] Relevant tests added.
+- [x] No duplicated business logic.
+- [x] Locked specifications changed only for the explicitly approved M4 decisions.
+- [x] lint passes.
+- [x] typecheck passes.
+- [x] tests pass.
 - [ ] build passes.
-- [ ] milestone code review completed.
+- [x] milestone code review completed.
 
 ## Risks / implementation notes
 
@@ -124,4 +151,7 @@ Select typed columns versus type-specific tables only for demonstrated question 
 
 ## Open questions
 
-Exact numeric precision/range and maximum OPTIONS count are boundary-validation implementation decisions to settle in the M4 plan without changing scoring semantics.
+The standard Turbopack build remains blocked in this execution environment because its CSS
+worker cannot bind an internal port (`Operation not permitted`). The webpack production
+build and dedicated M4 mobile E2E flow pass. Keep M4 `IN PROGRESS` until the standard build
+passes in an unrestricted environment and the user completes manual testing.

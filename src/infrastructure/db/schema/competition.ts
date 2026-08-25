@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   index,
+  integer,
   pgEnum,
   pgTable,
   text,
@@ -48,6 +49,21 @@ export const competition = pgTable(
       withTimezone: true,
     }),
     startedAt: timestamp("started_at", { withTimezone: true }),
+    defaultMatchExactScorePoints: integer("default_match_exact_score_points")
+      .default(3)
+      .notNull(),
+    defaultMatchGoalDifferencePoints: integer(
+      "default_match_goal_difference_points",
+    ).default(2),
+    defaultMatchNormalResultPoints: integer("default_match_normal_result_points")
+      .default(1)
+      .notNull(),
+    defaultClosestValuePoints: integer("default_closest_value_points")
+      .default(1)
+      .notNull(),
+    defaultOptionsPoints: integer("default_options_points").default(1).notNull(),
+    defaultOpenTextPoints: integer("default_open_text_points").default(1).notNull(),
+    defaultExactValuePoints: integer("default_exact_value_points").default(1).notNull(),
     createdByUserId: text("created_by_user_id")
       .notNull()
       .references(() => user.id, { onDelete: "restrict" }),
@@ -64,6 +80,10 @@ export const competition = pgTable(
       .where(sql`${table.invitationTokenHash} is not null`),
     check("competition_name_nonblank", sql`length(trim(${table.name})) > 0`),
     check("competition_currency_mxn", sql`${table.currency} = 'MXN'`),
+    check(
+      "competition_default_scoring_valid",
+      sql`${table.defaultMatchExactScorePoints} between 1 and 100 and ${table.defaultMatchNormalResultPoints} between 1 and 100 and (${table.defaultMatchGoalDifferencePoints} is null or ${table.defaultMatchGoalDifferencePoints} between 1 and 100) and ${table.defaultMatchExactScorePoints} > coalesce(${table.defaultMatchGoalDifferencePoints}, ${table.defaultMatchNormalResultPoints}) and (${table.defaultMatchGoalDifferencePoints} is null or ${table.defaultMatchGoalDifferencePoints} > ${table.defaultMatchNormalResultPoints}) and ${table.defaultClosestValuePoints} between 1 and 100 and ${table.defaultOptionsPoints} between 1 and 100 and ${table.defaultOpenTextPoints} between 1 and 100 and ${table.defaultExactValuePoints} between 1 and 100`,
+    ),
   ],
 );
 

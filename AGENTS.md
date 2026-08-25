@@ -5,14 +5,14 @@
 This repository contains a mobile-first Quiniela application.
 
 `AGENTS.md` defines how coding agents must work in this repository. Product behavior is
-defined in `docs/product/`; technical design is defined in `docs/architecture/`.
+defined in `docs/product/`; technical design is defined in `docs/specs/`.
 
 ## Source of truth
 
 Before changing behavior, consult the relevant product and architecture documentation.
 
 - `docs/product/` — approved product/business rules.
-- `docs/architecture/` — approved technical architecture.
+- `docs/specs/` — approved technical architecture.
 - `docs/product/product-design.md` — canonical UI, visual design, and product-content
   guidance.
 

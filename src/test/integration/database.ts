@@ -10,6 +10,11 @@ import {
   competition,
   competitionParticipant,
   competitionParticipantEvent,
+  matchQuestionConfig,
+  question,
+  questionOption,
+  questionScoring,
+  round,
   session,
   user,
 } from "@/infrastructure/db/schema";
@@ -46,6 +51,31 @@ export async function cleanupUsersByEmail(
     const competitionIds = competitions.map(({ id }) => id);
 
     if (competitionIds.length) {
+      const rounds = await database
+        .select({ id: round.id })
+        .from(round)
+        .where(inArray(round.competitionId, competitionIds));
+      const roundIds = rounds.map(({ id }) => id);
+      if (roundIds.length) {
+        const questions = await database
+          .select({ id: question.id })
+          .from(question)
+          .where(inArray(question.roundId, roundIds));
+        const questionIds = questions.map(({ id }) => id);
+        if (questionIds.length) {
+          await database
+            .delete(questionOption)
+            .where(inArray(questionOption.questionId, questionIds));
+          await database
+            .delete(matchQuestionConfig)
+            .where(inArray(matchQuestionConfig.questionId, questionIds));
+          await database
+            .delete(questionScoring)
+            .where(inArray(questionScoring.questionId, questionIds));
+          await database.delete(question).where(inArray(question.id, questionIds));
+        }
+        await database.delete(round).where(inArray(round.id, roundIds));
+      }
       const memberships = await transaction
         .select({ id: competitionParticipant.id })
         .from(competitionParticipant)
@@ -146,6 +176,31 @@ export class IntegrationTestData {
     const userIds = [...this.#userIds];
 
     if (competitionIds.length) {
+      const rounds = await this.database
+        .select({ id: round.id })
+        .from(round)
+        .where(inArray(round.competitionId, competitionIds));
+      const roundIds = rounds.map(({ id }) => id);
+      if (roundIds.length) {
+        const questions = await this.database
+          .select({ id: question.id })
+          .from(question)
+          .where(inArray(question.roundId, roundIds));
+        const questionIds = questions.map(({ id }) => id);
+        if (questionIds.length) {
+          await this.database
+            .delete(questionOption)
+            .where(inArray(questionOption.questionId, questionIds));
+          await this.database
+            .delete(matchQuestionConfig)
+            .where(inArray(matchQuestionConfig.questionId, questionIds));
+          await this.database
+            .delete(questionScoring)
+            .where(inArray(questionScoring.questionId, questionIds));
+          await this.database.delete(question).where(inArray(question.id, questionIds));
+        }
+        await this.database.delete(round).where(inArray(round.id, roundIds));
+      }
       const memberships = await this.database
         .select({ id: competitionParticipant.id })
         .from(competitionParticipant)

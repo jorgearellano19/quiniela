@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PencilIcon, UsersIcon } from "lucide-react";
+import { CalendarDaysIcon, PencilIcon, UsersIcon } from "lucide-react";
 import { leaveCompetitionAction } from "@/features/competitions/membership-actions";
 import { MembershipActionButton } from "@/features/competitions/membership-action-button";
 import { RulesSummary } from "@/features/competitions/rules-summary";
@@ -59,13 +59,21 @@ export default async function CompetitionDetailPage({
         <div className="flex flex-wrap gap-2">
           {detail.canManageParticipants ? (
             <Button asChild variant="outline">
+              <Link href={`/app/competitions/${detail.id}/rounds`}>
+                <CalendarDaysIcon data-icon="inline-start" aria-hidden="true" />
+                Jornadas
+              </Link>
+            </Button>
+          ) : null}
+          {detail.canManageParticipants ? (
+            <Button asChild variant="outline">
               <Link href={`/app/competitions/${detail.id}/participants`}>
                 <UsersIcon data-icon="inline-start" aria-hidden="true" />
                 Participantes
               </Link>
             </Button>
           ) : null}
-          {detail.canEdit ? (
+          {detail.isAdmin && detail.status !== "COMPLETED" ? (
             <Button asChild variant="outline">
               <Link href={`/app/competitions/${detail.id}/edit`}>
                 <PencilIcon data-icon="inline-start" aria-hidden="true" />

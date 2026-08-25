@@ -169,6 +169,10 @@ Moves `STARTED → COMPLETED`. For LEAGUE, require all required Rounds effective
 
 Creates a Round in DRAFT.
 
+The Round start is its default answer deadline. Each Question selects that start or an
+absolute custom deadline. `MATCH_SCORE` has home/away labels without a prompt; other types
+require a prompt. Question scoring may inherit Competition defaults or override them.
+
 Input:
 - sequence;
 - name;
@@ -188,13 +192,20 @@ Validate:
 Updates a DRAFT Round.
 
 Can modify:
-- Questions;
-- Question configuration;
-- deadlines;
-- scoring rules;
-- Round payment configuration.
+- sequence and name;
+- unanswered penalty (`-1` or `0`).
+
+Question configuration and deadlines are changed only through the Question mutations.
+Payment configuration remains deferred to M8.
 
 Once PUBLISHED, these are frozen.
+
+## deleteRound
+
+**Actor:** Admin
+
+Hard-deletes only a DRAFT Round and its DRAFT Questions/configuration. A published or
+ACTIVE Round cannot be deleted.
 
 ## publishRound
 
@@ -215,6 +226,10 @@ Transactionally freezes:
 After publication, no new Questions may be added.
 
 Publishing atomically advances through PUBLISHED to ACTIVE and opens Answers until each Question deadline; MVP has no separate Admin `activateRound` mutation.
+
+Publishing requires a STARTED Competition, at least one Question, and every Question
+deadline strictly after the server-authoritative publication time. A repeated publication
+of the same ACTIVE Round is idempotent. Multiple ACTIVE Rounds are valid.
 
 The write that records the final required Official Result automatically moves the Round to FINISHED and starts the 24-hour correction window.
 
@@ -256,6 +271,20 @@ Only allowed while Round is DRAFT.
 Only allowed while Round is DRAFT.
 
 Do not allow deletion once published.
+
+## updateCompetitionQuestionScoringDefaults
+
+**Actor:** Admin
+
+Updates typed defaults during DRAFT or STARTED for unpublished inheriting Questions.
+Published scoring remains unchanged. Reject after Competition COMPLETED.
+
+## reorderRounds / reorderQuestions
+
+**Actor:** Admin
+
+Persists contiguous display order through drag-and-drop or keyboard controls. Question
+reorder is DRAFT-only; Round reorder requires every affected Round to remain DRAFT.
 
 ---
 

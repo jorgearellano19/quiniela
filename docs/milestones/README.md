@@ -8,8 +8,8 @@ These files are delivery contracts. Locked product and implementation specificat
 | M1 | Authentication | COMPLETED | M0 | End-user authentication |
 | M1.1 | Authentication Security | COMPLETED | M1 | Secure recovery and platform operations |
 | M2 | Competition | COMPLETED | M1.1 | Admin creates and manages a Competition |
-| M3 | Participants & Membership | FUTURE | M2 | Contextual membership and authorization |
-| M4 | Rounds & Questions | FUTURE | M3 | Admin publishes a playable Round |
+| M3 | Participants & Membership | COMPLETED | M2 | Contextual membership and authorization |
+| M4 | Rounds & Questions | IN PROGRESS | M3 | Admin publishes a playable Round |
 | M5 | Answers | FUTURE | M4 | Participants submit and edit predictions |
 | M6 | Official Results & Scoring | FUTURE | M5 | Results produce authoritative scores |
 | M7 | Standings & Winners | FUTURE | M6 | Scores become rankings and winners |

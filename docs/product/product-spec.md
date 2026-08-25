@@ -33,6 +33,13 @@ Starting requires no pending requests and a playable ACTIVE roster: at least 1 f
 DRAFT: Questions and scoring rules are editable. Publishing the Round atomically performs `DRAFT → PUBLISHED → ACTIVE`: PUBLISHED freezes its Questions/scoring rules and ACTIVE opens its Questions for Answers. Each Question closes at its absolute deadline. A separate activation action is not required for MVP. FINISHED begins automatically when all required Official Results exist and starts a 24-hour correction window. During the window the Admin may edit Official Results; affected derived scores/standings update immediately. At `finishedAt + 24 hours`, the Round is effectively FINALIZED by server-authoritative time without requiring a background worker or Admin action, and Official Results are immutable.
 
 ## 6. Questions and Answers
+`MATCH_SCORE` uses home and away labels and has no separate prompt; every other type
+requires a prompt. Each Round defines a start used as its default answer deadline, and each
+Question closes either then or at an absolute custom deadline. Competition Admins configure
+typed scoring defaults per Question type. A DRAFT Question may inherit current defaults or
+override them. Defaults remain editable after Competition start for future DRAFT Questions;
+publication snapshots effective scoring so published Rounds never change retroactively.
+
 Questions belong to either a regular Round or a Playoff Round. MVP Question types are:
 
 - `MATCH_SCORE`: numeric `homeScore` and `awayScore` prediction and Official Result.

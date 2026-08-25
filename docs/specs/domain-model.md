@@ -69,6 +69,10 @@ DRAFT → PUBLISHED → ACTIVE → FINISHED → FINALIZED
 
 **DRAFT:** Admin may add/edit Questions and scoring rules.
 
+An Admin may create and edit a DRAFT Round while its Competition is DRAFT or STARTED.
+Publishing requires the Competition to be STARTED. A COMPLETED Competition rejects all
+Round mutations. Multiple Rounds may be ACTIVE at the same time.
+
 **PUBLISHED:** Questions and scoring rules are frozen. The publish operation immediately and atomically continues to ACTIVE.
 
 **ACTIVE:** Answers are accepted until each Question's deadline. MVP has no separate Admin activation action.
@@ -81,7 +85,24 @@ Do not expose a generic unrestricted `setStatus()` operation; transitions must b
 
 ## Questions, Answers, and Official Results
 
-A Question belongs to exactly one regular Round or PlayoffRound. Question-specific data is typed. Approved MVP types are `MATCH_SCORE`, `CLOSEST_VALUE`, `OPTIONS`, `OPEN_TEXT`, and `EXACT_VALUE`. Match Questions use numeric `homeScore` and `awayScore`, not only strings. `OPTIONS` is single-select and owns multiple configured options plus one official correct option. `EXACT_VALUE` uses numeric Answer/Result values. `OPEN_TEXT` stores free text and an Admin's explicit correct/incorrect judgment for each Answer.
+`MATCH_SCORE` has distinct home/away labels and no prompt; all other types require a
+prompt. A Competition owns typed scoring defaults. DRAFT Questions inherit the current
+default or use an override. Publication snapshots effective scoring. Defaults may change
+after STARTED for unpublished inheriting Questions only.
+
+A Round owns `startsAt`, its default answer deadline. Each Question chooses the Round start
+or a custom absolute deadline. Round and Question sequences define display order and use
+mobile- and keyboard-accessible reorder controls while DRAFT.
+
+A Question belongs to exactly one regular Round or PlayoffRound. M4 implements required
+regular-Round ownership; M10 adds PlayoffRound ownership and the exclusive-parent
+constraint. Question-specific data is typed. Approved MVP types are `MATCH_SCORE`,
+`CLOSEST_VALUE`, `OPTIONS`, `OPEN_TEXT`, and `EXACT_VALUE`. Scoring belongs to each
+Question; only the unanswered penalty belongs to the Round. Match Questions use numeric
+`homeScore` and `awayScore`, not only strings. `OPTIONS` is single-select and owns multiple
+configured options plus one official correct option. `EXACT_VALUE` uses numeric
+Answer/Result values. `OPEN_TEXT` stores free text and an Admin's explicit correct/incorrect
+judgment for each Answer.
 
 An Answer belongs to `Participant + Question`. Only one active Answer exists for that combination. `submittedAt` is the original submission time and must not reset when edited. The client may receive safe capability information such as `canEdit`, but not internal reasons for non-editability. Every submitted `OPEN_TEXT` Answer requires an Admin correct/incorrect judgment before its parent Round has all required Results and can automatically finish.
 
@@ -137,7 +158,9 @@ If both have the same non-zero distance, neither gets the point. Distance `0` me
 
 ## Unanswered questions and Prediction Score
 
-Unanswered penalties are configured scoring rules. MVP default is `-1`, while Admin may configure `0` or another approved value. Do not create fake Answers for unanswered questions.
+Unanswered penalties are configured scoring rules. MVP default is `-1`; Admin may
+configure `0`. No other value is valid. Do not create fake Answers for unanswered
+questions.
 
 Prediction Score is derived from Answers, Official Results, Scoring Rules, and unanswered penalties. It is not an independent source of truth in MVP.
 

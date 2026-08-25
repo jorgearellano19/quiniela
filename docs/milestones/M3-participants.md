@@ -2,7 +2,7 @@
 
 ## Status
 
-`IN PROGRESS`
+`COMPLETED`
 
 ## Goal
 
@@ -113,7 +113,7 @@ Complete `CompetitionParticipant` fields, capabilities, state, timestamps, uniqu
 - [x] Admin + Participant coexistence works.
 - [x] Duplicate and cross-Competition membership actions are rejected.
 - [x] Starting locks Competition rules and invalidates the invitation without requiring persisted Participant acceptance.
-- [ ] Relevant tests, lint, typecheck, and build pass.
+- [x] Relevant tests, lint, typecheck, and build pass.
 
 ## Definition of Done
 
@@ -127,7 +127,7 @@ Complete `CompetitionParticipant` fields, capabilities, state, timestamps, uniqu
 - [x] lint passes.
 - [x] typecheck passes.
 - [x] tests pass.
-- [ ] build passes.
+- [x] build passes.
 - [x] milestone code review completed.
 
 ## Risks / implementation notes
@@ -136,4 +136,5 @@ Do not solve uniqueness by creating duplicate historical memberships. Model capa
 
 ## Open questions
 
-The standard Turbopack production build remains blocked in the current execution environment because its CSS worker cannot bind an internal port (`Operation not permitted`). The same source passes `next build --webpack`; keep M3 `IN PROGRESS` until the standard `pnpm build` passes in CI or an unrestricted environment.
+The standard production build passed in the user's unrestricted environment. The prior
+Turbopack CSS-worker port error was specific to Codex's restricted execution environment.

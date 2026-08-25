@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCompetitionDetail } from "@/application/competition/use-cases";
+import { getCompetitionScoringDefaults } from "@/application/round/use-cases";
 import {
   Card,
   CardContent,
@@ -12,7 +13,9 @@ import {
 import { updateCompetitionAction } from "@/features/competitions/competition-actions";
 import { CompetitionForm } from "@/features/competitions/competition-form";
 import { requireCompetitionPageActor } from "@/features/competitions/competition-session";
+import { ScoringDefaultsForm } from "@/features/rounds/round-editor-forms";
 import { competitionRepository } from "@/infrastructure/competition/competition-repository";
+import { roundRepository } from "@/infrastructure/round/round-repository";
 export const metadata: Metadata = { title: "Editar quiniela · Quiniela" };
 export default async function EditCompetitionPage({
   params,
@@ -22,7 +25,13 @@ export default async function EditCompetitionPage({
   const { competitionId } = await params;
   const actor = await requireCompetitionPageActor();
   const detail = await getCompetitionDetail(competitionRepository, actor, competitionId);
-  if (!detail?.canEdit) redirect(`/app/competitions/${competitionId}`);
+  if (!detail?.isAdmin || detail.status === "COMPLETED")
+    redirect(`/app/competitions/${competitionId}`);
+  const scoringDefaults = await getCompetitionScoringDefaults(
+    roundRepository,
+    actor,
+    competitionId,
+  );
   const action = updateCompetitionAction.bind(null, competitionId);
   return (
     <section className="mx-auto flex max-w-2xl flex-col gap-6">
@@ -40,22 +49,40 @@ export default async function EditCompetitionPage({
           Edita tu quiniela
         </h1>
       </div>
+      {detail.canEdit ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reglas en borrador</CardTitle>
+            <CardDescription>
+              El estado y la moneda no pueden cambiarse desde aquí.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CompetitionForm
+              action={action}
+              initial={{
+                name: detail.name,
+                type: detail.type,
+                rulesNote: detail.rulesNote,
+              }}
+            />
+          </CardContent>
+        </Card>
+      ) : (
+        <p className="rounded-xl bg-secondary px-4 py-3 text-sm text-muted-foreground">
+          La quiniela ya inició. Sus reglas generales están congeladas, pero puedes
+          ajustar los puntajes para futuras jornadas en borrador.
+        </p>
+      )}
       <Card>
         <CardHeader>
-          <CardTitle>Reglas en borrador</CardTitle>
+          <CardTitle>Puntajes predeterminados</CardTitle>
           <CardDescription>
-            El estado y la moneda no pueden cambiarse desde aquí.
+            Se aplican a preguntas en borrador que mantienen los valores predeterminados.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <CompetitionForm
-            action={action}
-            initial={{
-              name: detail.name,
-              type: detail.type,
-              rulesNote: detail.rulesNote,
-            }}
-          />
+          <ScoringDefaultsForm competitionId={competitionId} value={scoringDefaults} />
         </CardContent>
       </Card>
     </section>

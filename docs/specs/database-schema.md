@@ -117,6 +117,7 @@ Round
 ├── competitionId
 ├── sequence
 ├── name
+├── startsAt
 ├── status
 ├── publishedAt
 ├── finishedAt
@@ -126,6 +127,7 @@ Round
 ```
 
 `(competitionId, sequence)` is unique.
+Trimmed, case-insensitive Round names are also unique within a Competition.
 
 Lifecycle:
 
@@ -143,22 +145,34 @@ Publication atomically records `publishedAt`, freezes configuration, and advance
 
 ## 6. Question
 
+Competition stores explicit typed scoring defaults for every Question family. Defaults
+remain editable through STARTED and freeze at COMPLETED. DRAFT Questions may inherit
+current values; publication snapshots effective values into Question scoring.
+
 ```text
 Question
 ├── id
-├── roundId (nullable)
+├── roundId (required in M4; nullable when M10 adds PlayoffRound ownership)
 ├── playoffRoundId (nullable)
 ├── sequence
 ├── type
 ├── prompt
-├── deadlineAt
+├── deadlineMode (`ROUND_START` or `CUSTOM`)
+├── deadlineAt (nullable custom value)
+├── usesDefaultScoring
 ├── createdAt
 └── updatedAt
 ```
 
-Exactly one of `roundId` or `playoffRoundId` must be present. Sequence is unique within the selected parent.
+M4 requires `roundId` and implements regular-Round ownership only. M10 adds nullable
+`playoffRoundId`, makes `roundId` nullable, and adds the exactly-one-parent constraint when
+PlayoffRound exists. Sequence is unique within the selected parent.
 
 Approved types are `MATCH_SCORE`, `CLOSEST_VALUE`, `OPTIONS`, `OPEN_TEXT`, and `EXACT_VALUE`. Do not create one giant JSON structure for all question types. Use typed columns or type-specific tables where appropriate. `OPTIONS` needs ordered option rows and one official correct option. `OPEN_TEXT` needs an explicit per-Answer Admin judgment. `CLOSEST_VALUE` and `EXACT_VALUE` use numeric typed values.
+
+Typed closest/exact Answer and Result values use `NUMERIC(18,6)`. Match scores are integers
+from 0 through 999. M4 locks these future boundaries but adds no Answer or Official Result
+columns.
 
 For Match Questions, scores are numeric `homeScore` and `awayScore`, never only a string such as `"3-1"`.
 
@@ -216,6 +230,12 @@ Persist scoring configuration independently from Answers. It must support:
 - Round/PlayoffRound scope;
 - `againstRival` for `CLOSEST_VALUE` where H2H exists;
 - unanswered-question penalty.
+
+Scoring is per Question; only unanswered penalty is Round-wide. Award values are integers
+from 1 through 100. Match defaults are 3/2/1 and must satisfy EXACT_SCORE > enabled
+GOAL_DIFFERENCE > NORMAL_RESULT. Other Question types default to 1 point. OPTIONS contains
+2–20 ordered, uniquely labelled options. CLOSEST_VALUE `againstRival=true` is invalid for
+LEAGUE.
 
 Match hierarchy:
 
