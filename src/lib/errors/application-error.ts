@@ -9,6 +9,7 @@ export class ApplicationError extends Error {
     readonly code: ApplicationErrorCode,
     message: string,
     options?: ErrorOptions,
+    readonly fieldErrors?: Readonly<Record<string, string>>,
   ) {
     super(message, options);
     this.name = "ApplicationError";

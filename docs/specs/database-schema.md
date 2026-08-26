@@ -1,6 +1,6 @@
 # Database Schema — Quiniela MVP
 
-**Status:** APPROVED AND LOCKED — revised 2026-08-19
+**Status:** APPROVED AND LOCKED — revised 2026-08-26
 **Provider:** Neon PostgreSQL  
 **ORM:** Drizzle
 
@@ -183,14 +183,21 @@ Answer
 ├── id
 ├── questionId
 ├── participantId
+├── homeScore / awayScore
+├── numericValue
+├── optionId
+├── textValue
 ├── submittedAt
 ├── updatedAt
-└── typed answer data
+└── exactly one valid typed value shape
 ```
 
 `(questionId, participantId)` is unique.
 
 - Preserve original `submittedAt`; editing must not reset it.
+- Match scores are integers from 0 through 999. Numeric values use signed `NUMERIC(18,6)`.
+- OPEN_TEXT is trimmed, nonblank, and limited to 500 characters.
+- The selected OPTIONS value must belong to the Answer's Question.
 - The client must not expose internal reasons why an Answer is no longer editable.
 - Payment restriction never deletes Answers.
 - When payment restores eligibility, stored Answers can count again.

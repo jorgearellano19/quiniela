@@ -1,6 +1,6 @@
 # Application Use Cases — Quiniela MVP
 
-**Status:** APPROVED AND LOCKED — revised 2026-08-19
+**Status:** APPROVED AND LOCKED — revised 2026-08-26
 
 ## 1. Purpose
 
@@ -307,6 +307,10 @@ The server must validate all conditions.
 
 `submittedAt` is set only on first submission.
 
+Inputs identify the Competition, Round, and Question plus typed Answer data. They never
+accept a participant identity. Answers save one Question at a time; a duplicate submission
+is rejected and must use `updateAnswer`.
+
 ## updateAnswer
 
 **Actor:** Participant
@@ -314,6 +318,8 @@ The server must validate all conditions.
 Uses the same authorization/deadline/restriction checks as submission.
 
 Updating an Answer does not reset original `submittedAt`.
+
+A saved Answer is not deleted back to unanswered in MVP.
 
 The client does not need to know the internal reason an Answer is unavailable for editing.
 
@@ -323,7 +329,17 @@ The client does not need to know the internal reason an Answer is unavailable fo
 
 Returns the current participant's Answers for an allowed Competition/Round.
 
+The safe result includes published Questions, scoring values, the caller's Answer or
+absence, and `canEdit`, but never an internal non-editability reason.
+
 Never accept an arbitrary participant ID as the identity source.
+
+## listParticipantRounds
+
+**Actor:** Participant
+
+Returns published regular Rounds visible to the caller's ACTIVE Competition membership so
+the participant can navigate to `getMyAnswers`. Draft Questions are never returned.
 
 ---
 

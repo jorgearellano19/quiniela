@@ -21,6 +21,7 @@ describe("authentication migration", () => {
     );
     expect(result.map(({ table_name }) => table_name)).toEqual([
       "account",
+      "answer",
       "auth_security_event",
       "competition",
       "competition_participant",

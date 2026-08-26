@@ -6,6 +6,7 @@ import type { Competition } from "@/domain/competition/competition";
 import type { db as applicationDatabase } from "@/infrastructure/db/client";
 import {
   account,
+  answer,
   authSecurityEvent,
   competition,
   competitionParticipant,
@@ -63,6 +64,7 @@ export async function cleanupUsersByEmail(
           .where(inArray(question.roundId, roundIds));
         const questionIds = questions.map(({ id }) => id);
         if (questionIds.length) {
+          await database.delete(answer).where(inArray(answer.questionId, questionIds));
           await database
             .delete(questionOption)
             .where(inArray(questionOption.questionId, questionIds));
@@ -188,6 +190,9 @@ export class IntegrationTestData {
           .where(inArray(question.roundId, roundIds));
         const questionIds = questions.map(({ id }) => id);
         if (questionIds.length) {
+          await this.database
+            .delete(answer)
+            .where(inArray(answer.questionId, questionIds));
           await this.database
             .delete(questionOption)
             .where(inArray(questionOption.questionId, questionIds));

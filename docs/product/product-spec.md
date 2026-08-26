@@ -1,6 +1,6 @@
 # Quiniela App — Product Spec (MVP)
 
-> Approved product contract. Last updated: 2026-08-20. This revision additionally defines platform operation, operator-assisted recovery, and authentication abuse controls.
+> Approved product contract. Last updated: 2026-08-26. This revision additionally defines platform operation, operator-assisted recovery, authentication abuse controls, and Answer editing boundaries.
 
 ## 1. Purpose
 Mobile-responsive web application for football prediction competitions. It replaces the Admin workflow of Excel + WhatsApp while keeping the Admin as owner. It includes predictions, scoring, standings, H2H, playoffs, and optional manual payment/debt tracking. It is not a payment processor.
@@ -64,7 +64,15 @@ EXACT_SCORE requires both homeScore and awayScore to match. GOAL_DIFFERENCE uses
 MVP supports an unanswered-question penalty. Default is -1; Admin may configure 0. An unanswered Tiebreaker Question always yields 0.
 
 ## 10. Answer editing
-The server decides editability. The client must not expose an editing state or the reason an Answer is no longer editable.
+The server decides editability. The client may receive a safe capability such as `canEdit`,
+but must not receive or expose the internal reason an Answer is no longer editable. Answers
+save one Question at a time. A saved Answer may be edited while allowed but is not deleted
+back to unanswered in MVP.
+
+`OPEN_TEXT` Answers are trimmed, nonblank, and limited to 500 characters.
+`CLOSEST_VALUE` and `EXACT_VALUE` accept signed decimal values with up to six decimal
+places; excess precision is rejected rather than rounded. Published scoring values may be
+shown with the Question without calculating a score.
 
 ## 11. Prediction Score and H2H Points
 Prediction Score is derived from Answers, Official Results, scoring rules, penalties, and applicable restrictions. MVP does not persist score snapshots as a second source of truth. Prediction Score and H2H Points are distinct.

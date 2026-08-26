@@ -2,7 +2,7 @@
 
 ## Status
 
-`IN PROGRESS`
+`COMPLETED`
 
 ## Goal
 
@@ -128,7 +128,7 @@ Official Results and scoring. Do not add any of those early.
   separate Admin activation is required.
 - [x] Questions/scoring cannot change after publication.
 - [x] Unauthorized and cross-Competition mutations fail.
-- [ ] Relevant tests, lint, typecheck, and build pass.
+- [x] Relevant tests, lint, typecheck, and build pass.
 
 ## Definition of Done
 
@@ -142,7 +142,7 @@ Official Results and scoring. Do not add any of those early.
 - [x] lint passes.
 - [x] typecheck passes.
 - [x] tests pass.
-- [ ] build passes.
+- [x] build passes.
 - [x] milestone code review completed.
 
 ## Risks / implementation notes
@@ -151,7 +151,4 @@ Select typed columns versus type-specific tables only for demonstrated question 
 
 ## Open questions
 
-The standard Turbopack build remains blocked in this execution environment because its CSS
-worker cannot bind an internal port (`Operation not permitted`). The webpack production
-build and dedicated M4 mobile E2E flow pass. Keep M4 `IN PROGRESS` until the standard build
-passes in an unrestricted environment and the user completes manual testing.
+None. The standard build passed in the user's unrestricted terminal on 2026-08-25.

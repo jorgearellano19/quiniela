@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarDaysIcon, PencilIcon, UsersIcon } from "lucide-react";
+import { CalendarDaysIcon, PencilIcon, TargetIcon, UsersIcon } from "lucide-react";
 import { leaveCompetitionAction } from "@/features/competitions/membership-actions";
 import { MembershipActionButton } from "@/features/competitions/membership-action-button";
 import { RulesSummary } from "@/features/competitions/rules-summary";
@@ -57,6 +57,14 @@ export default async function CompetitionDetailPage({
           </h1>
         </div>
         <div className="flex flex-wrap gap-2">
+          {detail.membershipStatus === "ACTIVE" ? (
+            <Button asChild>
+              <Link href={`/app/competitions/${detail.id}/answers`}>
+                <TargetIcon data-icon="inline-start" aria-hidden="true" />
+                Pronósticos
+              </Link>
+            </Button>
+          ) : null}
           {detail.canManageParticipants ? (
             <Button asChild variant="outline">
               <Link href={`/app/competitions/${detail.id}/rounds`}>

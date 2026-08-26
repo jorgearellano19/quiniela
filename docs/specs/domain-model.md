@@ -1,6 +1,6 @@
 # Domain Model — Quiniela MVP
 
-**Status:** APPROVED AND LOCKED — revised 2026-08-19
+**Status:** APPROVED AND LOCKED — revised 2026-08-26
 
 ## Purpose
 
@@ -104,7 +104,14 @@ configured options plus one official correct option. `EXACT_VALUE` uses numeric
 Answer/Result values. `OPEN_TEXT` stores free text and an Admin's explicit correct/incorrect
 judgment for each Answer.
 
-An Answer belongs to `Participant + Question`. Only one active Answer exists for that combination. `submittedAt` is the original submission time and must not reset when edited. The client may receive safe capability information such as `canEdit`, but not internal reasons for non-editability. Every submitted `OPEN_TEXT` Answer requires an Admin correct/incorrect judgment before its parent Round has all required Results and can automatically finish.
+An Answer belongs to `Participant + Question`. Only one active Answer exists for that
+combination. Answers save individually and are not deleted back to unanswered. `submittedAt`
+is the original submission time and must not reset when edited. The client may receive safe
+capability information such as `canEdit`, but not internal reasons for non-editability.
+`OPEN_TEXT` is trimmed, nonblank, and limited to 500 characters. Numeric Answers accept
+signed `NUMERIC(18,6)` values and reject excess precision rather than rounding. Every
+submitted `OPEN_TEXT` Answer requires an Admin correct/incorrect judgment before its parent
+Round has all required Results and can automatically finish.
 
 Payment restriction never deletes Answers.
 

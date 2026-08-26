@@ -71,6 +71,13 @@
       "when": 1787698834943,
       "tag": "0009_simple_ozymandias",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787755878398,
+      "tag": "0010_fuzzy_joseph",
+      "breakpoints": true
     }
   ]
 }

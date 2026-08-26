@@ -2,7 +2,7 @@
 
 ## Status
 
-`FUTURE`
+`IN PROGRESS`
 
 ## Goal
 
@@ -15,6 +15,7 @@ Participants can open a Round, answer its Questions, revisit saved Answers, and 
 ## In scope
 
 - Participant Round/question view and `getMyAnswers`.
+- `listParticipantRounds` navigation for published regular Rounds.
 - `submitAnswer` and `updateAnswer` with typed validation.
 - Published regular Round answer behavior for all five approved typed Question families.
 - Deadline, membership, ownership, and server-authoritative editability.
@@ -58,16 +59,25 @@ M5 depends on:
 - Atomic publication leaves the Round ACTIVE and opens Answers; every Question closes independently at its absolute deadline.
 - Missing Answers remain absent rows; unanswered penalties are calculated later.
 - The client may receive `canEdit`, never sensitive denial reasons.
+- Answers save one Question at a time. A saved Answer may be edited but not deleted.
+- `OPEN_TEXT` is trimmed, nonblank, and limited to 500 characters.
+- `CLOSEST_VALUE` and `EXACT_VALUE` accept signed `NUMERIC(18,6)` values; excess
+  precision is rejected rather than rounded.
+- Closed Questions show the caller's Answer, or `Sin pronóstico`, read-only.
+- Published scoring values are visible; no score is calculated in M5.
 
 ## Application use cases
 
 - `submitAnswer`
 - `updateAnswer`
 - `getMyAnswers`
+- `listParticipantRounds`
 
 ## Persistence impact
 
-Add `Answer` with typed answer data, unique `(questionId, participantId)`, `(participantId, submittedAt)` index, UTC timestamps, and foreign keys. Upsert/edit behavior must preserve `submittedAt`. No score columns or snapshots.
+Add `Answer` with explicit typed columns, unique `(questionId, participantId)`,
+`(participantId, submittedAt)` index, UTC timestamps, value-shape checks, and foreign keys.
+Submit and edit behavior must preserve `submittedAt`. No JSON, score columns, or snapshots.
 
 ## Authorization
 
@@ -92,28 +102,28 @@ Add `Answer` with typed answer data, unique `(questionId, participantId)`, `(par
 
 ## Acceptance criteria
 
-- [ ] Active Participant can submit a valid Answer for an available Question.
-- [ ] Participant can edit while allowed without resetting `submittedAt`.
-- [ ] Late, unauthorized, and cross-participant mutations are rejected.
-- [ ] Missing Answers create no fake rows.
-- [ ] UI exposes capability, not internal editing-state reasons.
-- [ ] No scoring snapshot or calculation is introduced.
+- [x] Active Participant can submit a valid Answer for an available Question.
+- [x] Participant can edit while allowed without resetting `submittedAt`.
+- [x] Late, unauthorized, and cross-participant mutations are rejected.
+- [x] Missing Answers create no fake rows.
+- [x] UI exposes capability, not internal editing-state reasons.
+- [x] No scoring snapshot or calculation is introduced.
 - [ ] Relevant tests, lint, typecheck, and build pass.
 
 ## Definition of Done
 
-- [ ] Scope implemented.
-- [ ] Out-of-scope functionality was not introduced.
-- [ ] Approved domain rules preserved.
-- [ ] Authorization enforced server-side.
-- [ ] Relevant tests added.
-- [ ] No duplicated business logic.
-- [ ] No locked specification modified.
-- [ ] lint passes.
-- [ ] typecheck passes.
-- [ ] tests pass.
+- [x] Scope implemented.
+- [x] Out-of-scope functionality was not introduced.
+- [x] Approved domain rules preserved.
+- [x] Authorization enforced server-side.
+- [x] Relevant tests added.
+- [x] No duplicated business logic.
+- [x] Locked specifications changed only for the explicitly approved M5 decisions.
+- [x] lint passes.
+- [x] typecheck passes.
+- [x] tests pass.
 - [ ] build passes.
-- [ ] milestone code review completed.
+- [x] milestone code review completed.
 
 ## Risks / implementation notes
 
@@ -121,4 +131,10 @@ Use a server-authoritative clock. Keep Answer persistence type-specific without 
 
 ## Open questions
 
-None.
+Payment-restriction enforcement remains deferred to M8; M5 preserves the Answer model and
+authorization seam that M8 will extend without deleting Answers.
+
+The standard Turbopack build remains blocked in this execution environment because its CSS
+worker cannot bind an internal port (`Operation not permitted`). The webpack production
+build, migration, focused checks, integration suite, and mobile E2E flow pass. Keep M5 `IN
+PROGRESS` until the standard build passes in an unrestricted user terminal.

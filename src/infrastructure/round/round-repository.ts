@@ -17,7 +17,7 @@ import {
   round,
 } from "@/infrastructure/db/schema";
 
-function scoringDefaults(
+export function scoringDefaults(
   row: typeof competition.$inferSelect,
 ): CompetitionScoringDefaults {
   return {
@@ -32,7 +32,7 @@ function scoringDefaults(
     exactValuePoints: row.defaultExactValuePoints,
   };
 }
-async function loadQuestions(
+export async function loadQuestions(
   database: typeof db,
   roundValue: Round,
   defaults: CompetitionScoringDefaults,

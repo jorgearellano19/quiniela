@@ -2,8 +2,10 @@ import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  foreignKey,
   index,
   integer,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -11,7 +13,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
-import { competition } from "./competition";
+import { competition, competitionParticipant } from "./competition";
 export const roundStatus = pgEnum("round_status", [
   "DRAFT",
   "PUBLISHED",
@@ -148,12 +150,58 @@ export const questionOption = pgTable(
   },
   (t) => [
     uniqueIndex("question_option_question_sequence_unique").on(t.questionId, t.sequence),
+    uniqueIndex("question_option_id_question_unique").on(t.id, t.questionId),
     uniqueIndex("question_option_question_label_unique").on(
       t.questionId,
       sql`lower(trim(${t.label}))`,
     ),
     check("question_option_sequence_positive", sql`${t.sequence} > 0`),
     check("question_option_label_valid", sql`length(trim(${t.label})) between 1 and 120`),
+  ],
+);
+export const answer = pgTable(
+  "answer",
+  {
+    id: text("id").primaryKey(),
+    questionId: text("question_id")
+      .notNull()
+      .references(() => question.id, { onDelete: "restrict" }),
+    participantId: text("participant_id")
+      .notNull()
+      .references(() => competitionParticipant.id, { onDelete: "restrict" }),
+    homeScore: integer("home_score"),
+    awayScore: integer("away_score"),
+    numericValue: numeric("numeric_value", { precision: 18, scale: 6 }),
+    optionId: text("option_id"),
+    textValue: text("text_value"),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    uniqueIndex("answer_question_participant_unique").on(t.questionId, t.participantId),
+    index("answer_participant_submitted_idx").on(t.participantId, t.submittedAt),
+    foreignKey({
+      name: "answer_option_question_fk",
+      columns: [t.optionId, t.questionId],
+      foreignColumns: [questionOption.id, questionOption.questionId],
+    }).onDelete("restrict"),
+    check(
+      "answer_value_shape_valid",
+      sql`(
+        (${t.homeScore} is not null and ${t.awayScore} is not null and ${t.numericValue} is null and ${t.optionId} is null and ${t.textValue} is null) or
+        (${t.homeScore} is null and ${t.awayScore} is null and ${t.numericValue} is not null and ${t.optionId} is null and ${t.textValue} is null) or
+        (${t.homeScore} is null and ${t.awayScore} is null and ${t.numericValue} is null and ${t.optionId} is not null and ${t.textValue} is null) or
+        (${t.homeScore} is null and ${t.awayScore} is null and ${t.numericValue} is null and ${t.optionId} is null and ${t.textValue} is not null)
+      )`,
+    ),
+    check(
+      "answer_match_score_valid",
+      sql`${t.homeScore} is null or (${t.homeScore} between 0 and 999 and ${t.awayScore} between 0 and 999)`,
+    ),
+    check(
+      "answer_text_value_valid",
+      sql`${t.textValue} is null or length(trim(${t.textValue})) between 1 and 500`,
+    ),
   ],
 );
 export const roundRelations = relations(round, ({ many }) => ({
@@ -164,4 +212,16 @@ export const questionRelations = relations(question, ({ one, many }) => ({
   scoring: one(questionScoring),
   match: one(matchQuestionConfig),
   options: many(questionOption),
+  answers: many(answer),
+}));
+export const answerRelations = relations(answer, ({ one }) => ({
+  question: one(question, { fields: [answer.questionId], references: [question.id] }),
+  participant: one(competitionParticipant, {
+    fields: [answer.participantId],
+    references: [competitionParticipant.id],
+  }),
+  option: one(questionOption, {
+    fields: [answer.optionId],
+    references: [questionOption.id],
+  }),
 }));

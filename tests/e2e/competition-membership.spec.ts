@@ -89,7 +89,7 @@ test("Admin invita, la persona solicita acceso y queda activa", async ({ browser
   }
 });
 
-test("Admin prepara las cinco preguntas, publica y ve la jornada congelada", async ({
+test("Admin publica cinco preguntas y guarda sus pronósticos como participante", async ({
   browser,
 }) => {
   test.setTimeout(90_000);
@@ -150,6 +150,75 @@ test("Admin prepara las cinco preguntas, publica y ve la jornada congelada", asy
     await expect(
       page.getByRole("button", { name: "Publicar y abrir jornada" }),
     ).toHaveCount(0);
+    const publishedOptions = page.locator('[data-slot="card"]').filter({
+      hasText: "Equipo campeón",
+    });
+    await publishedOptions
+      .getByRole("button", { name: /3 · Opciones.*Equipo campeón/ })
+      .click();
+    await expect(publishedOptions.getByText("Opciones publicadas")).toBeVisible();
+    await expect(publishedOptions.getByText("México", { exact: true })).toBeVisible();
+    await expect(publishedOptions.getByText("Canadá", { exact: true })).toBeVisible();
+
+    await page.goto(competitionUrl);
+    await page.getByRole("link", { name: "Pronósticos" }).click();
+    await page.getByRole("link", { name: /Fecha inaugural/ }).click();
+
+    const match = page.locator('[data-slot="card"]').filter({
+      hasText: "Marcador",
+    });
+    await expect(
+      match.getByRole("button", { name: "Guardar pronóstico" }),
+    ).toBeDisabled();
+    await match.getByLabel("México").fill("2");
+    await match.getByLabel("Canadá").fill("1");
+    await expect(match.getByRole("button", { name: "Guardar pronóstico" })).toBeEnabled();
+    await match.getByRole("button", { name: "Guardar pronóstico" }).click();
+    await expect(
+      match.getByRole("button", { name: "Guardar pronóstico" }),
+    ).toBeDisabled();
+
+    const closest = page.locator('[data-slot="card"]').filter({
+      hasText: "Total de goles",
+    });
+    await closest.getByLabel("Tu respuesta").fill("-12.5");
+    await closest.getByRole("button", { name: "Guardar pronóstico" }).click();
+
+    const options = page.locator('[data-slot="card"]').filter({
+      hasText: "Equipo campeón",
+    });
+    await options.getByLabel("Elige una opción").click();
+    await page.getByRole("option", { name: "México" }).click();
+    await expect(
+      options.getByRole("button", { name: "Guardar pronóstico" }),
+    ).toBeEnabled();
+    await options.getByRole("button", { name: "Guardar pronóstico" }).click();
+    await expect(
+      options.getByRole("button", { name: "Guardar pronóstico" }),
+    ).toBeDisabled();
+
+    const openText = page.locator('[data-slot="card"]').filter({
+      hasText: "Nombre del goleador",
+    });
+    await openText.getByLabel("Tu respuesta").fill("Persona goleadora");
+    await openText.getByRole("button", { name: "Guardar pronóstico" }).click();
+
+    const exact = page.locator('[data-slot="card"]').filter({
+      hasText: "Minuto del primer gol",
+    });
+    await expect(exact.getByPlaceholder("Ejemplo: 25")).toBeVisible();
+    await expect(exact.getByText("Usa hasta 6 decimales.")).toHaveCount(0);
+    await exact.getByLabel("Tu respuesta").fill("25");
+    await exact.getByRole("button", { name: "Guardar pronóstico" }).click();
+    await expect(page.getByText("5 de 5 guardados")).toBeVisible();
+
+    await page.reload();
+    await expect(match.getByLabel("México")).toHaveValue("2");
+    await closest.getByLabel("Tu respuesta").fill("13.25");
+    await closest.getByRole("button", { name: "Guardar pronóstico" }).click();
+    await expect(closest.getByText("Pronóstico guardado.")).toBeVisible();
+    await page.reload();
+    await expect(closest.getByLabel("Tu respuesta")).toHaveValue("13.25");
   } finally {
     await context.close();
     await cleanupUsersByEmail(database, [adminEmail]);

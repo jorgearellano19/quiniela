@@ -230,6 +230,24 @@ export function QuestionWorkspace({
                     <p className="mb-5 text-sm text-muted-foreground">
                       Cierra <LocalDateTime value={question.deadlineAt} />
                     </p>
+                    {readOnly && question.type === "OPTIONS" ? (
+                      <div className="flex flex-col gap-3">
+                        <p className="text-sm font-medium">Opciones publicadas</p>
+                        <ol className="grid gap-2 sm:grid-cols-2">
+                          {question.options.map((option, optionIndex) => (
+                            <li
+                              key={`${question.id}-${option.sequence}`}
+                              className="flex items-center gap-3 rounded-xl bg-muted px-4 py-3 text-sm"
+                            >
+                              <span className="font-heading text-lg text-muted-foreground">
+                                {optionIndex + 1}
+                              </span>
+                              <span>{option.label}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    ) : null}
                     {!readOnly ? (
                       <div className="grid gap-6">
                         <QuestionForm
