@@ -204,6 +204,123 @@ export const answer = pgTable(
     ),
   ],
 );
+export const officialResult = pgTable(
+  "official_result",
+  {
+    id: text("id").primaryKey(),
+    questionId: text("question_id")
+      .notNull()
+      .references(() => question.id, { onDelete: "restrict" }),
+    homeScore: integer("home_score"),
+    awayScore: integer("away_score"),
+    numericValue: numeric("numeric_value", { precision: 18, scale: 6 }),
+    optionId: text("option_id"),
+    recordedByUserId: text("recorded_by_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    updatedByUserId: text("updated_by_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    uniqueIndex("official_result_question_unique").on(t.questionId),
+    foreignKey({
+      name: "official_result_option_question_fk",
+      columns: [t.optionId, t.questionId],
+      foreignColumns: [questionOption.id, questionOption.questionId],
+    }).onDelete("restrict"),
+    check(
+      "official_result_value_shape_valid",
+      sql`(
+        (${t.homeScore} is not null and ${t.awayScore} is not null and ${t.numericValue} is null and ${t.optionId} is null) or
+        (${t.homeScore} is null and ${t.awayScore} is null and ${t.numericValue} is not null and ${t.optionId} is null) or
+        (${t.homeScore} is null and ${t.awayScore} is null and ${t.numericValue} is null and ${t.optionId} is not null)
+      )`,
+    ),
+    check(
+      "official_result_match_score_valid",
+      sql`${t.homeScore} is null or (${t.homeScore} between 0 and 999 and ${t.awayScore} between 0 and 999)`,
+    ),
+  ],
+);
+export const openTextJudgment = pgTable("open_text_judgment", {
+  answerId: text("answer_id")
+    .primaryKey()
+    .references(() => answer.id, { onDelete: "restrict" }),
+  isCorrect: boolean("is_correct").notNull(),
+  judgedByUserId: text("judged_by_user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "restrict" }),
+  updatedByUserId: text("updated_by_user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "restrict" }),
+  judgedAt: timestamp("judged_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+});
+export const officialResultCorrectionEvent = pgTable(
+  "official_result_correction_event",
+  {
+    id: text("id").primaryKey(),
+    officialResultId: text("official_result_id")
+      .notNull()
+      .references(() => officialResult.id, { onDelete: "restrict" }),
+    questionId: text("question_id")
+      .notNull()
+      .references(() => question.id, { onDelete: "restrict" }),
+    beforeHomeScore: integer("before_home_score"),
+    beforeAwayScore: integer("before_away_score"),
+    beforeNumericValue: numeric("before_numeric_value", { precision: 18, scale: 6 }),
+    beforeOptionId: text("before_option_id"),
+    afterHomeScore: integer("after_home_score"),
+    afterAwayScore: integer("after_away_score"),
+    afterNumericValue: numeric("after_numeric_value", { precision: 18, scale: 6 }),
+    afterOptionId: text("after_option_id"),
+    actorUserId: text("actor_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    index("official_result_correction_resource_time_idx").on(
+      t.officialResultId,
+      t.createdAt,
+    ),
+    foreignKey({
+      name: "official_result_correction_before_option_fk",
+      columns: [t.beforeOptionId, t.questionId],
+      foreignColumns: [questionOption.id, questionOption.questionId],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "official_result_correction_after_option_fk",
+      columns: [t.afterOptionId, t.questionId],
+      foreignColumns: [questionOption.id, questionOption.questionId],
+    }).onDelete("restrict"),
+  ],
+);
+export const openTextJudgmentCorrectionEvent = pgTable(
+  "open_text_judgment_correction_event",
+  {
+    id: text("id").primaryKey(),
+    answerId: text("answer_id")
+      .notNull()
+      .references(() => answer.id, { onDelete: "restrict" }),
+    beforeIsCorrect: boolean("before_is_correct").notNull(),
+    afterIsCorrect: boolean("after_is_correct").notNull(),
+    actorUserId: text("actor_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    index("open_text_judgment_correction_resource_time_idx").on(t.answerId, t.createdAt),
+    check(
+      "open_text_judgment_correction_changed",
+      sql`${t.beforeIsCorrect} <> ${t.afterIsCorrect}`,
+    ),
+  ],
+);
 export const roundRelations = relations(round, ({ many }) => ({
   questions: many(question),
 }));
@@ -213,6 +330,25 @@ export const questionRelations = relations(question, ({ one, many }) => ({
   match: one(matchQuestionConfig),
   options: many(questionOption),
   answers: many(answer),
+  officialResult: one(officialResult),
+}));
+export const officialResultRelations = relations(officialResult, ({ one, many }) => ({
+  question: one(question, {
+    fields: [officialResult.questionId],
+    references: [question.id],
+  }),
+  option: one(questionOption, {
+    fields: [officialResult.optionId],
+    references: [questionOption.id],
+  }),
+  corrections: many(officialResultCorrectionEvent),
+}));
+export const openTextJudgmentRelations = relations(openTextJudgment, ({ one, many }) => ({
+  answer: one(answer, {
+    fields: [openTextJudgment.answerId],
+    references: [answer.id],
+  }),
+  corrections: many(openTextJudgmentCorrectionEvent),
 }));
 export const answerRelations = relations(answer, ({ one }) => ({
   question: one(question, { fields: [answer.questionId], references: [question.id] }),

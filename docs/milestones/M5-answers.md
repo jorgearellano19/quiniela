@@ -2,7 +2,7 @@
 
 ## Status
 
-`IN PROGRESS`
+`COMPLETED`
 
 ## Goal
 
@@ -108,7 +108,7 @@ Submit and edit behavior must preserve `submittedAt`. No JSON, score columns, or
 - [x] Missing Answers create no fake rows.
 - [x] UI exposes capability, not internal editing-state reasons.
 - [x] No scoring snapshot or calculation is introduced.
-- [ ] Relevant tests, lint, typecheck, and build pass.
+- [x] Relevant tests, lint, typecheck, and build pass.
 
 ## Definition of Done
 
@@ -122,7 +122,7 @@ Submit and edit behavior must preserve `submittedAt`. No JSON, score columns, or
 - [x] lint passes.
 - [x] typecheck passes.
 - [x] tests pass.
-- [ ] build passes.
+- [x] build passes.
 - [x] milestone code review completed.
 
 ## Risks / implementation notes
@@ -131,10 +131,6 @@ Use a server-authoritative clock. Keep Answer persistence type-specific without 
 
 ## Open questions
 
-Payment-restriction enforcement remains deferred to M8; M5 preserves the Answer model and
-authorization seam that M8 will extend without deleting Answers.
-
-The standard Turbopack build remains blocked in this execution environment because its CSS
-worker cannot bind an internal port (`Operation not permitted`). The webpack production
-build, migration, focused checks, integration suite, and mobile E2E flow pass. Keep M5 `IN
-PROGRESS` until the standard build passes in an unrestricted user terminal.
+None. Payment-restriction enforcement remains deferred to M8; M5 preserves the Answer
+model and authorization seam that M8 will extend without deleting Answers. The standard
+build was confirmed in an unrestricted user terminal on 2026-08-26.

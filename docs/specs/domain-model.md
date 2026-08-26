@@ -115,7 +115,14 @@ Round has all required Results and can automatically finish.
 
 Payment restriction never deletes Answers.
 
-Official Results are separate from participant Answers. For Match Questions, numeric `homeScore` and `awayScore` are authoritative. Official Results can be corrected during the 24-hour correction window after FINISHED and become immutable after FINALIZED. Corrections must be auditable.
+Official Results are separate from participant Answers. For Match Questions, numeric
+`homeScore` and `awayScore` are authoritative. Result entry and OPEN_TEXT judgment require
+the affected Question deadline to have passed. Existing facts may be corrected while the
+Round remains ACTIVE or during the FINISHED correction window; effective FINALIZED makes
+them immutable. Every real correction is auditable.
+
+OPEN_TEXT has no empty OfficialResult marker. Once closed, it is result-complete when all
+submitted Answers are judged; no submitted Answers means it is complete.
 
 ## Match scoring
 
@@ -170,6 +177,9 @@ configure `0`. No other value is valid. Do not create fake Answers for unanswere
 questions.
 
 Prediction Score is derived from Answers, Official Results, Scoring Rules, and unanswered penalties. It is not an independent source of truth in MVP.
+
+A partial Prediction Score includes only result-complete Questions. Unanswered penalties
+begin contributing when the corresponding Question becomes result-complete.
 
 H2H Points and Prediction Score are distinct.
 

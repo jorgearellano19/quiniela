@@ -81,6 +81,21 @@ export default async function RoundEditorPage({
         scoringDefaults={value.scoringDefaults}
         readOnly={value.readOnly}
       />
+      {value.readOnly ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Resultados y puntajes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Link
+              href={`/app/competitions/${competitionId}/rounds/${roundId}/results`}
+              className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Abrir resultados de la jornada
+            </Link>
+          </CardContent>
+        </Card>
+      ) : null}
       {!value.readOnly ? (
         <>
           <Card className="border-primary/30">

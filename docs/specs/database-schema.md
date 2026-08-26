@@ -223,7 +223,15 @@ For Match Questions, `homeScore` and `awayScore` are numeric.
 
 Official Results may be corrected during the 24-hour window after the Round enters FINISHED. After FINALIZED, corrections are rejected. Administrative corrections must be auditable.
 
+Initial entry requires the Question deadline to have passed. Existing Results may also be
+corrected while the parent Round remains ACTIVE; effective finalization is always the
+immutability boundary.
+
 For `OPEN_TEXT`, persist the Admin's explicit correct/incorrect judgment per Answer with actor and timestamps; this is a source fact, not a derived score. Regular and PlayoffRound Results share the same correction rules.
+
+Do not create an empty OfficialResult row for OPEN_TEXT. A closed OPEN_TEXT Question with
+no submitted Answers is result-complete; otherwise every submitted Answer requires its
+judgment.
 
 All submitted `OPEN_TEXT` Answers must have judgments before the parent can atomically enter FINISHED.
 

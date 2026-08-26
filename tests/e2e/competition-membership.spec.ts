@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
+import { eq } from "drizzle-orm";
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { round } from "../../src/infrastructure/db/schema";
 import {
   cleanupUsersByEmail,
   createIntegrationDatabase,
@@ -219,6 +221,59 @@ test("Admin publica cinco preguntas y guarda sus pronósticos como participante"
     await expect(closest.getByText("Pronóstico guardado.")).toBeVisible();
     await page.reload();
     await expect(closest.getByLabel("Tu respuesta")).toHaveValue("13.25");
+
+    const roundId = new URL(roundUrl).pathname.split("/").at(-1)!;
+    await database
+      .update(round)
+      .set({ startsAt: new Date(Date.now() - 60_000) })
+      .where(eq(round.id, roundId));
+    await page.reload();
+    await expect(page.getByText("Sin pronóstico")).toHaveCount(0);
+    await page.getByRole("link", { name: "Revisar resultados de la jornada" }).click();
+    await expect(page.getByRole("heading", { name: "Fecha inaugural" })).toBeVisible();
+
+    const resultMatch = page.locator('[data-slot="card"]').filter({
+      hasText: "México vs Canadá",
+    });
+    await resultMatch.getByLabel("México").fill("2");
+    await resultMatch.getByLabel("Canadá").fill("1");
+    await resultMatch.getByRole("button", { name: "Guardar resultado" }).click();
+    await expect(resultMatch.getByText("Resultado guardado.")).toBeVisible();
+
+    const resultClosest = page.locator('[data-slot="card"]').filter({
+      hasText: "Total de goles",
+    });
+    await resultClosest.getByLabel("Valor oficial").fill("13");
+    await resultClosest.getByRole("button", { name: "Guardar resultado" }).click();
+    await expect(resultClosest.getByText("Resultado guardado.")).toBeVisible();
+
+    const resultOptions = page.locator('[data-slot="card"]').filter({
+      hasText: "Equipo campeón",
+    });
+    await resultOptions.getByLabel("Opción correcta").click();
+    await page.getByRole("option", { name: "México", exact: true }).click();
+    await resultOptions.getByRole("button", { name: "Guardar resultado" }).click();
+    await expect(resultOptions.getByText("Resultado guardado.")).toBeVisible();
+
+    const resultExact = page.locator('[data-slot="card"]').filter({
+      hasText: "Minuto del primer gol",
+    });
+    await resultExact.getByLabel("Valor oficial").fill("25");
+    await resultExact.getByRole("button", { name: "Guardar resultado" }).click();
+    await expect(resultExact.getByText("Resultado guardado.")).toBeVisible();
+
+    const resultOpen = page.locator('[data-slot="card"]').filter({
+      hasText: "Nombre del goleador",
+    });
+    await resultOpen.getByRole("button", { name: "Correcta", exact: true }).click();
+    await expect(resultOpen.getByText("Juicio guardado.")).toBeVisible();
+    await expect(page.getByText("En corrección")).toBeVisible();
+    await expect(page.getByText("7", { exact: true })).toBeVisible();
+
+    await resultExact.getByLabel("Valor oficial").fill("26");
+    await resultExact.getByRole("button", { name: "Guardar corrección" }).click();
+    await expect(resultExact.getByText("Corrección guardada.")).toBeVisible();
+    await expect(page.getByText("6", { exact: true })).toBeVisible();
   } finally {
     await context.close();
     await cleanupUsersByEmail(database, [adminEmail]);

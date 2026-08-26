@@ -10,8 +10,8 @@ These files are delivery contracts. Locked product and implementation specificat
 | M2 | Competition | COMPLETED | M1.1 | Admin creates and manages a Competition |
 | M3 | Participants & Membership | COMPLETED | M2 | Contextual membership and authorization |
 | M4 | Rounds & Questions | COMPLETED | M3 | Admin publishes a playable Round |
-| M5 | Answers | IN PROGRESS | M4 | Participants submit and edit predictions |
-| M6 | Official Results & Scoring | FUTURE | M5 | Results produce authoritative scores |
+| M5 | Answers | COMPLETED | M4 | Participants submit and edit predictions |
+| M6 | Official Results & Scoring | COMPLETED | M5 | Results produce authoritative scores |
 | M7 | Standings & Winners | FUTURE | M6 | Scores become rankings and winners |
 | M8 | Payments & Debt | FUTURE | M7 | Manual debt tracking and eligibility |
 | M9 | H2H & Groups | FUTURE | M7 | H2H phases and group qualification |

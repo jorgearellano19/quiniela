@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMyAnswers } from "@/application/answer/use-cases";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AnswerForm } from "@/features/answers/answer-form";
 import { requireCompetitionPageActor } from "@/features/competitions/competition-session";
 import { answerRepository } from "@/infrastructure/answer/answer-repository";
@@ -45,6 +46,19 @@ export default async function AnswersPage({
           />
         ))}
       </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Resultados y puntajes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Link
+            href={`/app/competitions/${competitionId}/rounds/${roundId}/results`}
+            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Revisar resultados de la jornada
+          </Link>
+        </CardContent>
+      </Card>
     </section>
   );
 }

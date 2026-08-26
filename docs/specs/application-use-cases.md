@@ -354,6 +354,7 @@ Records an Official Result for a Question.
 Preconditions:
 - authorized Admin;
 - Question is eligible for result entry;
+- the Question deadline has passed according to server time;
 - result not already finalized;
 - result data is valid.
 
@@ -363,7 +364,8 @@ For Match Questions, validate numeric home/away scores.
 
 **Actor:** Admin
 
-Corrects an Official Result during the 24-hour FINISHED correction window.
+Corrects an Official Result after its Question deadline while the parent is ACTIVE or
+during the 24-hour FINISHED correction window.
 
 After FINALIZED, reject the operation.
 
@@ -375,9 +377,13 @@ Dependent derived scores/standings are recalculated when queried or through the 
 
 **Actor:** Admin
 
-Marks one `OPEN_TEXT` Answer correct or incorrect. The judgment is an auditable source fact with actor/time and may be corrected only while the parent regular Round or PlayoffRound remains within its correction policy.
+Marks one `OPEN_TEXT` Answer correct or incorrect after the Question deadline. The judgment
+is an auditable source fact with actor/time and may be corrected while the parent regular
+Round or PlayoffRound is ACTIVE or remains within its FINISHED correction policy.
 
 Every submitted OPEN_TEXT Answer must be judged before the final required Result can automatically finish the parent.
+OPEN_TEXT creates no empty OfficialResult marker. A closed OPEN_TEXT Question with no
+submitted Answers is result-complete.
 
 ## finalizeResults
 
@@ -417,6 +423,13 @@ Output:
 - relevant scoring breakdown if requested.
 
 Prediction Score remains derived in MVP.
+
+Before all Results exist, return a partial total containing only result-complete Questions.
+An unanswered penalty contributes only once its Question is result-complete. Before a
+Question deadline, peer predictions and scores are private. At and after the deadline,
+authorized Competition Participants may review every Participant's prediction or
+unanswered state, Official Result when present, and derived points. This is a neutral Round
+review, not standings or winner ordering.
 
 ## getH2HPoints
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-`FUTURE`
+`COMPLETED`
 
 ## Goal
 
@@ -57,6 +57,14 @@ M6 depends on:
 - Unanswered is `-1` by default/configurable `0`; Tiebreaker unanswered is always `0`.
 - The final required Result automatically sets FINISHED and begins exactly 24 hours; server-authoritative time makes the Round effectively FINALIZED at the boundary.
 - Scores are derived and reflect corrections; results are separate from Answers.
+- Result entry and OPEN_TEXT judgment begin only once the affected Question deadline has
+  passed. Existing facts remain correctable before effective finalization, including while
+  the Round is still ACTIVE, and every real correction is audited.
+- Partial totals contain only result-complete Questions. After a Question deadline,
+  authorized Competition participants may see every participant's prediction, Official
+  Result, and derived points; peer data remains private before the deadline.
+- OPEN_TEXT completion is derived from all submitted Answers having judgments. It has no
+  empty OfficialResult marker, and a closed OPEN_TEXT Question with no Answers is complete.
 
 ## Application use cases
 
@@ -94,37 +102,42 @@ Add `OfficialResult`, unique `questionId`, typed result fields, OPEN_TEXT Answer
 
 ## Acceptance criteria
 
-- [ ] Admin can record each supported typed Official Result.
-- [ ] Recording the final required Result atomically starts FINISHED.
-- [ ] Corrections within 24 hours are audited and immediately reflected.
-- [ ] Corrections at/after finalization are rejected.
-- [ ] Effective finalization is enforced from server time without requiring an Admin action or worker.
-- [ ] Every approved scoring rule and unanswered case is deterministic.
-- [ ] Every submitted OPEN_TEXT Answer is judged before automatic FINISHED.
-- [ ] Every equally closest non-rival participant receives the configured point.
-- [ ] Higher match rules never stack with lower ones.
-- [ ] No score snapshots are persisted.
-- [ ] Relevant tests, lint, typecheck, and build pass.
+- [x] Admin can record each supported typed Official Result.
+- [x] Recording the final required Result atomically starts FINISHED.
+- [x] Corrections within 24 hours are audited and immediately reflected.
+- [x] Corrections at/after finalization are rejected.
+- [x] Effective finalization is enforced from server time without requiring an Admin action or worker.
+- [x] Every approved scoring rule and unanswered case is deterministic.
+- [x] Every submitted OPEN_TEXT Answer is judged before automatic FINISHED.
+- [x] Every equally closest non-rival participant receives the configured point.
+- [x] Higher match rules never stack with lower ones.
+- [x] No score snapshots are persisted.
+- [x] Relevant tests, lint, typecheck, and build pass.
 
 ## Definition of Done
 
-- [ ] Scope implemented.
-- [ ] Out-of-scope functionality was not introduced.
-- [ ] Approved domain rules preserved.
-- [ ] Authorization enforced server-side.
-- [ ] Relevant tests added.
-- [ ] No duplicated business logic.
-- [ ] No locked specification modified.
-- [ ] lint passes.
-- [ ] typecheck passes.
-- [ ] tests pass.
-- [ ] build passes.
-- [ ] milestone code review completed.
+- [x] Scope implemented.
+- [x] Out-of-scope functionality was not introduced.
+- [x] Approved domain rules preserved.
+- [x] Authorization enforced server-side.
+- [x] Relevant tests added.
+- [x] No duplicated business logic.
+- [x] Locked specifications changed only for the explicitly approved M6 decisions.
+- [x] lint passes.
+- [x] typecheck passes.
+- [x] tests pass.
+- [x] build passes.
+- [x] milestone code review completed.
 
 ## Risks / implementation notes
 
 Keep audit scope small but sufficient for actor, time, resource, action, and correction before/after. Rival scoring can be unit-tested now while actual H2H orchestration arrives in M9.
 
+Validation completed on 2026-08-26. The production Webpack build passed; the default
+Turbopack build remains unavailable in the managed sandbox because its CSS worker cannot
+bind a local port (`EPERM`).
+
 ## Open questions
 
-None.
+None. Result timing, pre-FINISHED correction behavior, partial scoring, peer visibility,
+and OPEN_TEXT completion were approved during M6 planning on 2026-08-26.

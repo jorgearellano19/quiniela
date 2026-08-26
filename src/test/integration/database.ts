@@ -12,6 +12,10 @@ import {
   competitionParticipant,
   competitionParticipantEvent,
   matchQuestionConfig,
+  officialResult,
+  officialResultCorrectionEvent,
+  openTextJudgment,
+  openTextJudgmentCorrectionEvent,
   question,
   questionOption,
   questionScoring,
@@ -52,31 +56,57 @@ export async function cleanupUsersByEmail(
     const competitionIds = competitions.map(({ id }) => id);
 
     if (competitionIds.length) {
-      const rounds = await database
+      const rounds = await transaction
         .select({ id: round.id })
         .from(round)
-        .where(inArray(round.competitionId, competitionIds));
+        .where(inArray(round.competitionId, competitionIds))
+        .for("update");
       const roundIds = rounds.map(({ id }) => id);
       if (roundIds.length) {
-        const questions = await database
+        const questions = await transaction
           .select({ id: question.id })
           .from(question)
           .where(inArray(question.roundId, roundIds));
         const questionIds = questions.map(({ id }) => id);
         if (questionIds.length) {
-          await database.delete(answer).where(inArray(answer.questionId, questionIds));
-          await database
+          const answers = await transaction
+            .select({ id: answer.id })
+            .from(answer)
+            .where(inArray(answer.questionId, questionIds));
+          const answerIds = answers.map(({ id }) => id);
+          const results = await transaction
+            .select({ id: officialResult.id })
+            .from(officialResult)
+            .where(inArray(officialResult.questionId, questionIds));
+          const resultIds = results.map(({ id }) => id);
+          if (resultIds.length)
+            await transaction
+              .delete(officialResultCorrectionEvent)
+              .where(inArray(officialResultCorrectionEvent.officialResultId, resultIds));
+          if (answerIds.length) {
+            await transaction
+              .delete(openTextJudgmentCorrectionEvent)
+              .where(inArray(openTextJudgmentCorrectionEvent.answerId, answerIds));
+            await transaction
+              .delete(openTextJudgment)
+              .where(inArray(openTextJudgment.answerId, answerIds));
+          }
+          await transaction
+            .delete(officialResult)
+            .where(inArray(officialResult.questionId, questionIds));
+          await transaction.delete(answer).where(inArray(answer.questionId, questionIds));
+          await transaction
             .delete(questionOption)
             .where(inArray(questionOption.questionId, questionIds));
-          await database
+          await transaction
             .delete(matchQuestionConfig)
             .where(inArray(matchQuestionConfig.questionId, questionIds));
-          await database
+          await transaction
             .delete(questionScoring)
             .where(inArray(questionScoring.questionId, questionIds));
-          await database.delete(question).where(inArray(question.id, questionIds));
+          await transaction.delete(question).where(inArray(question.id, questionIds));
         }
-        await database.delete(round).where(inArray(round.id, roundIds));
+        await transaction.delete(round).where(inArray(round.id, roundIds));
       }
       const memberships = await transaction
         .select({ id: competitionParticipant.id })
@@ -190,6 +220,31 @@ export class IntegrationTestData {
           .where(inArray(question.roundId, roundIds));
         const questionIds = questions.map(({ id }) => id);
         if (questionIds.length) {
+          const answers = await this.database
+            .select({ id: answer.id })
+            .from(answer)
+            .where(inArray(answer.questionId, questionIds));
+          const answerIds = answers.map(({ id }) => id);
+          const results = await this.database
+            .select({ id: officialResult.id })
+            .from(officialResult)
+            .where(inArray(officialResult.questionId, questionIds));
+          const resultIds = results.map(({ id }) => id);
+          if (resultIds.length)
+            await this.database
+              .delete(officialResultCorrectionEvent)
+              .where(inArray(officialResultCorrectionEvent.officialResultId, resultIds));
+          if (answerIds.length) {
+            await this.database
+              .delete(openTextJudgmentCorrectionEvent)
+              .where(inArray(openTextJudgmentCorrectionEvent.answerId, answerIds));
+            await this.database
+              .delete(openTextJudgment)
+              .where(inArray(openTextJudgment.answerId, answerIds));
+          }
+          await this.database
+            .delete(officialResult)
+            .where(inArray(officialResult.questionId, questionIds));
           await this.database
             .delete(answer)
             .where(inArray(answer.questionId, questionIds));

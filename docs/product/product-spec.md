@@ -52,6 +52,13 @@ Question data, Answers, and Official Results are typed. Answers are never delete
 
 Every submitted `OPEN_TEXT` Answer must receive an Admin correct/incorrect judgment before all required Results are considered complete and the parent Round can automatically enter FINISHED.
 
+An Admin may first record a Result or judge an `OPEN_TEXT` Answer only at or after that
+Question's deadline. Existing Results and judgments remain correctable while the Round is
+ACTIVE or within its FINISHED correction window; every real correction is audited. They
+become immutable at effective FINALIZED. `OPEN_TEXT` has no empty shared Official Result:
+a closed Question is result-complete when every submitted Answer is judged, and a closed
+Question with no submitted Answers is complete.
+
 ## 7. Match scoring
 Match scoring is hierarchical, not cumulative: 1) EXACT_SCORE, 2) GOAL_DIFFERENCE if enabled for the Competition, 3) NORMAL_RESULT. If a higher rule succeeds, lower rules do not award additional points.
 
@@ -76,6 +83,15 @@ shown with the Question without calculating a score.
 
 ## 11. Prediction Score and H2H Points
 Prediction Score is derived from Answers, Official Results, scoring rules, penalties, and applicable restrictions. MVP does not persist score snapshots as a second source of truth. Prediction Score and H2H Points are distinct.
+
+Before all Results exist, a partial Prediction Score includes only result-complete
+Questions. The unanswered penalty begins contributing when its Question becomes
+result-complete, not merely when its deadline passes.
+
+Before a Question deadline, Participants may see only their own prediction. At and after
+the deadline, authorized Competition Participants may see every Participant's prediction
+or unanswered state, the Official Result when present, and the derived Question points.
+This review does not create standings, positions, or winner selection.
 
 H2H/Group standings tiebreak order: 1) H2H Points DESC, 2) Prediction Score DESC, 3) EXACT_SCORE DESC, 4) More H2H wins.
 
