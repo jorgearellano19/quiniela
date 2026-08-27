@@ -43,6 +43,7 @@ class FakeRepository implements AnswerRepository {
     participantId: "participant",
     questions: [question],
     answers: [],
+    restricted: false,
   };
   async listPublished() {
     return this.authorized ? [] : null;
@@ -65,6 +66,7 @@ class FakeRepository implements AnswerRepository {
       round: this.aggregate.round,
       question,
       current: this.answer,
+      restricted: this.aggregate.restricted,
     });
     return this.answer;
   }
@@ -135,6 +137,34 @@ describe("Answer use cases", () => {
     expect(repository.answer?.value).toEqual({ type: "OPEN_TEXT", value: "Editado" });
   });
 
+  it("preserves restricted Answers as read-only and rejects writes", async () => {
+    const repository = new FakeRepository();
+    repository.aggregate = { ...repository.aggregate, restricted: true };
+    const result = await getMyAnswers(
+      repository,
+      { userId: "user" },
+      competitionId,
+      roundId,
+      now,
+    );
+    expect(result?.restricted).toBe(true);
+    expect(result?.questions[0]?.canEdit).toBe(false);
+    await expect(
+      submitAnswer(
+        repository,
+        { userId: "user" },
+        {
+          competitionId,
+          roundId,
+          questionId,
+          type: "OPEN_TEXT",
+          value: "Preservado",
+        },
+        now,
+      ),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
   it("rejects blank Match scores instead of coercing them to zero", async () => {
     const repository = new FakeRepository();
     await expect(
@@ -183,6 +213,7 @@ describe("Answer use cases", () => {
           type: "OPEN_TEXT",
           value: "Valor",
         },
+        now,
       ),
     ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     repository.authorized = true;
@@ -197,6 +228,7 @@ describe("Answer use cases", () => {
           type: "OPEN_TEXT",
           value: "Valor",
         },
+        now,
       ),
     ).rejects.toMatchObject({ code: "INVALID_INPUT" });
     await expect(

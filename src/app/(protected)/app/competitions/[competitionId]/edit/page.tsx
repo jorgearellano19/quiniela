@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCompetitionDetail } from "@/application/competition/use-cases";
 import { getCompetitionScoringDefaults } from "@/application/round/use-cases";
+import { getCompetitionPaymentStatus } from "@/application/payment/use-cases";
 import {
   Card,
   CardContent,
@@ -16,6 +17,8 @@ import { requireCompetitionPageActor } from "@/features/competitions/competition
 import { ScoringDefaultsForm } from "@/features/rounds/round-editor-forms";
 import { competitionRepository } from "@/infrastructure/competition/competition-repository";
 import { roundRepository } from "@/infrastructure/round/round-repository";
+import { paymentRepository } from "@/infrastructure/payment/payment-repository";
+import { PaymentConfigurationForm } from "@/features/payments/payment-forms";
 export const metadata: Metadata = { title: "Editar quiniela · Quiniela" };
 export default async function EditCompetitionPage({
   params,
@@ -32,6 +35,9 @@ export default async function EditCompetitionPage({
     actor,
     competitionId,
   );
+  const payments = detail.isAdmin
+    ? await getCompetitionPaymentStatus(paymentRepository, actor, competitionId)
+    : null;
   const action = updateCompetitionAction.bind(null, competitionId);
   return (
     <section className="mx-auto flex max-w-2xl flex-col gap-6">
@@ -85,6 +91,23 @@ export default async function EditCompetitionPage({
           <ScoringDefaultsForm competitionId={competitionId} value={scoringDefaults} />
         </CardContent>
       </Card>
+      {detail.canEdit && detail.type !== "GROUP_PLAYOFFS" && payments ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pagos y premio por jornada</CardTitle>
+            <CardDescription>
+              Define la cuota antes de iniciar. Cada publicación generará un cargo por
+              participante activo.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PaymentConfigurationForm
+              competitionId={competitionId}
+              value={payments.competition}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
     </section>
   );
 }

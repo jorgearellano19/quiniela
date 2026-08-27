@@ -690,16 +690,16 @@ No online payment processor is involved.
 
 Enables/disables payment tracking and configures:
 - payment per Round;
-- applicable prize amounts;
+- Round-winner prize amount for M8;
 - maximum debt.
 
-Configuration must match Competition type.
+Configuration must match Competition type, is editable only while the Competition is DRAFT, and is frozen when it starts. A nullable maximum debt permits bookkeeping without restriction.
 
 ## createPaymentObligation
 
-**Actor:** Admin/system
+**Actor:** System within the Admin-authorized Round publication transaction
 
-Creates the amount owed by a participant for a configured Round/fee context.
+Creates the configured amount owed by every ACTIVE participant for a published Round/fee context. The operation is atomic with publication and idempotent by participant + Round.
 
 The participant's obligation is independent from the prize.
 
@@ -742,6 +742,8 @@ outstandingDebt <= maximumDebt
 the participant automatically becomes eligible again.
 
 No separate "unrestrict" operation is required.
+
+Restriction is evaluated for ACTIVE and FINISHED Rounds. At effective FINALIZED, preserved Answers participate in finalized scoring regardless of current debt, and later payment changes cannot change that Round's scores.
 
 ## updatePayment
 

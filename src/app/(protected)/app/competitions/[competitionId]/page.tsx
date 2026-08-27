@@ -5,6 +5,7 @@ import {
   CalendarDaysIcon,
   ListOrderedIcon,
   PencilIcon,
+  CircleDollarSignIcon,
   TargetIcon,
   UsersIcon,
 } from "lucide-react";
@@ -77,6 +78,15 @@ export default async function CompetitionDetailPage({
               <Link href={`/app/competitions/${detail.id}/standings`}>
                 <ListOrderedIcon data-icon="inline-start" aria-hidden="true" />
                 Clasificación
+              </Link>
+            </Button>
+          ) : null}
+          {(detail.membershipStatus === "ACTIVE" || detail.isAdmin) &&
+          detail.type !== "GROUP_PLAYOFFS" ? (
+            <Button asChild variant="outline">
+              <Link href={`/app/competitions/${detail.id}/payments`}>
+                <CircleDollarSignIcon data-icon="inline-start" aria-hidden="true" />
+                Pagos
               </Link>
             </Button>
           ) : null}

@@ -39,6 +39,7 @@ export type ResultRoundAggregate = Readonly<{
   judgments: OpenTextJudgment[];
   actorParticipantId: string | null;
   actorIsAdmin: boolean;
+  restrictedParticipantIds: ReadonlySet<string>;
 }>;
 
 export type ResultMutationDecision = Readonly<{
@@ -169,10 +170,21 @@ function questionForPublic(question: Question) {
 }
 
 function review(aggregate: ResultRoundAggregate, now: Date) {
+  const finalized = effectiveRoundStatus(aggregate.round, now) === "FINALIZED";
+  const eligibleParticipantIds = aggregate.participants
+    .map((participant) => participant.id)
+    .filter(
+      (participantId) =>
+        finalized || !aggregate.restrictedParticipantIds.has(participantId),
+    );
+  const eligibleParticipantIdSet = new Set(eligibleParticipantIds);
+  const eligibleAnswers = aggregate.answers.filter((answer) =>
+    eligibleParticipantIdSet.has(answer.participantId),
+  );
   const totals = calculateRoundScoreBreakdowns({
     questions: aggregate.questions,
-    participantIds: aggregate.participants.map((participant) => participant.id),
-    answers: aggregate.answers,
+    participantIds: eligibleParticipantIds,
+    answers: eligibleAnswers,
     results: aggregate.results,
     judgments: aggregate.judgments,
     unansweredPenalty: aggregate.round.unansweredPenalty,
@@ -182,6 +194,9 @@ function review(aggregate: ResultRoundAggregate, now: Date) {
     const closed = now.valueOf() >= question.deadlineAt.valueOf();
     const answers = aggregate.answers.filter(
       (answer) => answer.questionId === question.id,
+    );
+    const eligibleQuestionAnswers = answers.filter((answer) =>
+      eligibleParticipantIdSet.has(answer.participantId),
     );
     const result =
       aggregate.results.find((item) => item.questionId === question.id) ?? null;
@@ -194,8 +209,8 @@ function review(aggregate: ResultRoundAggregate, now: Date) {
     if (closed && !(question.type === "CLOSEST_VALUE" && question.againstRival))
       scores = calculateQuestionScores({
         question,
-        participantIds: aggregate.participants.map((participant) => participant.id),
-        answers,
+        participantIds: eligibleParticipantIds,
+        answers: eligibleQuestionAnswers,
         result,
         judgments: aggregate.judgments,
         unansweredPenalty: aggregate.round.unansweredPenalty,
@@ -220,7 +235,10 @@ function review(aggregate: ResultRoundAggregate, now: Date) {
           participantName: participant.name,
           answerId: answer?.id ?? null,
           answer: answer ? valueForPublic(answer.value) : null,
-          score: scores.get(participant.id) ?? null,
+          score:
+            aggregate.restrictedParticipantIds.has(participant.id) && !finalized
+              ? { state: "SCORED", points: 0, awardedRule: null }
+              : (scores.get(participant.id) ?? null),
           judgment: question.type === "OPEN_TEXT" ? (judgment?.isCorrect ?? null) : null,
         };
       }),

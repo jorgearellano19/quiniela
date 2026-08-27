@@ -14,6 +14,7 @@ import {
   round,
 } from "@/infrastructure/db/schema";
 import { loadQuestions, scoringDefaults } from "@/infrastructure/round/round-repository";
+import { loadRestrictedParticipantIds } from "@/infrastructure/payment/payment-eligibility";
 
 function persistedRound(value: typeof round.$inferSelect): Round {
   if (value.unansweredPenalty !== -1 && value.unansweredPenalty !== 0)
@@ -150,11 +151,15 @@ export function createAnswerRepository(database: typeof db): AnswerRepository {
               ),
             )
         : [];
+      const restricted = (
+        await loadRestrictedParticipantIds(database, competitionId, [row.participantId])
+      ).has(row.participantId);
       return {
         round: roundValue,
         participantId: row.participantId,
         questions,
         answers: rows.map((item) => domainAnswer(item, types.get(item.questionId)!)),
+        restricted,
       } satisfies ParticipantRoundAggregate;
     },
     async mutate(competitionId, roundId, questionId, userId, now, operation) {
@@ -176,6 +181,7 @@ export function createAnswerRepository(database: typeof db): AnswerRepository {
           round: aggregate.round,
           question: item,
           current,
+          restricted: aggregate.restricted,
         });
         if (!current)
           await tx.insert(answer).values({

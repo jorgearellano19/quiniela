@@ -14,7 +14,7 @@ Users see final Round, League/league-phase, and playoff winners with configured 
 
 ## In scope
 
-- `PrizeConfiguration` and approved prize types/amounts.
+- Complete the M8 `PrizeConfiguration` foundation with the remaining approved prize types/amounts.
 - LEAGUE Round and League winner prizes.
 - LEAGUE_PLAYOFFS Round winner, league-phase winner, and champion.
 - GROUP_PLAYOFFS champion.

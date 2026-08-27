@@ -110,6 +110,14 @@ test("Admin publica cinco preguntas y guarda sus pronósticos como participante"
     await page.getByRole("button", { name: "Crear quiniela" }).click();
     await expect(page).toHaveURL(/\/app\/competitions\/[^/?]+\?created=1$/);
     const competitionUrl = page.url();
+    await page.getByRole("link", { name: "Editar configuración" }).click();
+    await page.getByLabel("Cobrar una cuota por jornada").check();
+    await page.getByLabel("Cuota por jornada (MXN)").fill("250.00");
+    await page.getByLabel("Deuda máxima (MXN)").fill("0.00");
+    await page.getByLabel("Premio por jornada (MXN)").fill("1000.00");
+    await page.getByRole("button", { name: "Guardar pagos" }).click();
+    await expect(page.getByText("Configuración de pagos guardada.")).toBeVisible();
+    await page.goto(competitionUrl);
     await page.getByRole("link", { name: "Jornadas" }).click();
     await page.getByRole("button", { name: "Crear jornada" }).click();
     await page.getByLabel("Nombre").fill("Fecha inaugural");
@@ -162,6 +170,20 @@ test("Admin publica cinco preguntas y guarda sus pronósticos como participante"
     await expect(publishedOptions.getByText("México", { exact: true })).toBeVisible();
     await expect(publishedOptions.getByText("Canadá", { exact: true })).toBeVisible();
 
+    await page.goto(competitionUrl);
+    await page.getByRole("link", { name: "Pagos" }).click();
+    await expect(page.getByText("Restringido")).toBeVisible();
+    await expect(page.getByText("$250.00", { exact: true }).first()).toBeVisible();
+    await page.getByLabel("Monto (MXN)").fill("250.00");
+    await page.getByRole("button", { name: "Registrar pago" }).click();
+    await expect(page.getByText("Pago registrado.")).toBeVisible();
+    await expect(
+      page
+        .locator("form")
+        .filter({ has: page.getByRole("button", { name: "Registrar pago" }) })
+        .getByLabel("Monto (MXN)"),
+    ).toHaveValue("");
+    await expect(page.getByText("Elegible")).toBeVisible();
     await page.goto(competitionUrl);
     await page.getByRole("link", { name: "Pronósticos" }).click();
     await page.getByRole("link", { name: /Fecha inaugural/ }).click();

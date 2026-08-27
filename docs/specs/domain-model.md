@@ -364,7 +364,9 @@ sum(payment obligations) - sum(recorded payments)
 
 Payments are participant-level contributions and are not allocated to individual obligations. Overpayment is allowed and yields a negative outstanding balance (credit). A Competition has one immutable currency, defaulting to `MXN`, and monetary amounts use integer minor units.
 
-If `outstandingDebt > maximumDebt`, the participant may be restricted from open/future Rounds according to the approved payment rules. The restriction does not delete Answers, alter finalized history, or transfer Competition ownership.
+If a non-null `maximumDebt` satisfies `outstandingDebt > maximumDebt`, the participant is automatically restricted from open/future Rounds. Restricted Rounds contribute neither Answer points nor unanswered penalties, and their preserved Answers are read-only. The restriction does not delete Answers, alter finalized history, or transfer Competition ownership.
+
+The open-Round restriction applies through the FINISHED correction window. Once the Round is effectively FINALIZED, preserved Answers participate in its finalized derived result regardless of current debt; subsequent balance changes cannot change that finalized result. No eligibility or score snapshot is persisted for this boundary.
 
 When payment reduces debt to `outstandingDebt <= maximumDebt`, the participant automatically becomes eligible again.
 

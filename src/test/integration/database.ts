@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { inArray, or } from "drizzle-orm";
+import { eq, inArray, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import type { Competition } from "@/domain/competition/competition";
@@ -18,6 +18,10 @@ import {
   officialResultCorrectionEvent,
   openTextJudgment,
   openTextJudgmentCorrectionEvent,
+  payment,
+  paymentEvent,
+  paymentObligation,
+  prizeConfiguration,
   question,
   questionOption,
   questionScoring,
@@ -58,6 +62,34 @@ export async function cleanupUsersByEmail(
     const competitionIds = competitions.map(({ id }) => id);
 
     if (competitionIds.length) {
+      const paymentRows = await transaction
+        .select({ id: payment.id })
+        .from(payment)
+        .innerJoin(
+          competitionParticipant,
+          eq(payment.competitionParticipantId, competitionParticipant.id),
+        )
+        .where(inArray(competitionParticipant.competitionId, competitionIds));
+      if (paymentRows.length) {
+        await transaction.delete(paymentEvent).where(
+          inArray(
+            paymentEvent.paymentId,
+            paymentRows.map(({ id }) => id),
+          ),
+        );
+        await transaction.delete(payment).where(
+          inArray(
+            payment.id,
+            paymentRows.map(({ id }) => id),
+          ),
+        );
+      }
+      await transaction
+        .delete(paymentObligation)
+        .where(inArray(paymentObligation.competitionId, competitionIds));
+      await transaction
+        .delete(prizeConfiguration)
+        .where(inArray(prizeConfiguration.competitionId, competitionIds));
       const resolutions = await transaction
         .select({ id: manualRankingResolution.id })
         .from(manualRankingResolution)
@@ -225,6 +257,34 @@ export class IntegrationTestData {
     const userIds = [...this.#userIds];
 
     if (competitionIds.length) {
+      const paymentRows = await this.database
+        .select({ id: payment.id })
+        .from(payment)
+        .innerJoin(
+          competitionParticipant,
+          eq(payment.competitionParticipantId, competitionParticipant.id),
+        )
+        .where(inArray(competitionParticipant.competitionId, competitionIds));
+      if (paymentRows.length) {
+        await this.database.delete(paymentEvent).where(
+          inArray(
+            paymentEvent.paymentId,
+            paymentRows.map(({ id }) => id),
+          ),
+        );
+        await this.database.delete(payment).where(
+          inArray(
+            payment.id,
+            paymentRows.map(({ id }) => id),
+          ),
+        );
+      }
+      await this.database
+        .delete(paymentObligation)
+        .where(inArray(paymentObligation.competitionId, competitionIds));
+      await this.database
+        .delete(prizeConfiguration)
+        .where(inArray(prizeConfiguration.competitionId, competitionIds));
       const resolutions = await this.database
         .select({ id: manualRankingResolution.id })
         .from(manualRankingResolution)

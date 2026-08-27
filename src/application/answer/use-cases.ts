@@ -9,6 +9,7 @@ import {
   type AnswerValue,
 } from "@/domain/answer/answer";
 import type { Question, Round } from "@/domain/round/round";
+import { effectiveRoundStatus } from "@/domain/scoring/lifecycle";
 import {
   requireCompetitionActor,
   type CompetitionActor,
@@ -71,6 +72,7 @@ export type ParticipantRoundAggregate = Readonly<{
   participantId: string;
   questions: Question[];
   answers: Answer[];
+  restricted: boolean;
 }>;
 
 export interface AnswerRepository {
@@ -94,6 +96,7 @@ export interface AnswerRepository {
       round: Round;
       question: Question;
       current: Answer | null;
+      restricted: boolean;
     }) => Answer,
   ): Promise<Answer | null>;
 }
@@ -231,19 +234,23 @@ export async function getMyAnswers(
     return null;
   const value = await repository.getMine(competitionId, roundId, actor.userId);
   if (!value) return null;
+  const restricted =
+    value.restricted && effectiveRoundStatus(value.round, now) !== "FINALIZED";
   return {
     id: value.round.id,
     competitionId: value.round.competitionId,
     sequence: value.round.sequence,
     name: value.round.name,
     status: value.round.status,
+    restricted,
     questions: value.questions.map((question) => {
       const answer =
         value.answers.find((item) => item.questionId === question.id) ?? null;
       return {
         ...publicQuestion(question),
         answer: publicAnswer(answer),
-        canEdit: canEditAnswer(value.round.status, question.deadlineAt, now),
+        canEdit:
+          !restricted && canEditAnswer(value.round.status, question.deadlineAt, now),
       };
     }),
   };
@@ -270,8 +277,8 @@ async function write(
     identity.data.questionId,
     actor.userId,
     now,
-    ({ participantId, round, question, current }) => {
-      if (!canEditAnswer(round.status, question.deadlineAt, now))
+    ({ participantId, round, question, current, restricted }) => {
+      if (restricted || !canEditAnswer(round.status, question.deadlineAt, now))
         throw new ApplicationError(
           "UNAUTHORIZED",
           "No fue posible guardar el pronóstico.",

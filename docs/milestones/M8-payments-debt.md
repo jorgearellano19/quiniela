@@ -2,7 +2,7 @@
 
 ## Status
 
-`FUTURE`
+`COMPLETED — 2026-08-27`
 
 ## Goal
 
@@ -57,6 +57,7 @@ M8 depends on:
 - Restriction applies only when balance is strictly greater than `maximumDebt`, and only to open/future Rounds.
 - Balance at or below threshold restores eligibility automatically.
 - Restrictions never delete Answers or alter FINALIZED history.
+- Restriction applies through the FINISHED correction window; at effective FINALIZED, preserved Answers participate in the finalized result and later debt changes cannot alter it.
 - Payments are manual bookkeeping; prizes are separate configured amounts.
 
 ## Application use cases
@@ -97,30 +98,30 @@ Add `PaymentObligation`, participant-level `Payment`, relevant Competition payme
 
 ## Acceptance criteria
 
-- [ ] Payments can be enabled/configured only as approved for Competition type.
-- [ ] Obligation and payment history derive the correct balance.
-- [ ] Payments remain participant-level, overpayment produces credit, and no allocation model is introduced.
-- [ ] Admin records and audits full/partial payments and corrections.
-- [ ] Restriction applies only above threshold to open/future Rounds.
-- [ ] Sufficient payment automatically restores Answer eligibility.
-- [ ] Answers and finalized scoring are preserved.
-- [ ] No online-payment feature or authoritative debt column exists.
-- [ ] Relevant tests, lint, typecheck, and build pass.
+- [x] Payments can be enabled/configured only as approved for Competition type.
+- [x] Obligation and payment history derive the correct balance.
+- [x] Payments remain participant-level, overpayment produces credit, and no allocation model is introduced.
+- [x] Admin records and audits full/partial payments and corrections.
+- [x] Restriction applies only above threshold to open/future Rounds.
+- [x] Sufficient payment automatically restores Answer eligibility.
+- [x] Answers and finalized scoring are preserved.
+- [x] No online-payment feature or authoritative debt column exists.
+- [x] Relevant tests, lint, typecheck, and build pass.
 
 ## Definition of Done
 
-- [ ] Scope implemented.
-- [ ] Out-of-scope functionality was not introduced.
-- [ ] Approved domain rules preserved.
-- [ ] Authorization enforced server-side.
-- [ ] Relevant tests added.
-- [ ] No duplicated business logic.
-- [ ] No locked specification modified.
-- [ ] lint passes.
-- [ ] typecheck passes.
-- [ ] tests pass.
-- [ ] build passes.
-- [ ] milestone code review completed.
+- [x] Scope implemented.
+- [x] Out-of-scope functionality was not introduced.
+- [x] Approved domain rules preserved.
+- [x] Authorization enforced server-side.
+- [x] Relevant tests added.
+- [x] No duplicated business logic.
+- [x] No locked specification modified outside the approved M8 clarification revision.
+- [x] lint passes.
+- [x] typecheck passes.
+- [x] tests pass.
+- [x] build passes.
+- [x] milestone code review completed.
 
 ## Risks / implementation notes
 
@@ -128,4 +129,13 @@ Eligibility must be evaluated at score/query time so correction or payment immed
 
 ## Open questions
 
-Exact correction UX (editing a record versus an auditable replacement/reversal representation) is an implementation/audit design choice; it must preserve before/after history and cannot change the approved participant-level balance semantics.
+Resolved during planning on 2026-08-27: restriction is automatic and derived; Round publication atomically creates obligations; restricted open Rounds are read-only and contribute zero including no unanswered penalty; `maximumDebt` is optional; payment configuration freezes at Competition start; `paidAt` may be past/present only; corrections edit the effective Payment row plus append immutable before/after audit; and M8 implements only Round-winner prize configuration.
+
+Clarified during regression review on 2026-08-27: open-Round restriction includes the FINISHED correction window; at effective FINALIZED, preserved Answers participate in finalized scoring, which then remains unaffected by later debt changes.
+
+Validation completed on 2026-08-27: formatting, lint, typecheck, 154 unit tests,
+40 PostgreSQL integration tests, 2 mobile Chromium E2E tests, migration
+application to isolated development/test databases, and the optimized Next.js webpack
+build passed. The default Turbopack build retains the known restricted-environment CSS
+worker port-binding failure documented in M7; webpack validated every route including the
+new payments route.

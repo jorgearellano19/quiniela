@@ -1,8 +1,12 @@
-import { and, desc, eq, exists, inArray, or } from "drizzle-orm";
+import { and, desc, eq, exists, inArray, or, sql } from "drizzle-orm";
 import type { CompetitionRepository } from "@/application/competition/use-cases";
 import type { Competition } from "@/domain/competition/competition";
 import { db } from "@/infrastructure/db/client";
-import { competition, competitionParticipant } from "@/infrastructure/db/schema";
+import {
+  competition,
+  competitionParticipant,
+  prizeConfiguration,
+} from "@/infrastructure/db/schema";
 
 const selection = {
   id: competition.id,
@@ -103,6 +107,7 @@ export function createCompetitionRepository(database: typeof db): CompetitionRep
           and(
             eq(competition.id, value.id),
             eq(competition.status, "DRAFT"),
+            sql`(${value.type} <> 'GROUP_PLAYOFFS' or (not ${competition.paymentsEnabled} and not exists (select 1 from ${prizeConfiguration} where ${prizeConfiguration.competitionId} = ${competition.id} and ${prizeConfiguration.type} = 'ROUND_WINNER')))`,
             exists(
               database
                 .select({ id: competitionParticipant.id })

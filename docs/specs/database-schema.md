@@ -51,6 +51,7 @@ Competition
 ├── type
 ├── status
 ├── paymentsEnabled
+├── roundFeeAmount
 ├── maximumDebt
 ├── currency
 ├── rulesNote
@@ -71,7 +72,7 @@ LEAGUE_PLAYOFFS
 GROUP_PLAYOFFS
 ```
 
-`maximumDebt` is nullable when no restriction is configured. Do not create payment obligations when payments are disabled.
+`roundFeeAmount` is a positive integer-minor-unit amount when payments are enabled. `maximumDebt` is nullable when no restriction is configured. Payment configuration is DRAFT-only and frozen at Competition start. Do not create payment obligations when payments are disabled.
 
 Competition lifecycle is `DRAFT → STARTED → COMPLETED`. Starting locks Competition rules and invalidates the reusable invitation token. Completion is an explicit Admin action after type-specific finalization/winner readiness and locks remaining configuration. Store only a secure hash of the opaque token. `currency` is immutable after creation, defaults to `MXN`, and all money uses integer minor units.
 
@@ -394,9 +395,11 @@ Manual tracking only. No Stripe, Mercado Pago, PayPal, wallet, checkout, or exte
 ```text
 PaymentObligation
 ├── id
+├── competitionId
 ├── competitionParticipantId
 ├── roundId
 ├── amount
+├── createdByUserId
 ├── createdAt
 └── updatedAt
 ```
@@ -412,11 +415,14 @@ Payment
 ├── amount
 ├── paidAt
 ├── recordedByUserId
+├── updatedByUserId
 ├── createdAt
 └── updatedAt
 ```
 
 Partial payments, multiple payments, and overpayment credit are supported. Payments are participant-level contributions and are not allocated to individual obligations.
+
+Publishing a Round atomically creates one obligation at the configured fee for every ACTIVE Participant. Payment creation and correction append immutable audit events; corrections update the effective Payment row and preserve before/after amount and `paidAt`. Audit events are not used to derive balances.
 
 `PaymentObligation.amount`, `Payment.amount`, and prize amounts use integer minor units in the Competition's immutable currency, which defaults to `MXN`.
 
@@ -439,6 +445,8 @@ outstanding balance > maximumDebt
 ```
 
 Restriction applies only to open/future Rounds.
+
+The restriction remains effective during the FINISHED correction window. At effective FINALIZED it no longer applies to that Round, all preserved Answers participate in the finalized derived result, and later balance changes do not alter finalized scoring. Do not persist a restriction or score snapshot for this transition.
 
 When payment reduces the balance to `<= maximumDebt`, the participant becomes automatically eligible again. Stored Answers remain intact.
 

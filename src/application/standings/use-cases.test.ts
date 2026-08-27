@@ -94,6 +94,7 @@ function aggregate(tied = false): StandingsAggregate {
     rounds: [{ round, questions: [question], answers, results, judgments: [] }],
     resolutions: [],
     actorIsAdmin: true,
+    restrictedParticipantIds: new Set(),
   };
 }
 
@@ -126,6 +127,22 @@ describe("standings application", () => {
     await expect(
       getLeagueWinner(repository(aggregate()), { userId: "admin" }, ids.competition, now),
     ).resolves.toMatchObject({ state: "resolved", winner: { id: ids.participantA } });
+  });
+
+  it("keeps preserved Answers eligible once a Round is effectively FINALIZED", async () => {
+    const value = aggregate();
+    const result = await getLeagueStandings(
+      repository({
+        ...value,
+        restrictedParticipantIds: new Set([ids.participantB]),
+      }),
+      { userId: "admin" },
+      ids.competition,
+      now,
+    );
+    expect(
+      result?.rows.find((row) => row.participantId === ids.participantB)?.predictionScore,
+    ).toBe(2);
   });
 
   it("recomputes the classification after an Official Result correction", async () => {

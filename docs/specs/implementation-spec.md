@@ -451,6 +451,8 @@ Payments are participant-level contributions with no obligation allocation. Over
 
 Payment restriction must never delete Answers.
 
+Filter restricted participants and their Answers out of open-Round scoring inputs, including league-wide comparisons and OPEN_TEXT completeness checks. Restriction remains effective through FINISHED and stops applying at effective FINALIZED; finalized scoring then remains independent of later balance changes.
+
 ## 22. Playoff implementation
 
 Playoffs must preserve the approved distinction between:

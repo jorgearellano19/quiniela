@@ -16,6 +16,7 @@ import {
   user,
 } from "@/infrastructure/db/schema";
 import { loadQuestions, scoringDefaults } from "@/infrastructure/round/round-repository";
+import { loadRestrictedParticipantIds } from "@/infrastructure/payment/payment-eligibility";
 import {
   domainAnswer,
   domainJudgment,
@@ -124,6 +125,11 @@ async function loadAggregate(
     domainResult(item, types.get(item.questionId)!),
   );
   const judgments = judgmentRows.map(domainJudgment);
+  const restrictedParticipantIds = await loadRestrictedParticipantIds(
+    database,
+    competitionId,
+    participants.map((item) => item.id),
+  );
   return {
     competition: {
       id: scope.competition.id,
@@ -158,6 +164,7 @@ async function loadAggregate(
         .map((entry) => entry.participantId),
     })),
     actorIsAdmin: scope.membership.isAdmin,
+    restrictedParticipantIds,
   };
 }
 

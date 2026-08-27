@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { and, asc, count, eq, exists, inArray, sql } from "drizzle-orm";
 import type { RoundRepository, RoundAggregate } from "@/application/round/use-cases";
 import {
@@ -15,6 +16,7 @@ import {
   questionOption,
   questionScoring,
   round,
+  paymentObligation,
 } from "@/infrastructure/db/schema";
 
 export function scoringDefaults(
@@ -449,6 +451,38 @@ export function createRoundRepository(database: typeof db): RoundRepository {
                 : { points: item.points },
             )
             .where(eq(questionScoring.questionId, item.id));
+        }
+        if (competitionRow.paymentsEnabled && competitionRow.roundFeeAmount !== null) {
+          const participants = await tx
+            .select({ id: competitionParticipant.id })
+            .from(competitionParticipant)
+            .where(
+              and(
+                eq(competitionParticipant.competitionId, value.competitionId),
+                eq(competitionParticipant.status, "ACTIVE"),
+              ),
+            );
+          if (participants.length)
+            await tx
+              .insert(paymentObligation)
+              .values(
+                participants.map((participant) => ({
+                  id: randomUUID(),
+                  competitionId: value.competitionId,
+                  competitionParticipantId: participant.id,
+                  roundId: value.id,
+                  amount: competitionRow.roundFeeAmount!,
+                  createdByUserId: userId,
+                  createdAt: now,
+                  updatedAt: now,
+                })),
+              )
+              .onConflictDoNothing({
+                target: [
+                  paymentObligation.competitionParticipantId,
+                  paymentObligation.roundId,
+                ],
+              });
         }
         const persisted =
           activated === value ? activated : { ...activated, updatedByUserId: userId };

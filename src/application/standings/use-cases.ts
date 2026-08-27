@@ -64,6 +64,7 @@ export type StandingsAggregate = Readonly<{
   rounds: readonly StandingRound[];
   resolutions: readonly StoredRankingResolution[];
   actorIsAdmin: boolean;
+  restrictedParticipantIds: ReadonlySet<string>;
 }>;
 
 type ResolutionWrite = Readonly<{
@@ -139,10 +140,20 @@ function scoresForRounds(
   let supported = true;
   for (const item of rounds) {
     if (item.round.status === "DRAFT") continue;
+    const finalized = effectiveRoundStatus(item.round, now) === "FINALIZED";
+    const eligibleParticipantIds = aggregate.participants
+      .map((participant) => participant.id)
+      .filter(
+        (participantId) =>
+          finalized || !aggregate.restrictedParticipantIds.has(participantId),
+      );
+    const eligibleParticipantIdSet = new Set(eligibleParticipantIds);
     const result = calculateRoundScoreBreakdowns({
       questions: item.questions,
-      participantIds: aggregate.participants.map((participant) => participant.id),
-      answers: item.answers,
+      participantIds: eligibleParticipantIds,
+      answers: item.answers.filter((answer) =>
+        eligibleParticipantIdSet.has(answer.participantId),
+      ),
       results: item.results,
       judgments: item.judgments,
       unansweredPenalty: item.round.unansweredPenalty,

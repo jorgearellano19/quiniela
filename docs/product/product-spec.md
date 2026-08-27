@@ -126,7 +126,9 @@ A round fee creates an obligation per applicable participant. Admin can record f
 Each Competition uses one immutable currency, defaulting to `MXN`. Monetary amounts are stored in integer minor units.
 
 ## 15. Debt restriction
-If enabled, Admin configures `maximumDebt`. If outstanding balance exceeds it, Admin may restrict the participant. Restriction affects only open and future rounds. Finalized rounds are never retroactively invalidated. Answers are not deleted. While restricted, affected Answers do not count toward scoring.
+Debt restriction is optional. When `maximumDebt` is configured and outstanding balance exceeds it, the participant is automatically restricted. Restriction affects only open and future rounds. Finalized rounds are never retroactively invalidated. Answers are not deleted. While restricted, affected Answers are read-only and contribute neither points nor unanswered penalties.
+
+Eligibility is evaluated while a Round is open, including its FINISHED correction window. At effective FINALIZED, the restriction no longer applies to that Round: preserved Answers participate in the immutable finalized result and later debt changes cannot add or remove finalized points. This boundary does not persist a score snapshot or restriction state.
 
 When Admin records a payment that brings balance to `maximumDebt` or below, the participant is automatically enabled and affected Answers count again. No separate unblock action is required.
 
@@ -143,7 +145,7 @@ Playoff prize winner is the official playoff champion.
 Competition has no timezone. Store timestamps in UTC and compare deadlines in UTC. Present timestamps in the user's local timezone.
 
 ## 18. Auditability
-Important administrative mutations record `updatedAt` and `updatedBy`, including Official Result changes, manual tie resolutions, payment creation/correction, payment restrictions, and other sensitive configuration changes.
+Important administrative mutations record `updatedAt` and `updatedBy`, including Official Result changes, manual tie resolutions, payment creation/correction, payment configuration, and other sensitive configuration changes. Payment restriction itself is derived and has no separate mutation.
 
 Before an Admin resolution, tied standings use competition ranking (`1, 1, 3`). A manual resolution orders every Participant in the tied group, is auditable and correctable, and applies only to the exact authoritative source revision it resolved. Any later source change invalidates the decision without deleting its history.
 

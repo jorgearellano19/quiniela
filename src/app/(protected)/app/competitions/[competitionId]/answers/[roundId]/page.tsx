@@ -36,6 +36,12 @@ export default async function AnswersPage({
           {answered} de {value.questions.length} guardados
         </Badge>
       </div>
+      {value.restricted ? (
+        <p role="status" className="rounded-2xl bg-secondary p-4 text-sm">
+          Tus pronósticos están en modo de consulta. Revisa tu saldo en Pagos para
+          recuperar la elegibilidad.
+        </p>
+      ) : null}
       <div className="grid gap-4">
         {value.questions.map((item) => (
           <AnswerForm

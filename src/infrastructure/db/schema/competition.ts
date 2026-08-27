@@ -43,6 +43,9 @@ export const competition = pgTable(
     type: competitionType("type").notNull(),
     status: competitionStatus("status").default("DRAFT").notNull(),
     currency: text("currency").default("MXN").notNull(),
+    paymentsEnabled: boolean("payments_enabled").default(false).notNull(),
+    roundFeeAmount: integer("round_fee_amount"),
+    maximumDebt: integer("maximum_debt"),
     rulesNote: text("rules_note"),
     invitationTokenHash: text("invitation_token_hash"),
     invitationInvalidatedAt: timestamp("invitation_invalidated_at", {
@@ -81,6 +84,10 @@ export const competition = pgTable(
     check("competition_name_nonblank", sql`length(trim(${table.name})) > 0`),
     check("competition_currency_mxn", sql`${table.currency} = 'MXN'`),
     check(
+      "competition_payment_configuration_valid",
+      sql`(${table.paymentsEnabled} and ${table.roundFeeAmount} > 0 and (${table.maximumDebt} is null or ${table.maximumDebt} >= 0)) or (not ${table.paymentsEnabled} and ${table.roundFeeAmount} is null and ${table.maximumDebt} is null)`,
+    ),
+    check(
       "competition_default_scoring_valid",
       sql`${table.defaultMatchExactScorePoints} between 1 and 100 and ${table.defaultMatchNormalResultPoints} between 1 and 100 and (${table.defaultMatchGoalDifferencePoints} is null or ${table.defaultMatchGoalDifferencePoints} between 1 and 100) and ${table.defaultMatchExactScorePoints} > coalesce(${table.defaultMatchGoalDifferencePoints}, ${table.defaultMatchNormalResultPoints}) and (${table.defaultMatchGoalDifferencePoints} is null or ${table.defaultMatchGoalDifferencePoints} > ${table.defaultMatchNormalResultPoints}) and ${table.defaultClosestValuePoints} between 1 and 100 and ${table.defaultOptionsPoints} between 1 and 100 and ${table.defaultOpenTextPoints} between 1 and 100 and ${table.defaultExactValuePoints} between 1 and 100`,
     ),
@@ -114,6 +121,10 @@ export const competitionParticipant = pgTable(
     uniqueIndex("competition_participant_competition_user_unique").on(
       table.competitionId,
       table.userId,
+    ),
+    uniqueIndex("competition_participant_id_competition_unique").on(
+      table.id,
+      table.competitionId,
     ),
     index("competition_participant_user_idx").on(table.userId),
     index("competition_participant_competition_status_idx").on(

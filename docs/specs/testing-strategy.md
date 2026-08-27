@@ -27,7 +27,7 @@ Prefer many focused domain tests + targeted application/integration tests + few 
 - Invitation link authentication, rules-before-request, reuse/revocation/start expiry, pending request, and Admin approval.
 - Competition start locks rules and invalidates invitations; voluntary leave is DRAFT-only; explicit Admin completion validates type-specific finalization/winner readiness and locks configuration.
 - Automatic finish waits for every submitted OPEN_TEXT Answer judgment.
-- Payments: obligations, partial/multiple payments, derived debt, threshold restriction/restoration, corrections, audit.
+- Payments: obligations, partial/multiple payments, derived debt, threshold restriction/restoration, corrections, audit, eligible-only `CLOSEST_VALUE` comparison and `OPEN_TEXT` completeness, and the effective-FINALIZED restriction boundary.
 - Round winner ordering: Prediction Score, Match Question points, competition-phase Prediction Score, earliest original submission.
 - LEAGUE_PLAYOFFS prize ordering: Prediction Score, EXACT_SCORE, H2H, then Admin resolution.
 - PlayoffRounds exercise the same Question, Answer, Official Result, deadline, correction, and effective-finalization rules as regular Rounds.

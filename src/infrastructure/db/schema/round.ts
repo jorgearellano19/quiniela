@@ -61,6 +61,7 @@ export const round = pgTable(
   },
   (t) => [
     uniqueIndex("round_competition_sequence_unique").on(t.competitionId, t.sequence),
+    uniqueIndex("round_id_competition_unique").on(t.id, t.competitionId),
     uniqueIndex("round_competition_name_unique").on(
       t.competitionId,
       sql`lower(trim(${t.name}))`,

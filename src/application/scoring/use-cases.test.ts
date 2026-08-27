@@ -90,6 +90,7 @@ function aggregate(question = match()): ResultRoundAggregate {
     judgments: [],
     actorParticipantId: ids.participantA,
     actorIsAdmin: false,
+    restrictedParticipantIds: new Set(),
   };
 }
 
@@ -122,6 +123,140 @@ describe("scoring application use cases", () => {
       { name: "Ana", total: 3 },
       { name: "Beto", total: -1 },
     ]);
+  });
+
+  it("gives a restricted open-Round participant zero without unanswered penalty", async () => {
+    const value = aggregate();
+    const result = await getRoundResults(
+      repository({ ...value, restrictedParticipantIds: new Set([ids.participantB]) }),
+      { userId: "a" },
+      ids.competition,
+      ids.round,
+      now,
+    );
+    expect(result?.participants.find((item) => item.id === ids.participantB)?.total).toBe(
+      0,
+    );
+    expect(
+      result?.questions[0]?.entries.find(
+        (item) => item.participantId === ids.participantB,
+      )?.score,
+    ).toMatchObject({ state: "SCORED", points: 0 });
+  });
+
+  it("excludes a restricted Answer from league-wide CLOSEST_VALUE comparison", async () => {
+    const question = createQuestion({
+      id: ids.question,
+      roundId: ids.round,
+      sequence: 1,
+      type: "CLOSEST_VALUE",
+      prompt: "Total",
+      points: 4,
+      againstRival: false,
+      deadlineAt: now,
+      actorUserId: "admin",
+    });
+    const value = aggregate(question);
+    value.answers.splice(
+      0,
+      value.answers.length,
+      {
+        id: ids.answer,
+        questionId: ids.question,
+        participantId: ids.participantA,
+        value: { type: "CLOSEST_VALUE", value: "9" },
+        submittedAt: now,
+        updatedAt: now,
+      },
+      {
+        id: "00000000-0000-4000-8000-000000000009",
+        questionId: ids.question,
+        participantId: ids.participantB,
+        value: { type: "CLOSEST_VALUE", value: "10" },
+        submittedAt: now,
+        updatedAt: now,
+      },
+    );
+    value.results.splice(0, value.results.length, {
+      id: "result",
+      questionId: ids.question,
+      value: { type: "CLOSEST_VALUE", value: "10" },
+      recordedAt: now,
+      updatedAt: now,
+      updatedByUserId: "admin",
+    });
+    const result = await getRoundResults(
+      repository({ ...value, restrictedParticipantIds: new Set([ids.participantB]) }),
+      { userId: "a" },
+      ids.competition,
+      ids.round,
+      now,
+    );
+    expect(
+      result?.questions[0]?.entries.find(
+        (item) => item.participantId === ids.participantA,
+      )?.score,
+    ).toMatchObject({ state: "SCORED", points: 4 });
+  });
+
+  it("does not let an unjudged restricted OPEN_TEXT Answer block eligible scoring", async () => {
+    const question = createQuestion({
+      id: ids.question,
+      roundId: ids.round,
+      sequence: 1,
+      type: "OPEN_TEXT",
+      prompt: "Goleador",
+      points: 2,
+      deadlineAt: now,
+      actorUserId: "admin",
+    });
+    const value = aggregate(question);
+    value.answers.splice(
+      0,
+      value.answers.length,
+      {
+        id: ids.answer,
+        questionId: ids.question,
+        participantId: ids.participantA,
+        value: { type: "OPEN_TEXT", value: "Ana" },
+        submittedAt: now,
+        updatedAt: now,
+      },
+      {
+        id: "00000000-0000-4000-8000-000000000009",
+        questionId: ids.question,
+        participantId: ids.participantB,
+        value: { type: "OPEN_TEXT", value: "Beto" },
+        submittedAt: now,
+        updatedAt: now,
+      },
+    );
+    value.results.splice(0);
+    const withJudgment = {
+      ...value,
+      restrictedParticipantIds: new Set([ids.participantB]),
+      judgments: [
+        {
+          answerId: ids.answer,
+          isCorrect: true,
+          judgedAt: now,
+          updatedAt: now,
+          updatedByUserId: "admin",
+        },
+      ],
+    };
+    const result = await getRoundResults(
+      repository(withJudgment),
+      { userId: "a" },
+      ids.competition,
+      ids.round,
+      now,
+    );
+    expect(
+      result?.questions[0]?.entries.find(
+        (item) => item.participantId === ids.participantA,
+      )?.score,
+    ).toMatchObject({ state: "SCORED", points: 2 });
   });
 
   it("keeps peer predictions private before the deadline and does not apply penalties", async () => {

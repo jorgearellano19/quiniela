@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { RoundResultsDetail } from "@/application/scoring/use-cases";
 import { getRoundResults } from "@/application/scoring/use-cases";
-import { getRoundWinner } from "@/application/standings/use-cases";
+import { getPaymentWinner } from "@/application/payment/use-cases";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,6 +17,7 @@ import { JudgmentControls, OfficialResultForm } from "@/features/results/result-
 import { requireCompetitionPageActor } from "@/features/competitions/competition-session";
 import { resultRepository } from "@/infrastructure/scoring/result-repository";
 import { standingsRepository } from "@/infrastructure/standings/standings-repository";
+import { paymentRepository } from "@/infrastructure/payment/payment-repository";
 import { TieResolutionForm } from "@/features/standings/tie-resolution-form";
 
 type Question = RoundResultsDetail["questions"][number];
@@ -63,7 +64,13 @@ export default async function RoundResultsPage({
   ]);
   const [value, winner] = await Promise.all([
     getRoundResults(resultRepository, actor, competitionId, roundId),
-    getRoundWinner(standingsRepository, actor, competitionId, roundId),
+    getPaymentWinner(
+      paymentRepository,
+      standingsRepository,
+      actor,
+      competitionId,
+      roundId,
+    ),
   ]);
   if (!value) notFound();
   return (
@@ -101,6 +108,12 @@ export default async function RoundResultsPage({
             </CardTitle>
             <CardDescription>
               Resultado estable después de finalizar las jornadas aplicables.
+              {winner.prizeAmount !== null
+                ? ` Premio configurado: ${new Intl.NumberFormat("es-MX", {
+                    style: "currency",
+                    currency: winner.currency,
+                  }).format(winner.prizeAmount / 100)}.`
+                : ""}
             </CardDescription>
           </CardHeader>
         </Card>

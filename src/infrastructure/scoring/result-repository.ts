@@ -28,6 +28,7 @@ import {
   user,
 } from "@/infrastructure/db/schema";
 import { loadQuestions, scoringDefaults } from "@/infrastructure/round/round-repository";
+import { loadRestrictedParticipantIds } from "@/infrastructure/payment/payment-eligibility";
 
 function penalty(value: number): -1 | 0 {
   if (value !== -1 && value !== 0) throw new Error("Invalid persisted penalty.");
@@ -204,6 +205,11 @@ async function loadAggregate(
         )
     : [];
   const types = new Map(questions.map((item) => [item.id, item.type]));
+  const restrictedParticipantIds = await loadRestrictedParticipantIds(
+    database,
+    competitionId,
+    participants.map((item) => item.id),
+  );
   return {
     round: roundValue,
     questions,
@@ -213,6 +219,7 @@ async function loadAggregate(
     judgments: judgmentRows.map(domainJudgment),
     actorParticipantId: scope.membership.status === "ACTIVE" ? scope.membership.id : null,
     actorIsAdmin: scope.membership.isAdmin,
+    restrictedParticipantIds,
   } satisfies ResultRoundAggregate;
 }
 
