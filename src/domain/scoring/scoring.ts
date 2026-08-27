@@ -41,6 +41,13 @@ export type QuestionScore = Readonly<{
   awardedRule: AwardedRule | null;
 }>;
 
+export type PredictionScoreBreakdown = Readonly<{
+  total: number;
+  exactScorePoints: number;
+  matchQuestionPoints: number;
+  completedAt: Date | null;
+}>;
+
 export class ScoringDomainError extends Error {}
 
 const pending = (): QuestionScore => ({
@@ -286,4 +293,75 @@ export function isQuestionResultComplete(input: {
   if (input.question.type !== "OPEN_TEXT") return input.result !== null;
   const judged = new Set(input.judgments.map((item) => item.answerId));
   return input.answers.every((answer) => judged.has(answer.id));
+}
+
+export function calculateRoundScoreBreakdowns(input: {
+  questions: readonly Question[];
+  participantIds: readonly string[];
+  answers: readonly Answer[];
+  results: readonly OfficialResult[];
+  judgments: readonly OpenTextJudgment[];
+  unansweredPenalty: -1 | 0;
+  now: Date;
+}): Readonly<{
+  supported: boolean;
+  byParticipant: ReadonlyMap<string, PredictionScoreBreakdown>;
+}> {
+  const mutable = new Map(
+    input.participantIds.map((participantId) => [
+      participantId,
+      {
+        total: 0,
+        exactScorePoints: 0,
+        matchQuestionPoints: 0,
+        completedAt: null as Date | null,
+      },
+    ]),
+  );
+  let supported = true;
+  for (const question of input.questions) {
+    if (input.now.valueOf() < question.deadlineAt.valueOf()) continue;
+    if (question.type === "CLOSEST_VALUE" && question.againstRival) {
+      supported = false;
+      continue;
+    }
+    const scores = calculateQuestionScores({
+      question,
+      participantIds: input.participantIds,
+      answers: input.answers.filter((answer) => answer.questionId === question.id),
+      result: input.results.find((result) => result.questionId === question.id) ?? null,
+      judgments: input.judgments,
+      unansweredPenalty: input.unansweredPenalty,
+    });
+    for (const [participantId, score] of scores) {
+      if (score.state !== "SCORED") continue;
+      const current = mutable.get(participantId);
+      if (!current) throw new ScoringDomainError("Unknown participant score.");
+      current.total += score.points ?? 0;
+      if (score.awardedRule === "EXACT_SCORE")
+        current.exactScorePoints += score.points ?? 0;
+      if (question.type === "MATCH_SCORE")
+        current.matchQuestionPoints += score.points ?? 0;
+    }
+  }
+  for (const participantId of input.participantIds) {
+    const participantAnswers = input.answers.filter(
+      (answer) => answer.participantId === participantId,
+    );
+    const questionIds = new Set(participantAnswers.map((answer) => answer.questionId));
+    if (
+      input.questions.length > 0 &&
+      input.questions.every((q) => questionIds.has(q.id))
+    ) {
+      const latest = participantAnswers.reduce<Date | null>(
+        (value, answer) =>
+          value === null || answer.submittedAt.valueOf() > value.valueOf()
+            ? answer.submittedAt
+            : value,
+        null,
+      );
+      mutable.get(participantId)!.completedAt = latest;
+    }
+  }
+  return { supported, byParticipant: mutable };
 }

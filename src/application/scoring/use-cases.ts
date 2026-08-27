@@ -4,6 +4,7 @@ import type { Answer, AnswerValue } from "@/domain/answer/answer";
 import type { Question, Round } from "@/domain/round/round";
 import {
   calculateQuestionScores,
+  calculateRoundScoreBreakdowns,
   officialResultValuesEqual,
   ScoringDomainError,
   validateOfficialResult,
@@ -168,9 +169,15 @@ function questionForPublic(question: Question) {
 }
 
 function review(aggregate: ResultRoundAggregate, now: Date) {
-  const totals = new Map(
-    aggregate.participants.map((participant) => [participant.id, 0]),
-  );
+  const totals = calculateRoundScoreBreakdowns({
+    questions: aggregate.questions,
+    participantIds: aggregate.participants.map((participant) => participant.id),
+    answers: aggregate.answers,
+    results: aggregate.results,
+    judgments: aggregate.judgments,
+    unansweredPenalty: aggregate.round.unansweredPenalty,
+    now,
+  }).byParticipant;
   const questions = aggregate.questions.map((question) => {
     const closed = now.valueOf() >= question.deadlineAt.valueOf();
     const answers = aggregate.answers.filter(
@@ -193,9 +200,6 @@ function review(aggregate: ResultRoundAggregate, now: Date) {
         judgments: aggregate.judgments,
         unansweredPenalty: aggregate.round.unansweredPenalty,
       });
-    for (const [participantId, score] of scores)
-      if (score.state === "SCORED")
-        totals.set(participantId, totals.get(participantId)! + score.points!);
     const visibleParticipants = closed
       ? aggregate.participants
       : aggregate.participants.filter(
@@ -237,7 +241,7 @@ function review(aggregate: ResultRoundAggregate, now: Date) {
     participants: aggregate.participants.map((participant) => ({
       id: participant.id,
       name: participant.name,
-      total: totals.get(participant.id) ?? 0,
+      total: totals.get(participant.id)?.total ?? 0,
     })),
     questions,
   };

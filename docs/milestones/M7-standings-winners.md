@@ -2,7 +2,7 @@
 
 ## Status
 
-`FUTURE`
+`COMPLETED — 2026-08-26`
 
 ## Goal
 
@@ -89,34 +89,45 @@ Primarily derived queries over existing source facts. Add only approved explicit
 
 ## Acceptance criteria
 
-- [ ] League standings derive from current source facts.
-- [ ] EXACT_SCORE is the first League tiebreaker.
-- [ ] Round winner uses all approved criteria in order.
-- [ ] H2H calculation keeps Points distinct from Prediction Score.
-- [ ] Unresolved ties never choose an arbitrary participant.
-- [ ] Approved Admin decision is explicit and audited.
-- [ ] No score/standing/winner snapshot is introduced.
-- [ ] Relevant tests, lint, typecheck, and build pass.
+- [x] League standings derive from current source facts.
+- [x] EXACT_SCORE is the first League tiebreaker.
+- [x] Round winner uses all approved criteria in order.
+- [x] H2H calculation keeps Points distinct from Prediction Score.
+- [x] Unresolved ties never choose an arbitrary participant.
+- [x] Approved Admin decision is explicit and audited.
+- [x] No score/standing/winner snapshot is introduced.
+- [x] Relevant tests, lint, typecheck, and build pass.
 
 ## Definition of Done
 
-- [ ] Scope implemented.
-- [ ] Out-of-scope functionality was not introduced.
-- [ ] Approved domain rules preserved.
-- [ ] Authorization enforced server-side.
-- [ ] Relevant tests added.
-- [ ] No duplicated business logic.
-- [ ] No locked specification modified.
-- [ ] lint passes.
-- [ ] typecheck passes.
-- [ ] tests pass.
-- [ ] build passes.
-- [ ] milestone code review completed.
+- [x] Scope implemented.
+- [x] Out-of-scope functionality was not introduced.
+- [x] Approved domain rules preserved.
+- [x] Authorization enforced server-side.
+- [x] Relevant tests added.
+- [x] No duplicated business logic.
+- [x] No locked specification modified.
+- [x] lint passes.
+- [x] typecheck passes.
+- [x] tests pass.
+- [x] build passes.
+- [x] milestone code review completed.
 
 ## Risks / implementation notes
 
 Do not persist derived convenience columns. Design the unresolved-result shape for reuse by M9/M10 without building their features early.
 
+Validation completed on 2026-08-26: formatting, lint, typecheck, 139 unit tests,
+39 PostgreSQL integration tests, 2 mobile Chromium E2E tests, migration setup, diff
+integrity, and the optimized Next.js webpack build passed. The default Turbopack build
+cannot bind its internal sandbox process in this execution environment; the production
+webpack build validates the application routes, including the new standings route.
+
 ## Open questions
 
-The approved schema requires manual decisions to be persisted but leaves the generic audit/decision table strategy open. Resolve the smallest consistent persistence design during planning; this is an implementation decision, not new product behavior.
+Resolved during planning on 2026-08-26: Round phase totals stop at the target sequence;
+submission ordering uses complete Answer-set time; current winners require effective
+finalization; DRAFT Rounds block the current League winner; unresolved positions use
+competition ranking; and Admin orders the full tied group. Manual decisions use normalized
+append-only versions bound to the complete source revision, so every later source change
+invalidates the decision without deleting its audit history.

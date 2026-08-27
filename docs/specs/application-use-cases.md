@@ -465,6 +465,9 @@ For H2H competitions:
 
 If an approved manual resolution exists, apply it.
 
+Unresolved groups use competition ranking (`1, 1, 3`). A resolution orders the entire tied
+group and applies only when its authoritative source revision still matches.
+
 ## getGroupStandings
 
 For GROUP_PLAYOFFS:
@@ -486,11 +489,14 @@ Ordering:
 ```text
 1. Prediction Score DESC
 2. Match Question points DESC
-3. Total Prediction Score in the League/competition phase DESC
-4. Earliest submitted results
+3. Total Prediction Score in the League/competition phase through the target Round's sequence DESC
+4. Earliest complete Answer-set submission
 ```
 
-Use original Answer submission timestamps.
+Criterion 4 uses the latest original `submittedAt` only when the Participant answered every
+Question in the target Round. Incomplete sets rank after complete sets and tie with one
+another. Return `notReady` until every Round through the target sequence is effectively
+FINALIZED.
 
 If the approved criteria remain tied, return an unresolved-tie state rather than choosing arbitrarily.
 
@@ -500,12 +506,24 @@ If the approved criteria remain tied, return an unresolved-tie state rather than
 
 ## getLeagueWinner
 
-At Competition completion:
+For the current winner used by Competition completion:
+
+Require at least one Round, no DRAFT Round, and every existing Round to be effectively
+FINALIZED.
 
 1. calculate total Prediction Score;
 2. apply League tiebreaker:
    - EXACT_SCORE points DESC;
 3. use approved Admin resolution if still tied.
+
+## resolveRankingTie
+
+**Actor:** Admin
+
+Recomputes the requested LEAGUE standings or Round-winner scope, requires a stable scope,
+and accepts only an exact ordered permutation of one current unresolved group. Persist the
+decision and audit atomically. A correction appends a new decision version. Any source
+change invalidates prior versions without deleting them.
 
 ---
 

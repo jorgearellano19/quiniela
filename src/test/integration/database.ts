@@ -12,6 +12,8 @@ import {
   competitionParticipant,
   competitionParticipantEvent,
   matchQuestionConfig,
+  manualRankingResolution,
+  manualRankingResolutionEntry,
   officialResult,
   officialResultCorrectionEvent,
   openTextJudgment,
@@ -56,6 +58,21 @@ export async function cleanupUsersByEmail(
     const competitionIds = competitions.map(({ id }) => id);
 
     if (competitionIds.length) {
+      const resolutions = await transaction
+        .select({ id: manualRankingResolution.id })
+        .from(manualRankingResolution)
+        .where(inArray(manualRankingResolution.competitionId, competitionIds));
+      if (resolutions.length) {
+        await transaction.delete(manualRankingResolutionEntry).where(
+          inArray(
+            manualRankingResolutionEntry.resolutionId,
+            resolutions.map(({ id }) => id),
+          ),
+        );
+        await transaction
+          .delete(manualRankingResolution)
+          .where(inArray(manualRankingResolution.competitionId, competitionIds));
+      }
       const rounds = await transaction
         .select({ id: round.id })
         .from(round)
@@ -208,6 +225,21 @@ export class IntegrationTestData {
     const userIds = [...this.#userIds];
 
     if (competitionIds.length) {
+      const resolutions = await this.database
+        .select({ id: manualRankingResolution.id })
+        .from(manualRankingResolution)
+        .where(inArray(manualRankingResolution.competitionId, competitionIds));
+      if (resolutions.length) {
+        await this.database.delete(manualRankingResolutionEntry).where(
+          inArray(
+            manualRankingResolutionEntry.resolutionId,
+            resolutions.map(({ id }) => id),
+          ),
+        );
+        await this.database
+          .delete(manualRankingResolution)
+          .where(inArray(manualRankingResolution.competitionId, competitionIds));
+      }
       const rounds = await this.database
         .select({ id: round.id })
         .from(round)

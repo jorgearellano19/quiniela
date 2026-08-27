@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarDaysIcon, PencilIcon, TargetIcon, UsersIcon } from "lucide-react";
+import {
+  CalendarDaysIcon,
+  ListOrderedIcon,
+  PencilIcon,
+  TargetIcon,
+  UsersIcon,
+} from "lucide-react";
 import { leaveCompetitionAction } from "@/features/competitions/membership-actions";
 import { MembershipActionButton } from "@/features/competitions/membership-action-button";
 import { RulesSummary } from "@/features/competitions/rules-summary";
@@ -62,6 +68,15 @@ export default async function CompetitionDetailPage({
               <Link href={`/app/competitions/${detail.id}/answers`}>
                 <TargetIcon data-icon="inline-start" aria-hidden="true" />
                 Pronósticos
+              </Link>
+            </Button>
+          ) : null}
+          {detail.type === "LEAGUE" &&
+          (detail.membershipStatus === "ACTIVE" || detail.isAdmin) ? (
+            <Button asChild variant="outline">
+              <Link href={`/app/competitions/${detail.id}/standings`}>
+                <ListOrderedIcon data-icon="inline-start" aria-hidden="true" />
+                Clasificación
               </Link>
             </Button>
           ) : null}

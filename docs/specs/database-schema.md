@@ -377,6 +377,14 @@ Bracket positions pair the highest remaining seed against the lowest remaining s
 
 Persist enough source data to recompute rankings. Manual resolutions must be persisted and audited.
 
+Manual LEAGUE-standing and Round-winner resolutions use an append-only decision record plus
+normalized ordered Participant entries. Each decision identifies its Competition, scope,
+optional Round, complete source fingerprint, tied-group fingerprint, revision/superseded
+decision, action, actor, and UTC timestamp. Entries have unique Participant and position
+within the decision. The opaque source fingerprint validates applicability but is not a
+persisted score, standing, or winner snapshot. A changed source fingerprint invalidates the
+decision while retaining audit history.
+
 ## 15. Payments
 
 Manual tracking only. No Stripe, Mercado Pago, PayPal, wallet, checkout, or external payment transaction in MVP.

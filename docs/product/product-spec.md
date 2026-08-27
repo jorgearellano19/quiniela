@@ -131,7 +131,9 @@ If enabled, Admin configures `maximumDebt`. If outstanding balance exceeds it, A
 When Admin records a payment that brings balance to `maximumDebt` or below, the participant is automatically enabled and affected Answers count again. No separate unblock action is required.
 
 ## 16. Payment winner rules
-Round winner: 1) Prediction Score DESC, 2) Match Question points DESC, 3) total Prediction Score accumulated across the League phase DESC, 4) earlier Answer submission time ASC. If still tied, Admin resolves manually. Match Question points means points from Questions containing homeScore and awayScore.
+Round winner: 1) Prediction Score DESC, 2) Match Question points DESC, 3) total Prediction Score accumulated across the League phase through that Round's sequence DESC, 4) earlier complete Answer-set submission time ASC. Criterion 4 uses the latest original `submittedAt` after the Participant answered every Question in the Round; an incomplete set ranks after every complete set and remains tied with another incomplete set. If still tied, Admin orders the complete tied group manually. Match Question points means points from Questions containing homeScore and awayScore.
+
+League standings may be shown from current result-complete source facts. A Round winner is stable only when every Round through its sequence is effectively FINALIZED. A current LEAGUE winner requires at least one Round, no DRAFT Round, and every existing Round to be effectively FINALIZED; Competition completion in §4 later locks that winner.
 
 LEAGUE_PLAYOFFS league-phase winner: 1) Prediction Score DESC, 2) EXACT_SCORE points DESC, 3) H2H among tied participants when applicable. If H2H does not produce one winner, Admin resolves manually.
 
@@ -142,6 +144,8 @@ Competition has no timezone. Store timestamps in UTC and compare deadlines in UT
 
 ## 18. Auditability
 Important administrative mutations record `updatedAt` and `updatedBy`, including Official Result changes, manual tie resolutions, payment creation/correction, payment restrictions, and other sensitive configuration changes.
+
+Before an Admin resolution, tied standings use competition ranking (`1, 1, 3`). A manual resolution orders every Participant in the tied group, is auditable and correctable, and applies only to the exact authoritative source revision it resolved. Any later source change invalidates the decision without deleting its history.
 
 ## 19. Authentication and architecture constraints
 Use Better Auth minimally. Use Next.js App Router, Server Actions, Drizzle, PostgreSQL, and Neon initially. Supabase is an alternative provider, not a required dependency. Authorization is Competition-scoped.

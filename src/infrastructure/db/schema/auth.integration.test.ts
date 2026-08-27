@@ -26,6 +26,8 @@ describe("authentication migration", () => {
       "competition",
       "competition_participant",
       "competition_participant_event",
+      "manual_ranking_resolution",
+      "manual_ranking_resolution_entry",
       "match_question_config",
       "official_result",
       "official_result_correction_event",

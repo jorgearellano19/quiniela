@@ -34,7 +34,7 @@ function penalty(value: number): -1 | 0 {
   return value;
 }
 
-function persistedRound(value: typeof round.$inferSelect): Round {
+export function persistedRound(value: typeof round.$inferSelect): Round {
   return { ...value, unansweredPenalty: penalty(value.unansweredPenalty) };
 }
 
@@ -50,7 +50,7 @@ function answerValue(row: typeof answer.$inferSelect, type: string): AnswerValue
   throw new Error(`Answer persistence is invalid: ${row.id}.`);
 }
 
-function domainAnswer(row: typeof answer.$inferSelect, type: string): Answer {
+export function domainAnswer(row: typeof answer.$inferSelect, type: string): Answer {
   return {
     id: row.id,
     questionId: row.questionId,
@@ -74,7 +74,7 @@ function resultValue(
   throw new Error(`Official Result persistence is invalid: ${row.id}.`);
 }
 
-function domainResult(
+export function domainResult(
   row: typeof officialResult.$inferSelect,
   type: string,
 ): OfficialResult {
@@ -88,7 +88,9 @@ function domainResult(
   };
 }
 
-function domainJudgment(row: typeof openTextJudgment.$inferSelect): OpenTextJudgment {
+export function domainJudgment(
+  row: typeof openTextJudgment.$inferSelect,
+): OpenTextJudgment {
   return {
     answerId: row.answerId,
     isCorrect: row.isCorrect,

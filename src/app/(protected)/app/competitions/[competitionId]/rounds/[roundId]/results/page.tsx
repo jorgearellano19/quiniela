@@ -2,12 +2,22 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { RoundResultsDetail } from "@/application/scoring/use-cases";
 import { getRoundResults } from "@/application/scoring/use-cases";
+import { getRoundWinner } from "@/application/standings/use-cases";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { LocalDateTime } from "@/features/rounds/local-date-time";
 import { JudgmentControls, OfficialResultForm } from "@/features/results/result-controls";
 import { requireCompetitionPageActor } from "@/features/competitions/competition-session";
 import { resultRepository } from "@/infrastructure/scoring/result-repository";
+import { standingsRepository } from "@/infrastructure/standings/standings-repository";
+import { TieResolutionForm } from "@/features/standings/tie-resolution-form";
 
 type Question = RoundResultsDetail["questions"][number];
 type Entry = Question["entries"][number];
@@ -51,7 +61,10 @@ export default async function RoundResultsPage({
     params,
     requireCompetitionPageActor(),
   ]);
-  const value = await getRoundResults(resultRepository, actor, competitionId, roundId);
+  const [value, winner] = await Promise.all([
+    getRoundResults(resultRepository, actor, competitionId, roundId),
+    getRoundWinner(standingsRepository, actor, competitionId, roundId),
+  ]);
   if (!value) notFound();
   return (
     <section className="mx-auto flex max-w-4xl flex-col gap-6">
@@ -76,6 +89,49 @@ export default async function RoundResultsPage({
         <p role="status" className="rounded-2xl bg-secondary p-4 text-sm">
           Las correcciones cierran <LocalDateTime value={value.correctionEndsAt} />.
         </p>
+      ) : null}
+      {winner?.outcome.state === "resolved" ? (
+        <Card className="border-primary/30 bg-secondary">
+          <CardHeader>
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">
+              Ganador de la jornada
+            </p>
+            <CardTitle className="font-heading text-3xl">
+              {winner.outcome.winner.name}
+            </CardTitle>
+            <CardDescription>
+              Resultado estable después de finalizar las jornadas aplicables.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : winner?.outcome.state === "unresolved" ? (
+        <Alert>
+          <AlertTitle>La jornada sigue empatada</AlertTitle>
+          <AlertDescription>
+            Todos los criterios aprobados terminaron iguales. La administración debe
+            ordenar el grupo empatado.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      {winner?.canManage && winner.manualTie ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {winner.outcome.state === "resolved" ? "Corregir" : "Resolver"} ganador
+            </CardTitle>
+            <CardDescription>
+              Ordena el grupo completo; la primera posición será la ganadora.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TieResolutionForm
+              competitionId={competitionId}
+              scope="ROUND_WINNER"
+              roundId={roundId}
+              participants={winner.tiedParticipants}
+            />
+          </CardContent>
+        </Card>
       ) : null}
       <Card className="overflow-hidden border-primary/20">
         <CardHeader>

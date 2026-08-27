@@ -274,6 +274,26 @@ test("Admin publica cinco preguntas y guarda sus pronósticos como participante"
     await resultExact.getByRole("button", { name: "Guardar corrección" }).click();
     await expect(resultExact.getByText("Corrección guardada.")).toBeVisible();
     await expect(page.getByText("6", { exact: true })).toBeVisible();
+
+    await database
+      .update(round)
+      .set({ finishedAt: new Date(Date.now() - 86_400_001) })
+      .where(eq(round.id, roundId));
+    await page.reload();
+    const roundWinner = page.locator('[data-slot="card"]').filter({
+      hasText: "Ganador de la jornada",
+    });
+    await expect(roundWinner).toBeVisible();
+    await expect(roundWinner.getByText("Admin Jornadas", { exact: true })).toBeVisible();
+
+    await page.goto(competitionUrl);
+    await page.getByRole("link", { name: "Clasificación" }).click();
+    await expect(page.getByRole("heading", { name: "Clasificación" })).toBeVisible();
+    const leagueWinner = page.locator('[data-slot="card"]').filter({
+      hasText: "Ganador actual",
+    });
+    await expect(leagueWinner).toBeVisible();
+    await expect(leagueWinner.getByText("Admin Jornadas", { exact: true })).toBeVisible();
   } finally {
     await context.close();
     await cleanupUsersByEmail(database, [adminEmail]);

@@ -195,6 +195,10 @@ EXACT_SCORE points DESC
 
 If approved criteria remain tied, use Admin resolution.
 
+Live LEAGUE standings use competition ranking for unresolved groups (`1, 1, 3`). A
+current League winner exists only with at least one Round, no DRAFT Round, and every
+existing Round effectively FINALIZED. Competition completion later locks that winner.
+
 ## LEAGUE_PLAYOFFS
 
 Two phases:
@@ -292,11 +296,18 @@ Round winner criteria:
 ```text
 1. Prediction Score DESC
 2. Match Question points DESC
-3. Total Prediction Score in the League/competition phase DESC
-4. Earliest submitted results
+3. Total Prediction Score in the League/competition phase through the target Round's sequence DESC
+4. Earliest complete Answer-set submission
 ```
 
-Criterion 4 uses original Answer submission timestamps. If still tied, Admin resolves.
+Criterion 4 uses the latest original `submittedAt` after every Question in the Round has an
+Answer. An incomplete set ranks after a complete set and remains tied with another
+incomplete set. A Round winner is stable only when every Round through the target sequence
+is effectively FINALIZED. If still tied, Admin orders the complete tied group.
+
+Manual ranking decisions are correctable, auditable, and bound to the complete
+authoritative source revision. Any later source change invalidates the current decision
+while preserving its history.
 
 LEAGUE_PLAYOFFS League-phase prize:
 
