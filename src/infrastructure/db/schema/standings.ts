@@ -14,10 +14,13 @@ import {
 import { user } from "./auth";
 import { competition, competitionParticipant } from "./competition";
 import { round } from "./round";
+import { competitionGroup } from "./h2h";
 
 export const rankingResolutionScope = pgEnum("ranking_resolution_scope", [
   "LEAGUE_STANDINGS",
   "ROUND_WINNER",
+  "H2H_PHASE",
+  "GROUP_STANDINGS",
 ]);
 export const rankingResolutionAction = pgEnum("ranking_resolution_action", [
   "CREATED",
@@ -33,6 +36,7 @@ export const manualRankingResolution = pgTable(
       .references(() => competition.id, { onDelete: "restrict" }),
     scope: rankingResolutionScope("scope").notNull(),
     roundId: text("round_id").references(() => round.id, { onDelete: "restrict" }),
+    groupId: text("group_id"),
     sourceFingerprint: text("source_fingerprint").notNull(),
     tieFingerprint: text("tie_fingerprint").notNull(),
     revision: integer("revision").notNull(),
@@ -48,6 +52,11 @@ export const manualRankingResolution = pgTable(
       name: "manual_ranking_resolution_supersedes_fk",
       columns: [table.supersedesResolutionId],
       foreignColumns: [table.id],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "manual_ranking_resolution_group_competition_fk",
+      columns: [table.groupId, table.competitionId],
+      foreignColumns: [competitionGroup.id, competitionGroup.competitionId],
     }).onDelete("restrict"),
     uniqueIndex("manual_ranking_resolution_supersedes_unique")
       .on(table.supersedesResolutionId)
@@ -77,7 +86,7 @@ export const manualRankingResolution = pgTable(
     ),
     check(
       "manual_ranking_resolution_scope_shape",
-      sql`(${table.scope} = 'LEAGUE_STANDINGS' and ${table.roundId} is null) or (${table.scope} = 'ROUND_WINNER' and ${table.roundId} is not null)`,
+      sql`(${table.scope}::text = 'LEAGUE_STANDINGS' and ${table.roundId} is null and ${table.groupId} is null) or (${table.scope}::text = 'ROUND_WINNER' and ${table.roundId} is not null and ${table.groupId} is null) or (${table.scope}::text = 'H2H_PHASE' and ${table.roundId} is null and ${table.groupId} is null) or (${table.scope}::text = 'GROUP_STANDINGS' and ${table.roundId} is null and ${table.groupId} is not null)`,
     ),
     check("manual_ranking_resolution_revision_positive", sql`${table.revision} > 0`),
     check(

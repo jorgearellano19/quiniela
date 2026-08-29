@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { and, desc, eq, exists, inArray, or, sql } from "drizzle-orm";
 import type { CompetitionRepository } from "@/application/competition/use-cases";
 import type { Competition } from "@/domain/competition/competition";
@@ -40,9 +41,14 @@ function map(row: CompetitionRow): Competition & {
 
 export function createCompetitionRepository(database: typeof db): CompetitionRepository {
   return {
-    async createWithAdmin(value, membershipId) {
+    async createWithAdmin(value, membershipId, paymentConfiguration) {
       await database.transaction(async (tx) => {
-        await tx.insert(competition).values(value);
+        await tx.insert(competition).values({
+          ...value,
+          paymentsEnabled: paymentConfiguration?.enabled ?? false,
+          roundFeeAmount: paymentConfiguration?.roundFeeAmount ?? null,
+          maximumDebt: paymentConfiguration?.maximumDebt ?? null,
+        });
         await tx.insert(competitionParticipant).values({
           id: membershipId,
           competitionId: value.id,
@@ -56,6 +62,19 @@ export function createCompetitionRepository(database: typeof db): CompetitionRep
           createdAt: value.createdAt,
           updatedAt: value.updatedAt,
         });
+        if (
+          paymentConfiguration?.roundWinnerPrizeAmount !== null &&
+          paymentConfiguration?.roundWinnerPrizeAmount !== undefined
+        )
+          await tx.insert(prizeConfiguration).values({
+            id: randomUUID(),
+            competitionId: value.id,
+            type: "ROUND_WINNER",
+            amount: paymentConfiguration.roundWinnerPrizeAmount,
+            updatedByUserId: value.createdByUserId,
+            createdAt: value.createdAt,
+            updatedAt: value.updatedAt,
+          });
       });
     },
     async listForUser(userId) {

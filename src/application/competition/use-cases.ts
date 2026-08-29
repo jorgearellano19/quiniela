@@ -12,6 +12,8 @@ import {
 import { ApplicationError } from "@/lib/errors/application-error";
 import type { MembershipStatus } from "@/domain/competition/membership";
 import { requireCompetitionActor, type CompetitionActor } from "./boundary";
+import { paymentConfigurationFromInput } from "@/application/payment/use-cases";
+import type { PaymentConfiguration } from "@/domain/payment/payment";
 
 export type { CompetitionActor } from "./boundary";
 export type CompetitionSummary = Readonly<{
@@ -37,7 +39,11 @@ export type CompetitionDetail = CompetitionSummary &
   }>;
 
 export interface CompetitionRepository {
-  createWithAdmin(competition: Competition, membershipId: string): Promise<void>;
+  createWithAdmin(
+    competition: Competition,
+    membershipId: string,
+    paymentConfiguration?: PaymentConfiguration,
+  ): Promise<void>;
   listForUser(
     userId: string,
   ): Promise<
@@ -56,6 +62,10 @@ const inputSchema = z.object({
   name: z.string(),
   type: z.enum(COMPETITION_TYPES),
   rulesNote: z.string().optional(),
+  paymentsEnabled: z.unknown().optional(),
+  roundFeeAmount: z.unknown().optional(),
+  maximumDebt: z.unknown().optional(),
+  roundWinnerPrizeAmount: z.unknown().optional(),
 });
 const competitionIdSchema = z.uuid();
 const typeLabels: Record<CompetitionType, string> = {
@@ -117,7 +127,13 @@ export async function createCompetition(
       rulesNote: parsed.data.rulesNote ?? null,
     }),
   );
-  await repository.createWithAdmin(competition, randomUUID());
+  const paymentConfiguration = paymentConfigurationFromInput(competition.type, {
+    enabled: parsed.data.paymentsEnabled,
+    roundFeeAmount: parsed.data.roundFeeAmount,
+    maximumDebt: parsed.data.maximumDebt,
+    roundWinnerPrizeAmount: parsed.data.roundWinnerPrizeAmount,
+  });
+  await repository.createWithAdmin(competition, randomUUID(), paymentConfiguration);
   return summary({ ...competition, isAdmin: true, membershipStatus: "ACTIVE" });
 }
 export async function listMyCompetitions(

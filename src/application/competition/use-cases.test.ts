@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Competition } from "@/domain/competition/competition";
+import type { PaymentConfiguration } from "@/domain/payment/payment";
 import {
   createCompetition,
   getCompetitionDetail,
@@ -34,9 +35,11 @@ function fixture(overrides: Partial<CompetitionMembership> = {}): CompetitionMem
 }
 function repository(rows: CompetitionMembership[] = []) {
   const created: Competition[] = [];
+  const paymentConfigurations: PaymentConfiguration[] = [];
   const repo: CompetitionRepository = {
-    async createWithAdmin(value) {
+    async createWithAdmin(value, _membershipId, paymentConfiguration) {
       created.push(value);
+      if (paymentConfiguration) paymentConfigurations.push(paymentConfiguration);
     },
     async listForUser(userId) {
       return rows.filter((row) => row.isAdmin && row.createdByUserId === userId);
@@ -54,7 +57,7 @@ function repository(rows: CompetitionMembership[] = []) {
       return true;
     },
   };
-  return { repo, created };
+  return { repo, created, paymentConfigurations };
 }
 describe("Competition use cases", () => {
   it("rejects anonymous and forced-password access", async () => {
@@ -88,6 +91,42 @@ describe("Competition use cases", () => {
       capabilities: { canEdit: true },
     });
     expect(created[0]).toMatchObject({ createdByUserId: "owner" });
+  });
+  it("validates and includes initial payment rules in atomic creation", async () => {
+    const { repo, paymentConfigurations } = repository();
+    await createCompetition(
+      repo,
+      { userId: "owner" },
+      {
+        name: "Copa con cuota",
+        type: "LEAGUE",
+        paymentsEnabled: "on",
+        roundFeeAmount: "250.50",
+        maximumDebt: "500",
+        roundWinnerPrizeAmount: "1000",
+      },
+    );
+    expect(paymentConfigurations[0]).toEqual({
+      enabled: true,
+      roundFeeAmount: 25_050,
+      maximumDebt: 50_000,
+      roundWinnerPrizeAmount: 100_000,
+    });
+  });
+  it("rejects Round payment rules for GROUP_PLAYOFFS at creation", async () => {
+    const { repo } = repository();
+    await expect(
+      createCompetition(
+        repo,
+        { userId: "owner" },
+        {
+          name: "Grupos",
+          type: "GROUP_PLAYOFFS",
+          paymentsEnabled: "on",
+          roundFeeAmount: "100",
+        },
+      ),
+    ).rejects.toMatchObject({ code: "INVALID_INPUT" });
   });
   it("returns null for missing, malformed, and unrelated details", async () => {
     const row = fixture();

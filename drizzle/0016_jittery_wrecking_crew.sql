@@ -1,0 +1,2 @@
+ALTER TABLE "h2h_matchup" ADD CONSTRAINT "h2h_matchup_group_participant_a_fk" FOREIGN KEY ("group_id","participant_a_id") REFERENCES "public"."competition_group_participant"("group_id","participant_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "h2h_matchup" ADD CONSTRAINT "h2h_matchup_group_participant_b_fk" FOREIGN KEY ("group_id","participant_b_id") REFERENCES "public"."competition_group_participant"("group_id","participant_id") ON DELETE restrict ON UPDATE no action;

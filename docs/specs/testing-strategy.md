@@ -18,7 +18,8 @@ Prefer many focused domain tests + targeted application/integration tests + few 
 - LEAGUE winner and EXACT_SCORE tiebreaker.
 - GROUP_PLAYOFFS valid participant/group constraints and unresolved manual ties.
 - LEAGUE_PLAYOFFS limits, no groups, and phase transition.
-- H2H Round outcomes award 3/1/0 from opponent Prediction Scores; generated round robin covers every pairing once and handles odd-participant byes.
+- H2H Round outcomes award 3/1/0 from opponent Prediction Scores; partial circle schedules have no repeated pairing, one matchup per participant/Round, and fair odd-participant byes across the persisted draw cycle.
+- Bye `CLOSEST_VALUE againstRival` covers exact decimal averages, exact Answers, equal distances, missing Answers, restriction/restoration, and no eligible peer Answers.
 - Manual GROUP_PLAYOFFS assignment validation followed by complete within-group round-robin generation.
 - Playoff configuration freeze, seeding, `BEST_SEED`, `TIEBREAKER_QUESTION`, bracket integrity, and champion determination.
 - Round lifecycle `DRAFT → PUBLISHED → ACTIVE → FINISHED → FINALIZED` and invalid transitions.

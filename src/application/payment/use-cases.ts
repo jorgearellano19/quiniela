@@ -146,6 +146,26 @@ function safeConfiguration<T>(operation: () => T): T {
   }
 }
 
+export function paymentConfigurationFromInput(
+  competitionType: CompetitionType,
+  input: {
+    enabled?: unknown;
+    roundFeeAmount?: unknown;
+    maximumDebt?: unknown;
+    roundWinnerPrizeAmount?: unknown;
+  },
+) {
+  const enabled = input.enabled === true || input.enabled === "on";
+  return safeConfiguration(() =>
+    validatePaymentConfiguration(competitionType, {
+      enabled,
+      roundFeeAmount: enabled ? money(input.roundFeeAmount)! : null,
+      maximumDebt: enabled ? money(input.maximumDebt, true) : null,
+      roundWinnerPrizeAmount: money(input.roundWinnerPrizeAmount, true),
+    }),
+  );
+}
+
 function safePayment<T>(operation: () => T): T {
   try {
     return operation();
@@ -187,15 +207,7 @@ export async function configurePayments(
           "UNAUTHORIZED",
           "No fue posible guardar la configuración.",
         );
-      const enabled = parsed.data.enabled;
-      return safeConfiguration(() =>
-        validatePaymentConfiguration(aggregate.competition.type, {
-          enabled,
-          roundFeeAmount: enabled ? money(parsed.data.roundFeeAmount)! : null,
-          maximumDebt: enabled ? money(parsed.data.maximumDebt, true) : null,
-          roundWinnerPrizeAmount: money(parsed.data.roundWinnerPrizeAmount, true),
-        }),
-      );
+      return paymentConfigurationFromInput(aggregate.competition.type, parsed.data);
     },
   );
   if (!result)

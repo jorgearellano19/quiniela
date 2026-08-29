@@ -472,7 +472,7 @@ Seeding must support:
 
 Any unresolved tie requiring Admin intervention must be explicit and auditable.
 
-Never resolve a business tie using database ID, insertion order, random selection, or hidden timestamp ordering unless an approved rule explicitly requires it.
+Never resolve a business tie using database ID, insertion order, random selection, or hidden timestamp ordering unless an approved rule explicitly requires it. M9's visible, persisted LEAGUE_PLAYOFFS draw is the sole pairing exception: secure server randomness chooses the source order once, and all retries reuse it.
 
 ## 23. Testing implementation
 

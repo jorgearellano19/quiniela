@@ -10,6 +10,7 @@ import {
   decimalMicros,
   isQuestionResultComplete,
   scoreClosestValueAgainstRival,
+  scoreClosestValueAgainstAverage,
   scoreMatchAnswer,
   validateOfficialResult,
   type OfficialResult,
@@ -20,6 +21,59 @@ import {
   effectiveRoundStatus,
   finishRound,
 } from "./lifecycle";
+
+describe("CLOSEST_VALUE against the bye average", () => {
+  it("compares against the exact decimal mean without rounding", () => {
+    expect(
+      scoreClosestValueAgainstAverage({
+        officialValue: "1",
+        participantValue: "1.2",
+        eligibleOtherValues: ["0", "2.1"],
+        points: 1,
+        unansweredPenalty: -1,
+      }),
+    ).toMatchObject({ points: 0 });
+    expect(
+      scoreClosestValueAgainstAverage({
+        officialValue: "1",
+        participantValue: "1.01",
+        eligibleOtherValues: ["0", "2.1"],
+        points: 1,
+        unansweredPenalty: -1,
+      }),
+    ).toMatchObject({ points: 1 });
+  });
+
+  it("preserves exact, missing and no-eligible-answer behavior", () => {
+    expect(
+      scoreClosestValueAgainstAverage({
+        officialValue: "5",
+        participantValue: "5",
+        eligibleOtherValues: ["100"],
+        points: 2,
+        unansweredPenalty: -1,
+      }).points,
+    ).toBe(2);
+    expect(
+      scoreClosestValueAgainstAverage({
+        officialValue: "5",
+        participantValue: null,
+        eligibleOtherValues: ["5"],
+        points: 2,
+        unansweredPenalty: -1,
+      }).points,
+    ).toBe(-1);
+    expect(
+      scoreClosestValueAgainstAverage({
+        officialValue: "5",
+        participantValue: "4",
+        eligibleOtherValues: [],
+        points: 2,
+        unansweredPenalty: -1,
+      }).points,
+    ).toBe(0);
+  });
+});
 
 const now = new Date("2026-08-26T12:00:00.000Z");
 const match = createQuestion({

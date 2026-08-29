@@ -173,6 +173,33 @@ export function scoreClosestValueAgainstRival(input: {
     : [scored(0, "NO_POINTS"), scored(input.points, "CLOSEST_VALUE")];
 }
 
+export function scoreClosestValueAgainstAverage(input: {
+  officialValue: string;
+  participantValue: string | null;
+  eligibleOtherValues: readonly string[];
+  points: number;
+  unansweredPenalty: -1 | 0;
+}): QuestionScore {
+  if (input.participantValue === null)
+    return scored(input.unansweredPenalty, "UNANSWERED");
+  if (input.eligibleOtherValues.length === 0) return scored(0, "NO_POINTS");
+  const official = decimalMicros(input.officialValue);
+  const own = decimalMicros(input.participantValue);
+  if (own === official) return scored(input.points, "CLOSEST_VALUE");
+  const count = BigInt(input.eligibleOtherValues.length);
+  const sum = input.eligibleOtherValues.reduce(
+    (total, value) => total + decimalMicros(value),
+    0n,
+  );
+  // Compare exact rational distances without rounding the arithmetic mean.
+  const ownDistanceScaled = (own > official ? own - official : official - own) * count;
+  const averageDistanceScaled =
+    sum > official * count ? sum - official * count : official * count - sum;
+  return ownDistanceScaled < averageDistanceScaled
+    ? scored(input.points, "CLOSEST_VALUE")
+    : scored(0, "NO_POINTS");
+}
+
 export function calculateQuestionScores(input: {
   question: Question;
   participantIds: readonly string[];
@@ -303,6 +330,7 @@ export function calculateRoundScoreBreakdowns(input: {
   judgments: readonly OpenTextJudgment[];
   unansweredPenalty: -1 | 0;
   now: Date;
+  rivalParticipantIdByParticipant?: ReadonlyMap<string, string | null>;
 }): Readonly<{
   supported: boolean;
   byParticipant: ReadonlyMap<string, PredictionScoreBreakdown>;
@@ -321,18 +349,69 @@ export function calculateRoundScoreBreakdowns(input: {
   let supported = true;
   for (const question of input.questions) {
     if (input.now.valueOf() < question.deadlineAt.valueOf()) continue;
+    let scores: ReadonlyMap<string, QuestionScore>;
     if (question.type === "CLOSEST_VALUE" && question.againstRival) {
-      supported = false;
-      continue;
-    }
-    const scores = calculateQuestionScores({
-      question,
-      participantIds: input.participantIds,
-      answers: input.answers.filter((answer) => answer.questionId === question.id),
-      result: input.results.find((result) => result.questionId === question.id) ?? null,
-      judgments: input.judgments,
-      unansweredPenalty: input.unansweredPenalty,
-    });
+      const rivals = input.rivalParticipantIdByParticipant;
+      const result = input.results.find((item) => item.questionId === question.id);
+      if (!rivals) {
+        supported = false;
+        continue;
+      }
+      if (!result) continue;
+      if (result.value.type !== "CLOSEST_VALUE")
+        throw new ScoringDomainError("Persisted result type does not match Question.");
+      const answers = new Map(
+        input.answers
+          .filter((answer) => answer.questionId === question.id)
+          .map((answer) => [
+            answer.participantId,
+            (answer.value as { value: string }).value,
+          ]),
+      );
+      const calculated = new Map<string, QuestionScore>();
+      for (const participantId of input.participantIds) {
+        const rivalId = rivals.get(participantId);
+        if (rivalId === undefined) {
+          supported = false;
+          continue;
+        }
+        if (rivalId === null) {
+          calculated.set(
+            participantId,
+            scoreClosestValueAgainstAverage({
+              officialValue: result.value.value,
+              participantValue: answers.get(participantId) ?? null,
+              eligibleOtherValues: input.participantIds
+                .filter((id) => id !== participantId)
+                .flatMap((id) => {
+                  const value = answers.get(id);
+                  return value === undefined ? [] : [value];
+                }),
+              points: question.points,
+              unansweredPenalty: input.unansweredPenalty,
+            }),
+          );
+        } else {
+          const pair = scoreClosestValueAgainstRival({
+            officialValue: result.value.value,
+            firstValue: answers.get(participantId) ?? null,
+            secondValue: answers.get(rivalId) ?? null,
+            points: question.points,
+            unansweredPenalty: input.unansweredPenalty,
+          });
+          calculated.set(participantId, pair[0]);
+        }
+      }
+      scores = calculated;
+    } else
+      scores = calculateQuestionScores({
+        question,
+        participantIds: input.participantIds,
+        answers: input.answers.filter((answer) => answer.questionId === question.id),
+        result: input.results.find((result) => result.questionId === question.id) ?? null,
+        judgments: input.judgments,
+        unansweredPenalty: input.unansweredPenalty,
+      });
     for (const [participantId, score] of scores) {
       if (score.state !== "SCORED") continue;
       const current = mutable.get(participantId);

@@ -211,9 +211,9 @@ Playoffs
 
 Regular phase:
 - no groups;
-- all participants play one another;
+- the persisted visible draw order feeds a partial circle-method schedule;
 - maximum 30 participants;
-- configurable number of Rounds;
+- configurable 1 through N-1 Rounds and 2/4/8/16 qualifiers not exceeding the roster;
 - maximum `N - 1` Rounds.
 
 After the regular phase, PlayoffRounds begin.
@@ -240,7 +240,7 @@ draw = 1 H2H Point each
 loss = 0 H2H Points
 ```
 
-The system generates the `LEAGUE_PLAYOFFS` round-robin schedule. With an odd participant count, each schedule slot has one bye. For `GROUP_PLAYOFFS`, the Admin manually assigns valid group membership and the system generates the round-robin schedule within each group.
+The server securely shuffles once, persists and exposes the draw order, and generates the configured `LEAGUE_PLAYOFFS` schedule with the circle method. Retries reuse the persisted order. With an odd participant count, each schedule slot has one bye. A bye awards no H2H Points; against-rival CLOSEST_VALUE compares its participant with the exact arithmetic mean of other eligible Answers. For `GROUP_PLAYOFFS`, the Admin manually assigns valid group membership and the system generates the round-robin schedule within each group.
 
 Ordering:
 

@@ -27,7 +27,8 @@ import {
 } from "@/application/competition/boundary";
 import { ApplicationError } from "@/lib/errors/application-error";
 
-export type RankingScope = "LEAGUE_STANDINGS" | "ROUND_WINNER";
+export type RankingScope =
+  "LEAGUE_STANDINGS" | "ROUND_WINNER" | "H2H_PHASE" | "GROUP_STANDINGS";
 
 export type StandingParticipant = Readonly<{
   id: string;
@@ -47,6 +48,7 @@ export type StoredRankingResolution = Readonly<{
   id: string;
   scope: RankingScope;
   roundId: string | null;
+  groupId: string | null;
   sourceFingerprint: string;
   tieFingerprint: string;
   revision: number;
@@ -72,6 +74,7 @@ type ResolutionWrite = Readonly<{
   competitionId: string;
   scope: RankingScope;
   roundId: string | null;
+  groupId: string | null;
   sourceFingerprint: string;
   tieFingerprint: string;
   revision: number;
@@ -110,13 +113,24 @@ function ordered<T extends { id: string }>(values: readonly T[]) {
   return [...values].sort((left, right) => left.id.localeCompare(right.id));
 }
 
-function fingerprint(aggregate: StandingsAggregate, rounds: readonly StandingRound[]) {
+function fingerprint(
+  aggregate: StandingsAggregate,
+  rounds: readonly StandingRound[],
+  now: Date,
+) {
   return hash({
     participants: ordered(aggregate.participants).map((participant) => participant.id),
     rounds: [...rounds]
       .sort((left, right) => left.round.sequence - right.round.sequence)
       .map((item) => ({
         round: item.round,
+        eligibleParticipantIds: ordered(aggregate.participants)
+          .map((participant) => participant.id)
+          .filter(
+            (participantId) =>
+              effectiveRoundStatus(item.round, now) === "FINALIZED" ||
+              !aggregate.restrictedParticipantIds.has(participantId),
+          ),
         questions: [...item.questions].sort((a, b) => a.sequence - b.sequence),
         answers: ordered(item.answers),
         results: ordered(item.results),
@@ -188,7 +202,7 @@ function matchingResolutions(
 }
 
 function leagueModel(aggregate: StandingsAggregate, now: Date) {
-  const source = fingerprint(aggregate, aggregate.rounds);
+  const source = fingerprint(aggregate, aggregate.rounds, now);
   const scored = scoresForRounds(aggregate, aggregate.rounds, now);
   const values = aggregate.participants.map((participant) => {
     const score = [...scored.byRound.values()].reduce<PredictionScoreBreakdown>(
@@ -231,7 +245,7 @@ function roundModel(aggregate: StandingsAggregate, roundId: string, now: Date) {
   const rounds = aggregate.rounds.filter(
     (item) => item.round.sequence <= target.round.sequence,
   );
-  const source = fingerprint(aggregate, rounds);
+  const source = fingerprint(aggregate, rounds, now);
   const scored = scoresForRounds(aggregate, rounds, now);
   const targetScores = scored.byRound.get(target.round.id);
   const values: RoundWinnerInput[] = aggregate.participants.map((participant) => {
@@ -477,6 +491,7 @@ export async function resolveRankingTie(
         competitionId: aggregate.competition.id,
         scope: parsed.data.scope,
         roundId: parsed.data.roundId ?? null,
+        groupId: null,
         sourceFingerprint: source,
         tieFingerprint: tie,
         revision: (previous?.revision ?? 0) + 1,

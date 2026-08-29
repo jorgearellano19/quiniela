@@ -3,3 +3,4 @@ export * from "./competition";
 export * from "./round";
 export * from "./standings";
 export * from "./payments";
+export * from "./h2h";

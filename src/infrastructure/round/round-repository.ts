@@ -400,7 +400,7 @@ export function createRoundRepository(database: typeof db): RoundRepository {
     async publish(roundId, userId, now) {
       return database.transaction(async (tx) => {
         const locked = await tx.execute(
-          sql`select r.* from round r join competition c on c.id = r.competition_id and c.status = 'STARTED' join competition_participant cp on cp.competition_id = c.id and cp.user_id = ${userId} and cp.is_admin = true where r.id = ${roundId} for update`,
+          sql`select r.* from round r join competition c on c.id = r.competition_id and c.status = 'STARTED' join competition_participant cp on cp.competition_id = c.id and cp.user_id = ${userId} and cp.is_admin = true where r.id = ${roundId} and (c.type = 'LEAGUE' or exists (select 1 from h2h_matchup hm where hm.round_id = r.id)) for update`,
         );
         if (!locked.length) return null;
         const [persistedRound] = await tx

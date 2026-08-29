@@ -32,7 +32,8 @@ export default function NewCompetitionPage() {
         <CardHeader>
           <CardTitle>Configuración inicial</CardTitle>
           <CardDescription>
-            No incluye participantes, pagos ni rondas todavía.
+            Define formato, límites del roster y reglas económicas antes de invitar
+            participantes.
           </CardDescription>
         </CardHeader>
         <CardContent>

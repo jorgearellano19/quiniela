@@ -8,6 +8,7 @@ import {
   CircleDollarSignIcon,
   TargetIcon,
   UsersIcon,
+  SwordsIcon,
 } from "lucide-react";
 import { leaveCompetitionAction } from "@/features/competitions/membership-actions";
 import { MembershipActionButton } from "@/features/competitions/membership-action-button";
@@ -81,6 +82,15 @@ export default async function CompetitionDetailPage({
               </Link>
             </Button>
           ) : null}
+          {detail.type !== "LEAGUE" &&
+          (detail.membershipStatus === "ACTIVE" || detail.isAdmin) ? (
+            <Button asChild variant="outline">
+              <Link href={`/app/competitions/${detail.id}/h2h`}>
+                <SwordsIcon data-icon="inline-start" aria-hidden="true" />
+                H2H
+              </Link>
+            </Button>
+          ) : null}
           {(detail.membershipStatus === "ACTIVE" || detail.isAdmin) &&
           detail.type !== "GROUP_PLAYOFFS" ? (
             <Button asChild variant="outline">
@@ -129,7 +139,11 @@ export default async function CompetitionDetailPage({
           </CardContent>
         </Card>
       ) : null}
-      <RulesSummary typeLabel={detail.typeLabel} statusLabel={detail.statusLabel} />
+      <RulesSummary
+        type={detail.type}
+        typeLabel={detail.typeLabel}
+        statusLabel={detail.statusLabel}
+      />
       {detail.status === "DRAFT" && detail.membershipStatus === "ACTIVE" ? (
         <MembershipActionButton
           action={leaveCompetitionAction.bind(null, detail.id)}

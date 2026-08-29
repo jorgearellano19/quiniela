@@ -99,6 +99,27 @@
       "when": 1787869246345,
       "tag": "0013_serious_weapon_omega",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1787872952303,
+      "tag": "0014_massive_shatterstar",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1787873597306,
+      "tag": "0015_classy_cerise",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1787966507608,
+      "tag": "0016_jittery_wrecking_crew",
+      "breakpoints": true
     }
   ]
 }

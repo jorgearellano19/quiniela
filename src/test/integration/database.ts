@@ -9,9 +9,14 @@ import {
   answer,
   authSecurityEvent,
   competition,
+  competitionGroup,
+  competitionGroupParticipant,
   competitionParticipant,
   competitionParticipantEvent,
   matchQuestionConfig,
+  h2hDrawParticipant,
+  h2hMatchup,
+  h2hPhaseConfiguration,
   manualRankingResolution,
   manualRankingResolutionEntry,
   officialResult,
@@ -105,6 +110,21 @@ export async function cleanupUsersByEmail(
           .delete(manualRankingResolution)
           .where(inArray(manualRankingResolution.competitionId, competitionIds));
       }
+      await transaction
+        .delete(h2hMatchup)
+        .where(inArray(h2hMatchup.competitionId, competitionIds));
+      await transaction
+        .delete(h2hDrawParticipant)
+        .where(inArray(h2hDrawParticipant.competitionId, competitionIds));
+      await transaction
+        .delete(competitionGroupParticipant)
+        .where(inArray(competitionGroupParticipant.competitionId, competitionIds));
+      await transaction
+        .delete(competitionGroup)
+        .where(inArray(competitionGroup.competitionId, competitionIds));
+      await transaction
+        .delete(h2hPhaseConfiguration)
+        .where(inArray(h2hPhaseConfiguration.competitionId, competitionIds));
       const rounds = await transaction
         .select({ id: round.id })
         .from(round)
@@ -300,6 +320,21 @@ export class IntegrationTestData {
           .delete(manualRankingResolution)
           .where(inArray(manualRankingResolution.competitionId, competitionIds));
       }
+      await this.database
+        .delete(h2hMatchup)
+        .where(inArray(h2hMatchup.competitionId, competitionIds));
+      await this.database
+        .delete(h2hDrawParticipant)
+        .where(inArray(h2hDrawParticipant.competitionId, competitionIds));
+      await this.database
+        .delete(competitionGroupParticipant)
+        .where(inArray(competitionGroupParticipant.competitionId, competitionIds));
+      await this.database
+        .delete(competitionGroup)
+        .where(inArray(competitionGroup.competitionId, competitionIds));
+      await this.database
+        .delete(h2hPhaseConfiguration)
+        .where(inArray(h2hPhaseConfiguration.competitionId, competitionIds));
       const rounds = await this.database
         .select({ id: round.id })
         .from(round)

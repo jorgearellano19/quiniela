@@ -352,16 +352,17 @@ H2HMatchup
 └── updatedAt
 ```
 
-The system generates `LEAGUE_PLAYOFFS` round-robin matchups, including one bye per schedule slot when the participant count is odd. A win based on Round Prediction Score yields 3 H2H Points, a draw 1 each, and a loss 0; points and standings remain derived.
+The system persists one visible server-randomized draw order and generates the configured partial `LEAGUE_PLAYOFFS` circle schedule from it, including one bye per schedule slot when the participant count is odd. Generation is transactional and retries never redraw. A win based on Round Prediction Score yields 3 H2H Points, a draw 1 each, and a loss 0; points and standings remain derived.
 
 ## 13. LEAGUE_PLAYOFFS regular phase
 
 `LEAGUE_PLAYOFFS` has no groups.
 
-All participants play one another in the regular phase.
+The configured partial regular phase has no repeated pair within its persisted draw cycle.
 
 - Maximum participants: 30.
 - Number of regular-phase rounds is configurable.
+- Qualifiers: 2, 4, 8, or 16 without exceeding the roster.
 - Maximum: `N - 1`.
 
 Regular `Round` records and later `PlayoffRound` records remain distinct.

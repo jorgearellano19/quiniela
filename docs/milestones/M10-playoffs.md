@@ -18,6 +18,7 @@ Admins configure/publish PlayoffRounds and resolve matchups; participants see th
 - PlayoffRound/Matchup generation; typed Questions, Answers, Official Results, deadlines, lifecycle; round-specific scoring/tiebreaker/advancement configuration; and publication freeze.
 - `BEST_SEED`, `TIEBREAKER_QUESTION`, advancement, explicit audited tie resolution, and champion.
 - Both LEAGUE_PLAYOFFS and GROUP_PLAYOFFS entrants.
+- Entrants are accepted only from M9 `OFFICIAL` qualification: every regular-phase Round is effectively FINALIZED and required ranking ties are resolved.
 
 ## Out of scope
 
@@ -131,4 +132,4 @@ Reuse M4–M6 Question, Answer, Result, lifecycle, and scoring behavior through 
 
 ## Open questions
 
-None.
+- M9 input contract: bracket generation consumes only the persisted official qualifier order; provisional or unresolved qualification is rejected.

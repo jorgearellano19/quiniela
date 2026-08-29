@@ -4,6 +4,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   competition as competitionTable,
   competitionParticipant,
+  prizeConfiguration,
 } from "@/infrastructure/db/schema";
 import {
   createIntegrationDatabase,
@@ -51,6 +52,33 @@ describe("Competition persistence", () => {
       currency: "MXN",
       isAdmin: true,
     });
+  });
+  it("atomically includes approved payment and Round-prize configuration", async () => {
+    const competition = value();
+    await repository.createWithAdmin(competition, randomUUID(), {
+      enabled: true,
+      roundFeeAmount: 25_000,
+      maximumDebt: 50_000,
+      roundWinnerPrizeAmount: 100_000,
+    });
+    const [configured] = await database
+      .select({
+        paymentsEnabled: competitionTable.paymentsEnabled,
+        roundFeeAmount: competitionTable.roundFeeAmount,
+        maximumDebt: competitionTable.maximumDebt,
+      })
+      .from(competitionTable)
+      .where(eq(competitionTable.id, competition.id));
+    const [prize] = await database
+      .select()
+      .from(prizeConfiguration)
+      .where(eq(prizeConfiguration.competitionId, competition.id));
+    expect(configured).toEqual({
+      paymentsEnabled: true,
+      roundFeeAmount: 25_000,
+      maximumDebt: 50_000,
+    });
+    expect(prize).toMatchObject({ type: "ROUND_WINNER", amount: 100_000 });
   });
   it("enforces unique membership, restrictive foreign keys, and fixed currency", async () => {
     const competition = value();

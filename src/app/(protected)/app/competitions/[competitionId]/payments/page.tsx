@@ -14,7 +14,10 @@ import {
 } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { requireCompetitionPageActor } from "@/features/competitions/competition-session";
-import { PaymentEntryForm } from "@/features/payments/payment-forms";
+import {
+  PaymentConfigurationForm,
+  PaymentEntryForm,
+} from "@/features/payments/payment-forms";
 import { LocalDateTime } from "@/features/rounds/local-date-time";
 import { paymentRepository } from "@/infrastructure/payment/payment-repository";
 
@@ -65,6 +68,23 @@ export default async function PaymentsPage({
           {value.competition.paymentsEnabled ? "Cuotas activas" : "Sin cuotas"}
         </Badge>
       </div>
+      {value.canManage && value.competition.status === "DRAFT" ? (
+        <Card className="border-primary/25">
+          <CardHeader>
+            <CardTitle>Reglas de pagos</CardTitle>
+            <CardDescription>
+              Configura cuotas, deuda máxima y premio antes de iniciar. Al publicar una
+              jornada se crea un cargo para cada participante activo.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PaymentConfigurationForm
+              competitionId={competitionId}
+              value={value.competition}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
       {!value.participants.length ? (
         <Empty className="border bg-card">
           <EmptyHeader>

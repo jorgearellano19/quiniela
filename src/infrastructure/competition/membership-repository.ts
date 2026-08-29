@@ -320,6 +320,51 @@ export function createMembershipRepository(database: typeof db): MembershipRepos
           activeCount: count("ACTIVE"),
           pendingCount: count("PENDING"),
         });
+        if (context.type !== "LEAGUE") {
+          const phaseRows = await tx.execute<{
+            league_round_count: number | null;
+            qualifier_count: number | null;
+            group_size: number | null;
+            advancers_per_group: number | null;
+            draft_round_count: number;
+            total_round_count: number;
+          }>(sql`
+            select cfg.league_round_count, cfg.qualifier_count, cfg.group_size,
+              cfg.advancers_per_group,
+              count(r.id) filter (where r.status = 'DRAFT')::int as draft_round_count,
+              count(r.id)::int as total_round_count
+            from h2h_phase_configuration cfg
+            left join round r on r.competition_id = cfg.competition_id
+            where cfg.competition_id = ${competitionId} and cfg.generated_at is null
+            group by cfg.league_round_count, cfg.qualifier_count, cfg.group_size,
+              cfg.advancers_per_group
+          `);
+          const phase = phaseRows[0];
+          const activeCount = count("ACTIVE");
+          const requiredRounds =
+            (context.type === "LEAGUE_PLAYOFFS"
+              ? phase?.league_round_count
+              : phase?.group_size
+                ? phase.group_size - 1
+                : null) ?? null;
+          if (
+            requiredRounds === null ||
+            phase?.total_round_count !== requiredRounds ||
+            phase?.draft_round_count !== requiredRounds ||
+            (context.type === "LEAGUE_PLAYOFFS" &&
+              (requiredRounds > activeCount - 1 ||
+                !phase?.qualifier_count ||
+                phase.qualifier_count > activeCount)) ||
+            (context.type === "GROUP_PLAYOFFS" &&
+              (!phase?.group_size ||
+                !phase.advancers_per_group ||
+                activeCount % phase.group_size !== 0 ||
+                ![4, 8, 16, 32].includes(
+                  (activeCount / phase.group_size) * phase.advancers_per_group,
+                )))
+          )
+            throw new Error("H2H phase configuration is incomplete.");
+        }
         await tx
           .update(competition)
           .set({

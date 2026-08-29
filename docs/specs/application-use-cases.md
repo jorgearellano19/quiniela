@@ -535,15 +535,15 @@ Admin configures the regular League phase.
 
 Validate:
 - maximum 30 participants;
-- number of Rounds is configurable;
-- maximum `N - 1`;
+- number of Rounds is `1…N - 1`;
+- 2/4/8/16 qualifiers without exceeding the roster;
 - no groups.
 
 ## generateLeaguePhaseSchedule
 
 **Actor:** Admin/system
 
-Deterministically generates the all-play-all round-robin matchups. An odd participant count creates one bye in each schedule slot. Generation is idempotent and transactional.
+Securely shuffles the active roster once, persists and exposes that draw order, then deterministically applies the circle method for the configured partial schedule. An odd participant count creates one bye in each schedule slot. Generation is idempotent and transactional; a retry never redraws.
 
 ## getLeaguePhasePrizeWinner
 

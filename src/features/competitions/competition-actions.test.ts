@@ -75,7 +75,15 @@ describe("Competition Server Actions", () => {
     expect(mocks.createCompetition).toHaveBeenCalledWith(
       {},
       { userId: "user-id", passwordChangeRequired: false },
-      { name: "Copa", type: "LEAGUE", rulesNote: "Nota" },
+      {
+        name: "Copa",
+        type: "LEAGUE",
+        rulesNote: "Nota",
+        paymentsEnabled: false,
+        roundFeeAmount: null,
+        maximumDebt: null,
+        roundWinnerPrizeAmount: null,
+      },
     );
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/app");
   });

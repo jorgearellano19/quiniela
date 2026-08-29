@@ -48,6 +48,8 @@ export async function configurePaymentsAction(
       roundWinnerPrizeAmount: data.get("roundWinnerPrizeAmount"),
     });
     revalidatePath(`/app/competitions/${competitionId}`);
+    revalidatePath(`/app/competitions/${competitionId}/payments`);
+    revalidatePath(`/app/competitions/${competitionId}/edit`);
     return { success: true, message: "Configuración de pagos guardada." };
   } catch (error) {
     return failure(error, "No fue posible guardar la configuración.");

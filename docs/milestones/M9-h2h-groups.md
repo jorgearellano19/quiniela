@@ -2,7 +2,7 @@
 
 ## Status
 
-`FUTURE`
+`COMPLETED — 2026-08-28`
 
 ## Goal
 
@@ -15,14 +15,14 @@ Participants can view opponents, H2H outcomes, group/league-phase standings, and
 ## In scope
 
 - H2H matchups, 3/1/0 Points from Round Prediction Score, wins, and standings.
-- `LEAGUE_PLAYOFFS` all-play-all regular phase, max 30 and rounds max `N-1`, without groups.
+- `LEAGUE_PLAYOFFS` visible persisted draw and partial regular phase, max 30 and 1…`N-1` rounds, without groups.
 - `GROUP_PLAYOFFS` manual Admin group assignment followed by system round-robin generation, 8/16/32/64 participant and size 4/8 constraints, one/two advancers, standings, and qualification.
 - Explicit audited Admin resolution for unresolved group/H2H ties.
 
 ## Out of scope
 
 - PlayoffRound/bracket generation, playoff advancement, champion, and prizes.
-- Arbitrary/random/ID-based pairing or tie resolution.
+- Arbitrary/random/ID-based tie resolution or hidden pairing redraws.
 - New Competition types.
 
 ## Dependencies
@@ -54,8 +54,8 @@ M9 depends on:
 - H2H Points and Prediction Score remain distinct.
 - Higher Round Prediction Score wins the matchup for 3 H2H Points; a tie awards 1 each; a loss awards 0.
 - H2H order is Points, Prediction Score, EXACT_SCORE, then wins; unresolved required ties are manual.
-- LEAGUE_PLAYOFFS has no groups, max 30, all participants play, and at most `N-1` configured regular rounds.
-- The system deterministically generates the all-play-all schedule; odd counts receive one bye per schedule slot.
+- LEAGUE_PLAYOFFS has no groups, max 30, 1…`N-1` configured regular rounds, and 2/4/8/16 qualifiers within the roster.
+- The server securely shuffles once, persists the visible order, and applies the circle method; retries are idempotent and odd counts receive one bye per schedule slot.
 - GROUP_PLAYOFFS counts are 8/16/32/64; groups are 4/8; one/two advance to fields 4/8/16/32.
 - The Admin assigns valid group membership, then the system generates every within-group round-robin matchup.
 - Group advancement uses the full H2H order before manual resolution and never uses hidden fallback ordering.
@@ -98,28 +98,39 @@ Add explicit H2H matchup/source-fact representation, including nullable opponent
 
 ## Acceptance criteria
 
-- [ ] Valid LEAGUE_PLAYOFFS regular phase produces H2H matchups without groups.
-- [ ] Valid GROUP_PLAYOFFS manual assignment produces approved-size groups and complete system-generated within-group schedules.
-- [ ] H2H Points/wins and standings derive correctly.
-- [ ] Approved participant counts and advancement fields are enforced.
-- [ ] Unresolved ties require an explicit audited Admin decision.
-- [ ] No arbitrary tie/pairing order or persisted standings is introduced.
-- [ ] Relevant tests, lint, typecheck, and build pass.
+- [x] Valid LEAGUE_PLAYOFFS regular phase produces H2H matchups without groups.
+- [x] Valid GROUP_PLAYOFFS manual assignment produces approved-size groups and complete system-generated within-group schedules.
+- [x] H2H Points/wins and standings derive correctly.
+- [x] Approved participant counts and advancement fields are enforced.
+- [x] Unresolved ties require an explicit audited Admin decision.
+- [x] No arbitrary tie/pairing order or persisted standings is introduced.
+- [x] Relevant tests, lint, typecheck, and build pass.
 
 ## Definition of Done
 
-- [ ] Scope implemented.
-- [ ] Out-of-scope functionality was not introduced.
-- [ ] Approved domain rules preserved.
-- [ ] Authorization enforced server-side.
-- [ ] Relevant tests added.
-- [ ] No duplicated business logic.
-- [ ] No locked specification modified.
-- [ ] lint passes.
-- [ ] typecheck passes.
-- [ ] tests pass.
-- [ ] build passes.
-- [ ] milestone code review completed.
+- [x] Scope implemented.
+- [x] Out-of-scope functionality was not introduced.
+- [x] Approved domain rules preserved.
+- [x] Authorization enforced server-side.
+- [x] Relevant tests added.
+- [x] No duplicated business logic.
+- [x] No sealed decision changed without approval.
+- [x] lint passes.
+- [x] typecheck passes.
+- [x] tests pass.
+- [x] build passes.
+- [x] milestone code review completed.
+
+## Closure validation
+
+Validated 2026-08-28:
+
+- formatting, lint, and TypeScript checks passed;
+- 176 domain/application unit tests passed across 27 files;
+- 44 PostgreSQL integration tests passed across 10 files;
+- 3 mobile Chromium E2E flows passed, including the 320 px H2H Admin flow;
+- the production webpack build passed;
+- the default Turbopack build remains subject to the documented restricted worker-port environment failure and was verified with the approved webpack fallback.
 
 ## Risks / implementation notes
 
@@ -127,4 +138,4 @@ The H2H matchup schema must store schedule/source facts, not derived standings o
 
 ## Open questions
 
-None.
+- Approved 2026-08-27: partial LEAGUE_PLAYOFFS phase, persisted visible server-random draw, exact-average bye scoring, explicit matchup states, and official qualification readiness described in this revision.

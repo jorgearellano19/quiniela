@@ -12,13 +12,22 @@ import { toSafeError } from "@/lib/errors/application-error";
 
 export type CompetitionFormState = {
   message?: string;
-  fieldErrors?: { name?: string; type?: string; rulesNote?: string };
+  fieldErrors?: {
+    name?: string;
+    type?: string;
+    rulesNote?: string;
+    payments?: string;
+  };
 };
 function input(formData: FormData) {
   return {
     name: String(formData.get("name") ?? ""),
     type: String(formData.get("type") ?? ""),
     rulesNote: String(formData.get("rulesNote") ?? ""),
+    paymentsEnabled: formData.get("paymentsEnabled") ?? false,
+    roundFeeAmount: formData.get("roundFeeAmount"),
+    maximumDebt: formData.get("maximumDebt"),
+    roundWinnerPrizeAmount: formData.get("roundWinnerPrizeAmount"),
   };
 }
 async function actor() {

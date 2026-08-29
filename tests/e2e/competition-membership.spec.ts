@@ -5,6 +5,7 @@ import { round } from "../../src/infrastructure/db/schema";
 import {
   cleanupUsersByEmail,
   createIntegrationDatabase,
+  IntegrationTestData,
 } from "../../src/test/integration/database";
 
 const password = "Quiniela-test-2026";
@@ -319,6 +320,76 @@ test("Admin publica cinco preguntas y guarda sus pronósticos como participante"
   } finally {
     await context.close();
     await cleanupUsersByEmail(database, [adminEmail]);
+    await client.end();
+  }
+});
+
+test("Admin configura y confirma una fase H2H móvil", async ({ browser }) => {
+  test.setTimeout(90_000);
+  test.skip(!databaseUrl, "TEST_DATABASE_URL is required for deterministic cleanup.");
+  const suffix = randomUUID();
+  const adminEmail = `h2h-admin-${suffix}@example.test`;
+  const participantEmail = `h2h-participant-${suffix}@example.test`;
+  const { client, database } = createIntegrationDatabase();
+  const data = new IntegrationTestData(database);
+  const context = await browser.newContext({ ...devicesForMobile });
+  try {
+    const page = await context.newPage();
+    await signUp(page, "Admin H2H", adminEmail);
+    await page.getByRole("link", { name: "Crear quiniela" }).click();
+    await page.getByLabel("Nombre").fill("Copa H2H E2E");
+    await page.getByLabel("Tipo de competencia").click();
+    await page
+      .getByRole("option", { name: "Liga con eliminatorias", exact: true })
+      .click();
+    await page.getByRole("button", { name: "Crear quiniela" }).click();
+    await expect(page).toHaveURL(/\/app\/competitions\/[^/?]+\?created=1$/);
+    const competitionUrl = page.url().split("?")[0]!;
+    const competitionId = new URL(competitionUrl).pathname.split("/").at(-1)!;
+    const admin = await database.query.user.findFirst({
+      where: (table, { eq: equals }) => equals(table.email, adminEmail),
+    });
+    const participant = await data.createUser({ email: participantEmail });
+    await data.createMembership({
+      competitionId,
+      userId: participant.id,
+      status: "ACTIVE",
+      statusChangedAt: new Date(),
+      updatedByUserId: admin!.id,
+    });
+
+    await page.goto(`${competitionUrl}/h2h`);
+    await page.getByLabel("Jornadas de fase regular").fill("1");
+    await page.getByLabel("Clasifican").selectOption("2");
+    await page.getByRole("button", { name: "Guardar configuración" }).click();
+    await expect(page.getByText("Configuración guardada.")).toBeVisible();
+
+    await page.goto(`${competitionUrl}/rounds`);
+    await page.getByRole("button", { name: "Crear jornada" }).click();
+    await page.getByLabel("Nombre").fill("Jornada H2H");
+    await page.getByLabel("Inicio de jornada").fill("2027-01-01T12:00");
+    await page.getByRole("button", { name: "Crear jornada" }).click();
+    await page.goto(`${competitionUrl}/participants`);
+    await page.getByRole("button", { name: "Iniciar quiniela" }).click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Iniciar quiniela" })
+      .click();
+    await expect(page.getByText("Iniciada")).toBeVisible();
+
+    await page.goto(`${competitionUrl}/h2h`);
+    await page.getByRole("button", { name: "Confirmar sorteo" }).click();
+    await expect(page.getByText("Calendario", { exact: true })).toBeVisible();
+    await expect(page.getByText("Orden del sorteo", { exact: true })).toBeVisible();
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+  } finally {
+    await context.close();
+    await cleanupUsersByEmail(database, [adminEmail, participantEmail]);
     await client.end();
   }
 });

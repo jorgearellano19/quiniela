@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, count, eq } from "drizzle-orm";
+import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   competition as competitionTable,
   competitionParticipant,
   competitionParticipantEvent,
+  h2hPhaseConfiguration,
+  round,
 } from "@/infrastructure/db/schema";
 import {
   createIntegrationDatabase,
@@ -300,5 +302,62 @@ describe("membership persistence", () => {
       );
     expect(results.sort()).toEqual([false, true]);
     expect(activeCount?.count).toBe(30);
+  });
+
+  it("revalidates GROUP_PLAYOFFS configuration against the final roster", async () => {
+    const value = { ...competition(), type: "GROUP_PLAYOFFS" as const };
+    await competitions.createWithAdmin(value, randomUUID());
+    const rosterIds: string[] = [];
+    for (let index = 1; index < 16; index += 1) {
+      const candidate = await testData.createUser({
+        email: `m3-group-roster-${index}@example.test`,
+      });
+      const membership = await testData.createMembership({
+        competitionId: value.id,
+        userId: candidate.id,
+        status: "ACTIVE",
+        statusChangedAt: new Date(),
+        updatedByUserId: adminId,
+      });
+      rosterIds.push(membership.id);
+    }
+    const now = new Date();
+    await database.insert(h2hPhaseConfiguration).values({
+      competitionId: value.id,
+      groupSize: 4,
+      advancersPerGroup: 1,
+      updatedAt: now,
+      updatedByUserId: adminId,
+    });
+    await database.insert(round).values(
+      [1, 2, 3].map((sequence) => ({
+        id: randomUUID(),
+        competitionId: value.id,
+        sequence,
+        name: `Jornada ${sequence}`,
+        startsAt: now,
+        status: "DRAFT" as const,
+        unansweredPenalty: -1 as const,
+        createdByUserId: adminId,
+        updatedByUserId: adminId,
+        createdAt: now,
+        updatedAt: now,
+      })),
+    );
+    await database
+      .update(competitionParticipant)
+      .set({ status: "REMOVED" })
+      .where(
+        // Keep the Admin plus seven participants: 8 active makes a field of 2,
+        // which is invalid for groupSize=4 and one advancer per group.
+        inArray(competitionParticipant.id, rosterIds.slice(7)),
+      );
+
+    await expect(memberships.start(value.id, adminId, now)).rejects.toThrow();
+    const [stored] = await database
+      .select({ status: competitionTable.status })
+      .from(competitionTable)
+      .where(eq(competitionTable.id, value.id));
+    expect(stored?.status).toBe("DRAFT");
   });
 });
