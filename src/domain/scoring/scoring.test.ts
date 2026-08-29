@@ -6,6 +6,7 @@ import {
   type MatchScoreQuestion,
 } from "@/domain/round/round";
 import {
+  calculateRoundScoreBreakdowns,
   calculateQuestionScores,
   decimalMicros,
   isQuestionResultComplete,
@@ -323,6 +324,63 @@ describe("scoring", () => {
         unansweredPenalty: -1,
       }).get("b")?.points,
     ).toBe(-1);
+  });
+
+  it("scores playoff rivals and gives unanswered tiebreakers zero", () => {
+    const closest = createQuestion({
+      id: "closest",
+      roundId: "r",
+      sequence: 1,
+      type: "CLOSEST_VALUE",
+      prompt: "Valor",
+      points: 2,
+      againstRival: true,
+      deadlineAt: now,
+      actorUserId: "u",
+    });
+    const tiebreaker = createQuestion({
+      id: "tie",
+      roundId: "r",
+      sequence: 2,
+      type: "EXACT_VALUE",
+      prompt: "Desempate",
+      points: 1,
+      deadlineAt: now,
+      actorUserId: "u",
+    });
+    const breakdown = calculateRoundScoreBreakdowns({
+      questions: [closest, tiebreaker],
+      participantIds: ["a", "b"],
+      answers: [
+        {
+          ...answer("a", { type: "CLOSEST_VALUE", value: "10" }),
+          questionId: "closest",
+        },
+        {
+          ...answer("b", { type: "CLOSEST_VALUE", value: "20" }),
+          questionId: "closest",
+        },
+        {
+          ...answer("a", { type: "EXACT_VALUE", value: "5" }),
+          questionId: "tie",
+        },
+      ],
+      results: [
+        { ...result({ type: "CLOSEST_VALUE", value: "10" }), questionId: "closest" },
+        { ...result({ type: "EXACT_VALUE", value: "5" }), questionId: "tie" },
+      ],
+      judgments: [],
+      unansweredPenalty: -1,
+      rivalParticipantIdByParticipant: new Map([
+        ["a", "b"],
+        ["b", "a"],
+      ]),
+      tiebreakerQuestionId: "tie",
+      now,
+    });
+    expect(breakdown.supported).toBe(true);
+    expect(breakdown.byParticipant.get("a")?.total).toBe(2);
+    expect(breakdown.byParticipant.get("b")?.total).toBe(0);
   });
 
   it("validates typed results and OPEN_TEXT completeness", () => {

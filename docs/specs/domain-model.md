@@ -281,11 +281,13 @@ Approved bracket seeding ranks:
 3. Admin resolution if tied
 ```
 
-Seeding orders Prediction Score DESC, then EXACT_SCORE DESC, then explicit Admin resolution. Bracket pairing is highest remaining seed against lowest remaining seed (`1 vs 16`, `2 vs 15`, and so on).
+Seeding orders Prediction Score DESC, then EXACT_SCORE DESC, then explicit Admin resolution. The official qualifier order is atomically snapshotted as immutable original seeds when the first bracket is generated. Every stage pairs the highest remaining original seed against the lowest remaining original seed (`1 vs 16`, `2 vs 15`, and so on).
 
 With `BEST_SEED`, when the opponents' Playoff Round Prediction Scores tie, the better seed advances.
 
-With `TIEBREAKER_QUESTION`, the configured PlayoffRound tiebreaker Question determines advancement. If it still produces an unresolved tie, Admin resolves it explicitly. The domain must never silently choose a winner.
+With `TIEBREAKER_QUESTION`, after tied PlayoffRound Prediction Scores, compare the opponents' derived points on the configured tiebreaker Question. Equal Question points require explicit Admin resolution. The domain must never silently choose a winner.
+
+A FINISHED PlayoffRound exposes provisional winners during its correction window. Final advancement and downstream publication require the preceding round to be effectively FINALIZED. A manual playoff decision may be corrected only before a downstream PlayoffRound has been published.
 
 The Playoff Champion is the participant who wins the final PlayoffMatchup.
 

@@ -208,10 +208,57 @@ export function calculateQuestionScores(input: {
   judgments: readonly OpenTextJudgment[];
   unansweredPenalty: -1 | 0;
   isTiebreaker?: boolean;
+  rivalParticipantIdByParticipant?: ReadonlyMap<string, string | null> | undefined;
 }): ReadonlyMap<string, QuestionScore> {
   const byParticipant = new Map(input.answers.map((a) => [a.participantId, a]));
   const penalty = input.isTiebreaker ? 0 : input.unansweredPenalty;
   const scores = new Map<string, QuestionScore>();
+  if (input.question.type === "CLOSEST_VALUE" && input.question.againstRival) {
+    if (!input.result) return scores;
+    if (input.result.value.type !== "CLOSEST_VALUE")
+      throw new ScoringDomainError("Persisted result type does not match Question.");
+    const rivals = input.rivalParticipantIdByParticipant;
+    if (!rivals) return scores;
+    const values = new Map(
+      input.answers.map((answer) => [
+        answer.participantId,
+        (answer.value as { value: string }).value,
+      ]),
+    );
+    for (const participantId of input.participantIds) {
+      const rivalId = rivals.get(participantId);
+      if (rivalId === undefined) continue;
+      if (rivalId === null) {
+        scores.set(
+          participantId,
+          scoreClosestValueAgainstAverage({
+            officialValue: input.result.value.value,
+            participantValue: values.get(participantId) ?? null,
+            eligibleOtherValues: input.participantIds
+              .filter((id) => id !== participantId)
+              .flatMap((id) => {
+                const value = values.get(id);
+                return value === undefined ? [] : [value];
+              }),
+            points: input.question.points,
+            unansweredPenalty: penalty,
+          }),
+        );
+      } else {
+        scores.set(
+          participantId,
+          scoreClosestValueAgainstRival({
+            officialValue: input.result.value.value,
+            firstValue: values.get(participantId) ?? null,
+            secondValue: values.get(rivalId) ?? null,
+            points: input.question.points,
+            unansweredPenalty: penalty,
+          })[0],
+        );
+      }
+    }
+    return scores;
+  }
   if (input.question.type === "OPEN_TEXT") {
     const byAnswer = new Map(input.judgments.map((j) => [j.answerId, j]));
     if (input.answers.some((answer) => !byAnswer.has(answer.id))) {
@@ -330,7 +377,8 @@ export function calculateRoundScoreBreakdowns(input: {
   judgments: readonly OpenTextJudgment[];
   unansweredPenalty: -1 | 0;
   now: Date;
-  rivalParticipantIdByParticipant?: ReadonlyMap<string, string | null>;
+  rivalParticipantIdByParticipant?: ReadonlyMap<string, string | null> | undefined;
+  tiebreakerQuestionId?: string | null | undefined;
 }): Readonly<{
   supported: boolean;
   byParticipant: ReadonlyMap<string, PredictionScoreBreakdown>;
@@ -349,6 +397,9 @@ export function calculateRoundScoreBreakdowns(input: {
   let supported = true;
   for (const question of input.questions) {
     if (input.now.valueOf() < question.deadlineAt.valueOf()) continue;
+    if (question.id === input.tiebreakerQuestionId) continue;
+    const unansweredPenalty =
+      question.id === input.tiebreakerQuestionId ? 0 : input.unansweredPenalty;
     let scores: ReadonlyMap<string, QuestionScore>;
     if (question.type === "CLOSEST_VALUE" && question.againstRival) {
       const rivals = input.rivalParticipantIdByParticipant;
@@ -388,7 +439,7 @@ export function calculateRoundScoreBreakdowns(input: {
                   return value === undefined ? [] : [value];
                 }),
               points: question.points,
-              unansweredPenalty: input.unansweredPenalty,
+              unansweredPenalty,
             }),
           );
         } else {
@@ -397,7 +448,7 @@ export function calculateRoundScoreBreakdowns(input: {
             firstValue: answers.get(participantId) ?? null,
             secondValue: answers.get(rivalId) ?? null,
             points: question.points,
-            unansweredPenalty: input.unansweredPenalty,
+            unansweredPenalty,
           });
           calculated.set(participantId, pair[0]);
         }
@@ -410,7 +461,8 @@ export function calculateRoundScoreBreakdowns(input: {
         answers: input.answers.filter((answer) => answer.questionId === question.id),
         result: input.results.find((result) => result.questionId === question.id) ?? null,
         judgments: input.judgments,
-        unansweredPenalty: input.unansweredPenalty,
+        unansweredPenalty,
+        isTiebreaker: question.id === input.tiebreakerQuestionId,
       });
     for (const [participantId, score] of scores) {
       if (score.state !== "SCORED") continue;

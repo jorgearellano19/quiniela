@@ -1,0 +1,2 @@
+ALTER TABLE "playoff_round" ADD CONSTRAINT "playoff_round_tiebreaker_question_id_question_id_fk" FOREIGN KEY ("tiebreaker_question_id") REFERENCES "public"."question"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "playoff_round" ADD CONSTRAINT "playoff_round_tiebreaker_same_round_fk" FOREIGN KEY ("tiebreaker_question_id", "id") REFERENCES "public"."question"("id", "playoff_round_id") ON DELETE restrict ON UPDATE no action;

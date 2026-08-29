@@ -466,9 +466,9 @@ PlayoffRound configuration remains editable until publication and frozen after p
 
 PlayoffRounds own typed Questions and use the same participant Answer, shared Official Result, deadline, publication, automatic finish, correction-window, and effective-finalization implementation as regular Rounds. Reuse the scoring engine and shared application behavior rather than creating a parallel implementation.
 
-Seeding must support:
-- bracket-based seeding;
-- ranking-based seeding.
+Seeding supports the approved ranking-based method only. It snapshots M9's `OFFICIAL` qualifier order as immutable original seeds and pairs the highest remaining seed with the lowest at every stage.
+
+FINISHED PlayoffRounds expose provisional winners. Final advancement and publication of the next round wait for effective FINALIZED. `TIEBREAKER_QUESTION` compares derived points on the configured Question after tied round scores.
 
 Any unresolved tie requiring Admin intervention must be explicit and auditable.
 

@@ -103,7 +103,7 @@ export interface RoundRepository {
   reorderQuestions(roundId: string, userId: string, ids: string[]): Promise<boolean>;
   deleteDraft(roundId: string, competitionId: string, userId: string): Promise<boolean>;
 }
-function questionEditor(value: Question): QuestionEditor {
+export function questionEditor(value: Question): QuestionEditor {
   const common = {
     id: value.id,
     sequence: value.sequence,
@@ -152,7 +152,7 @@ function summary(value: Round, questionCount: number): RoundSummary {
     questionCount,
   };
 }
-function editor(value: RoundAggregate): RoundEditorDetail {
+export function roundEditorDetail(value: RoundAggregate): RoundEditorDetail {
   return {
     ...summary(value.round, value.questions.length),
     competitionType: value.competitionType,
@@ -352,7 +352,7 @@ export async function getRoundEditor(
 ) {
   const { actor } = await admin(repository, actorValue, competitionId);
   const result = await repository.getEditor(roundId, actor.userId);
-  return result?.round.competitionId === competitionId ? editor(result) : null;
+  return result?.round.competitionId === competitionId ? roundEditorDetail(result) : null;
 }
 export async function updateRound(
   repository: RoundRepository,
@@ -484,5 +484,5 @@ export async function publishRound(
   const result = await repository.publish(roundId, actor.userId, now);
   if (!result || result.round.competitionId !== competitionId)
     throw new ApplicationError("UNAUTHORIZED", "No fue posible publicar la jornada.");
-  return editor(result);
+  return roundEditorDetail(result);
 }

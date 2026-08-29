@@ -20,6 +20,10 @@ import {
   saveOfficialResultAction,
   type ResultActionState,
 } from "./result-actions";
+import {
+  judgePlayoffOpenTextAction,
+  savePlayoffOfficialResultAction,
+} from "@/features/playoffs/playoff-result-actions";
 
 type Question = RoundResultsDetail["questions"][number];
 
@@ -27,10 +31,12 @@ export function OfficialResultForm({
   competitionId,
   roundId,
   question,
+  context = "round",
 }: {
   competitionId: string;
   roundId: string;
   question: Question;
+  context?: "round" | "playoff";
 }) {
   const router = useRouter();
   const mode = question.result ? "correct" : "record";
@@ -38,13 +44,9 @@ export function OfficialResultForm({
   const [optionId, setOptionId] = useState(
     current?.type === "OPTIONS" ? current.optionId : "",
   );
-  const action = saveOfficialResultAction.bind(
-    null,
-    mode,
-    competitionId,
-    roundId,
-    question.id,
-  );
+  const action = (
+    context === "playoff" ? savePlayoffOfficialResultAction : saveOfficialResultAction
+  ).bind(null, mode, competitionId, roundId, question.id);
   const [state, formAction, pending] = useActionState<ResultActionState, FormData>(
     action,
     {},
@@ -157,23 +159,22 @@ export function JudgmentControls({
   roundId,
   answerId,
   value,
+  context = "round",
 }: {
   competitionId: string;
   roundId: string;
   answerId: string;
   value: boolean | null;
+  context?: "round" | "playoff";
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState<ResultActionState>({});
   function save(isCorrect: boolean) {
     startTransition(async () => {
-      const result = await judgeOpenTextAction(
-        competitionId,
-        roundId,
-        answerId,
-        isCorrect,
-      );
+      const result = await (
+        context === "playoff" ? judgePlayoffOpenTextAction : judgeOpenTextAction
+      )(competitionId, roundId, answerId, isCorrect);
       setState(result);
       if (result.success) router.refresh();
     });

@@ -9,6 +9,10 @@ import {
   removeQuestionAction,
   reorderQuestionsAction,
 } from "@/features/rounds/round-actions";
+import {
+  removePlayoffQuestionAction,
+  reorderPlayoffQuestionsAction,
+} from "@/features/playoffs/playoff-actions";
 import { QuestionForm } from "@/features/rounds/round-editor-forms";
 import { RoundConfirmButton } from "@/features/rounds/round-confirm-button";
 import { LocalDateTime } from "@/features/rounds/local-date-time";
@@ -33,12 +37,14 @@ export function QuestionWorkspace({
   questions: initialQuestions,
   scoringDefaults,
   readOnly,
+  context = "round",
 }: {
   competitionId: string;
   roundId: string;
   questions: readonly QuestionEditor[];
   scoringDefaults: RoundEditorDetail["scoringDefaults"];
   readOnly: boolean;
+  context?: "round" | "playoff";
 }) {
   const [questions, setQuestions] = useState([...initialQuestions]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -51,7 +57,9 @@ export function QuestionWorkspace({
     const previous = questions;
     setQuestions(next);
     startTransition(async () => {
-      const result = await reorderQuestionsAction(
+      const result = await (
+        context === "playoff" ? reorderPlayoffQuestionsAction : reorderQuestionsAction
+      )(
         competitionId,
         roundId,
         next.map((question) => question.id),
@@ -115,6 +123,7 @@ export function QuestionWorkspace({
               roundId={roundId}
               nextSequence={(questions.at(-1)?.sequence ?? 0) + 1}
               scoringDefaults={scoringDefaults}
+              context={context}
             />
           </CardContent>
         </Card>
@@ -256,15 +265,14 @@ export function QuestionWorkspace({
                           nextSequence={question.sequence}
                           value={question}
                           scoringDefaults={scoringDefaults}
+                          context={context}
                         />
                         <div className="border-t pt-5">
                           <RoundConfirmButton
-                            action={removeQuestionAction.bind(
-                              null,
-                              competitionId,
-                              roundId,
-                              question.id,
-                            )}
+                            action={(context === "playoff"
+                              ? removePlayoffQuestionAction
+                              : removeQuestionAction
+                            ).bind(null, competitionId, roundId, question.id)}
                             label="Eliminar pregunta"
                             title="Eliminar pregunta"
                             description="La pregunta y su configuración se eliminarán del borrador."

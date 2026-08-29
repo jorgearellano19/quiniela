@@ -14,8 +14,8 @@ These files are delivery contracts. Locked product and implementation specificat
 | M6 | Official Results & Scoring | COMPLETED | M5 | Results produce authoritative scores |
 | M7 | Standings & Winners | COMPLETED | M6 | Scores become rankings and winners |
 | M8 | Payments & Debt | COMPLETED | M7 | Manual debt tracking and eligibility |
-| M9 | H2H & Groups | FUTURE | M7 | H2H phases and group qualification |
-| M10 | Playoffs | FUTURE | M9 | Playoff bracket through champion |
+| M9 | H2H & Groups | COMPLETED | M7 | H2H phases and group qualification |
+| M10 | Playoffs | COMPLETED | M9 | Playoff bracket through champion |
 | M11 | Prizes & Competition Completion | FUTURE | M8, M10 | Final winners and configured prizes |
 | M12 | MVP Hardening & Release Readiness | FUTURE | M11 | Production-ready MVP |
 

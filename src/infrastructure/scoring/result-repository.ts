@@ -24,6 +24,8 @@ import {
   officialResultCorrectionEvent,
   openTextJudgment,
   openTextJudgmentCorrectionEvent,
+  playoffMatchup,
+  playoffRound,
   round,
   user,
 } from "@/infrastructure/db/schema";
@@ -36,6 +38,10 @@ function penalty(value: number): -1 | 0 {
 }
 
 export function persistedRound(value: typeof round.$inferSelect): Round {
+  return { ...value, unansweredPenalty: penalty(value.unansweredPenalty) };
+}
+
+function persistedPlayoffRound(value: typeof playoffRound.$inferSelect): Round {
   return { ...value, unansweredPenalty: penalty(value.unansweredPenalty) };
 }
 
@@ -132,41 +138,75 @@ function correctionFields(prefix: "before" | "after", value: OfficialResultValue
       };
 }
 
-async function loadAggregate(
+export async function loadAggregate(
   database: typeof db,
   competitionId: string,
   roundId: string,
   userId: string,
+  parent: "ROUND" | "PLAYOFF" = "ROUND",
 ) {
-  const [scope] = await database
-    .select({ round, competition, membership: competitionParticipant })
-    .from(round)
-    .innerJoin(competition, eq(competition.id, round.competitionId))
-    .innerJoin(
-      competitionParticipant,
-      and(
-        eq(competitionParticipant.competitionId, competition.id),
-        eq(competitionParticipant.userId, userId),
-        or(
-          eq(competitionParticipant.isAdmin, true),
-          eq(competitionParticipant.status, "ACTIVE"),
-        ),
-      ),
-    )
-    .where(
-      and(
-        eq(round.id, roundId),
-        eq(round.competitionId, competitionId),
-        sql`${round.status} <> 'DRAFT'`,
-      ),
-    )
-    .limit(1);
+  const [scope] =
+    parent === "ROUND"
+      ? await database
+          .select({ round, competition, membership: competitionParticipant })
+          .from(round)
+          .innerJoin(competition, eq(competition.id, round.competitionId))
+          .innerJoin(
+            competitionParticipant,
+            and(
+              eq(competitionParticipant.competitionId, competition.id),
+              eq(competitionParticipant.userId, userId),
+              or(
+                eq(competitionParticipant.isAdmin, true),
+                eq(competitionParticipant.status, "ACTIVE"),
+              ),
+            ),
+          )
+          .where(
+            and(
+              eq(round.id, roundId),
+              eq(round.competitionId, competitionId),
+              sql`${round.status} <> 'DRAFT'`,
+            ),
+          )
+          .limit(1)
+      : await database
+          .select({
+            round: playoffRound,
+            competition,
+            membership: competitionParticipant,
+          })
+          .from(playoffRound)
+          .innerJoin(competition, eq(competition.id, playoffRound.competitionId))
+          .innerJoin(
+            competitionParticipant,
+            and(
+              eq(competitionParticipant.competitionId, competition.id),
+              eq(competitionParticipant.userId, userId),
+              or(
+                eq(competitionParticipant.isAdmin, true),
+                eq(competitionParticipant.status, "ACTIVE"),
+              ),
+            ),
+          )
+          .where(
+            and(
+              eq(playoffRound.id, roundId),
+              eq(playoffRound.competitionId, competitionId),
+              sql`${playoffRound.status} <> 'DRAFT'`,
+            ),
+          )
+          .limit(1);
   if (!scope) return null;
-  const roundValue = persistedRound(scope.round);
+  const roundValue =
+    parent === "ROUND"
+      ? persistedRound(scope.round as typeof round.$inferSelect)
+      : persistedPlayoffRound(scope.round as typeof playoffRound.$inferSelect);
   const questions = await loadQuestions(
     database,
     roundValue,
     scoringDefaults(scope.competition),
+    parent,
   );
   const participants = await database
     .select({
@@ -180,9 +220,31 @@ async function loadAggregate(
       and(
         eq(competitionParticipant.competitionId, competitionId),
         eq(competitionParticipant.status, "ACTIVE"),
+        parent === "ROUND"
+          ? sql`true`
+          : sql`exists (select 1 from playoff_matchup pm where pm.playoff_round_id = ${roundId} and (pm.participant_a_id = ${competitionParticipant.id} or pm.participant_b_id = ${competitionParticipant.id}))`,
       ),
     )
     .orderBy(asc(user.name), asc(competitionParticipant.id));
+  const playoffMatchups =
+    parent === "PLAYOFF"
+      ? await database
+          .select({
+            participantAId: playoffMatchup.participantAId,
+            participantBId: playoffMatchup.participantBId,
+          })
+          .from(playoffMatchup)
+          .where(eq(playoffMatchup.playoffRoundId, roundId))
+      : [];
+  const rivalParticipantIdByParticipant =
+    parent === "PLAYOFF"
+      ? new Map(
+          playoffMatchups.flatMap((matchup) => [
+            [matchup.participantAId, matchup.participantBId] as const,
+            [matchup.participantBId, matchup.participantAId] as const,
+          ]),
+        )
+      : undefined;
   const questionIds = questions.map((item) => item.id);
   const answerRows = questionIds.length
     ? await database.select().from(answer).where(inArray(answer.questionId, questionIds))
@@ -220,6 +282,11 @@ async function loadAggregate(
     actorParticipantId: scope.membership.status === "ACTIVE" ? scope.membership.id : null,
     actorIsAdmin: scope.membership.isAdmin,
     restrictedParticipantIds,
+    rivalParticipantIdByParticipant,
+    tiebreakerQuestionId:
+      parent === "PLAYOFF"
+        ? (scope.round as typeof playoffRound.$inferSelect).tiebreakerQuestionId
+        : null,
   } satisfies ResultRoundAggregate;
 }
 
@@ -228,6 +295,7 @@ async function finishIfComplete(
   aggregate: ResultRoundAggregate,
   actorUserId: string,
   now: Date,
+  parent: "ROUND" | "PLAYOFF" = "ROUND",
 ) {
   const complete = aggregate.questions.every((item) => {
     if (now.valueOf() < item.deadlineAt.valueOf()) return false;
@@ -239,31 +307,54 @@ async function finishIfComplete(
     });
   });
   const finished = finishRound(aggregate.round, complete, actorUserId, now);
-  if (finished !== aggregate.round)
-    await tx
-      .update(round)
-      .set({
-        status: "FINISHED",
-        finishedAt: finished.finishedAt,
-        updatedAt: finished.updatedAt,
-        updatedByUserId: actorUserId,
-      })
-      .where(and(eq(round.id, aggregate.round.id), eq(round.status, "ACTIVE")));
+  if (finished !== aggregate.round) {
+    const fields = {
+      status: "FINISHED" as const,
+      finishedAt: finished.finishedAt,
+      updatedAt: finished.updatedAt,
+      updatedByUserId: actorUserId,
+    };
+    if (parent === "ROUND")
+      await tx
+        .update(round)
+        .set(fields)
+        .where(and(eq(round.id, aggregate.round.id), eq(round.status, "ACTIVE")));
+    else
+      await tx
+        .update(playoffRound)
+        .set({
+          ...fields,
+        })
+        .where(
+          and(eq(playoffRound.id, aggregate.round.id), eq(playoffRound.status, "ACTIVE")),
+        );
+  }
 }
 
-export function createResultRepository(database: typeof db): ResultRepository {
+export function createResultRepository(
+  database: typeof db,
+  parent: "ROUND" | "PLAYOFF" = "ROUND",
+): ResultRepository {
   return {
     getRound(competitionId, roundId, userId) {
-      return loadAggregate(database, competitionId, roundId, userId);
+      return loadAggregate(database, competitionId, roundId, userId, parent);
     },
     async mutateResult(competitionId, roundId, questionId, userId, now, operation) {
       return database.transaction(async (tx) => {
         const locked = await tx.execute(
-          sql`select r.id from round r join competition_participant cp on cp.competition_id = r.competition_id and cp.user_id = ${userId} and cp.is_admin = true where r.id = ${roundId} and r.competition_id = ${competitionId} and r.status in ('ACTIVE', 'FINISHED') for update`,
+          parent === "ROUND"
+            ? sql`select r.id from round r join competition_participant cp on cp.competition_id = r.competition_id and cp.user_id = ${userId} and cp.is_admin = true where r.id = ${roundId} and r.competition_id = ${competitionId} and r.status in ('ACTIVE', 'FINISHED') for update`
+            : sql`select pr.id from playoff_round pr join competition_participant cp on cp.competition_id = pr.competition_id and cp.user_id = ${userId} and cp.is_admin = true where pr.id = ${roundId} and pr.competition_id = ${competitionId} and pr.status in ('ACTIVE', 'FINISHED') for update`,
         );
         if (!locked.length) return null;
         const txDb = tx as unknown as typeof db;
-        const aggregate = await loadAggregate(txDb, competitionId, roundId, userId);
+        const aggregate = await loadAggregate(
+          txDb,
+          competitionId,
+          roundId,
+          userId,
+          parent,
+        );
         if (!aggregate) return null;
         const target = aggregate.questions.find((item) => item.id === questionId);
         if (!target || target.type === "OPEN_TEXT") return null;
@@ -308,20 +399,28 @@ export function createResultRepository(database: typeof db): ResultRepository {
               ),
             );
         }
-        const changed = await loadAggregate(txDb, competitionId, roundId, userId);
+        const changed = await loadAggregate(txDb, competitionId, roundId, userId, parent);
         if (!changed) throw new Error("Result aggregate disappeared.");
-        await finishIfComplete(tx, changed, userId, now);
-        return loadAggregate(txDb, competitionId, roundId, userId);
+        await finishIfComplete(tx, changed, userId, now, parent);
+        return loadAggregate(txDb, competitionId, roundId, userId, parent);
       });
     },
     async mutateJudgment(competitionId, roundId, answerId, userId, now, operation) {
       return database.transaction(async (tx) => {
         const locked = await tx.execute(
-          sql`select r.id from round r join competition_participant cp on cp.competition_id = r.competition_id and cp.user_id = ${userId} and cp.is_admin = true where r.id = ${roundId} and r.competition_id = ${competitionId} and r.status in ('ACTIVE', 'FINISHED') for update`,
+          parent === "ROUND"
+            ? sql`select r.id from round r join competition_participant cp on cp.competition_id = r.competition_id and cp.user_id = ${userId} and cp.is_admin = true where r.id = ${roundId} and r.competition_id = ${competitionId} and r.status in ('ACTIVE', 'FINISHED') for update`
+            : sql`select pr.id from playoff_round pr join competition_participant cp on cp.competition_id = pr.competition_id and cp.user_id = ${userId} and cp.is_admin = true where pr.id = ${roundId} and pr.competition_id = ${competitionId} and pr.status in ('ACTIVE', 'FINISHED') for update`,
         );
         if (!locked.length) return null;
         const txDb = tx as unknown as typeof db;
-        const aggregate = await loadAggregate(txDb, competitionId, roundId, userId);
+        const aggregate = await loadAggregate(
+          txDb,
+          competitionId,
+          roundId,
+          userId,
+          parent,
+        );
         if (!aggregate) return null;
         const targetAnswer = aggregate.answers.find((item) => item.id === answerId);
         const target = targetAnswer
@@ -363,13 +462,14 @@ export function createResultRepository(database: typeof db): ResultRepository {
             })
             .where(eq(openTextJudgment.answerId, answerId));
         }
-        const changed = await loadAggregate(txDb, competitionId, roundId, userId);
+        const changed = await loadAggregate(txDb, competitionId, roundId, userId, parent);
         if (!changed) throw new Error("Judgment aggregate disappeared.");
-        await finishIfComplete(tx, changed, userId, now);
-        return loadAggregate(txDb, competitionId, roundId, userId);
+        await finishIfComplete(tx, changed, userId, now, parent);
+        return loadAggregate(txDb, competitionId, roundId, userId, parent);
       });
     },
   };
 }
 
 export const resultRepository = createResultRepository(db);
+export const playoffResultRepository = createResultRepository(db, "PLAYOFF");

@@ -120,6 +120,34 @@
       "when": 1787966507608,
       "tag": "0016_jittery_wrecking_crew",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1787970228987,
+      "tag": "0017_glossy_toad_men",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1787971744877,
+      "tag": "0018_legal_frank_castle",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1787971789486,
+      "tag": "0019_curious_outlaw_kid",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1787985528188,
+      "tag": "0020_young_lifeguard",
+      "breakpoints": true
     }
   ]
 }

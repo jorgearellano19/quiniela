@@ -32,6 +32,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { LocalDateTime } from "@/features/rounds/local-date-time";
 import { saveAnswerAction, type AnswerActionState } from "./answer-actions";
+import { savePlayoffAnswerAction } from "@/features/playoffs/playoff-answer-actions";
 
 type Item = MyAnswersDetail["questions"][number];
 
@@ -67,10 +68,12 @@ export function AnswerForm({
   competitionId,
   roundId,
   item,
+  context = "round",
 }: {
   competitionId: string;
   roundId: string;
   item: Item;
+  context?: "round" | "playoff";
 }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -97,7 +100,9 @@ export function AnswerForm({
     awayScore: initialAwayScore,
     value: initialValue,
   }));
-  const serverAction = saveAnswerAction.bind(null, mode, competitionId, roundId, item.id);
+  const serverAction = (
+    context === "playoff" ? savePlayoffAnswerAction : saveAnswerAction
+  ).bind(null, mode, competitionId, roundId, item.id);
   const action = async (previous: AnswerActionState, data: FormData) => {
     const result = await serverAction(previous, data);
     if (result.success) setBaseline({ optionId, homeScore, awayScore, value });

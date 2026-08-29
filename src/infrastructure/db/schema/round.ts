@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   boolean,
   check,
   foreignKey,
@@ -31,6 +32,10 @@ export const questionType = pgEnum("question_type", [
 export const questionDeadlineMode = pgEnum("question_deadline_mode", [
   "ROUND_START",
   "CUSTOM",
+]);
+export const playoffAdvancementMode = pgEnum("playoff_advancement_mode", [
+  "BEST_SEED",
+  "TIEBREAKER_QUESTION",
 ]);
 const audit = {
   createdByUserId: text("created_by_user_id")
@@ -72,13 +77,55 @@ export const round = pgTable(
     check("round_unanswered_penalty_valid", sql`${t.unansweredPenalty} in (-1, 0)`),
   ],
 );
+export const playoffRound = pgTable(
+  "playoff_round",
+  {
+    id: text("id").primaryKey(),
+    competitionId: text("competition_id")
+      .notNull()
+      .references(() => competition.id, { onDelete: "restrict" }),
+    sequence: integer("sequence").notNull(),
+    name: text("name").notNull(),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    status: roundStatus("status").default("DRAFT").notNull(),
+    unansweredPenalty: integer("unanswered_penalty").default(-1).notNull(),
+    advancementMode: playoffAdvancementMode("advancement_mode").notNull(),
+    tiebreakerQuestionId: text("tiebreaker_question_id").references(
+      (): AnyPgColumn => question.id,
+      { onDelete: "restrict" },
+    ),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    finalizedAt: timestamp("finalized_at", { withTimezone: true }),
+    ...audit,
+  },
+  (t) => [
+    uniqueIndex("playoff_round_competition_sequence_unique").on(
+      t.competitionId,
+      t.sequence,
+    ),
+    uniqueIndex("playoff_round_id_competition_unique").on(t.id, t.competitionId),
+    uniqueIndex("playoff_round_competition_name_unique").on(
+      t.competitionId,
+      sql`lower(trim(${t.name}))`,
+    ),
+    index("playoff_round_competition_status_idx").on(t.competitionId, t.status),
+    check("playoff_round_sequence_positive", sql`${t.sequence} > 0`),
+    check("playoff_round_name_valid", sql`length(trim(${t.name})) between 1 and 120`),
+    check(
+      "playoff_round_unanswered_penalty_valid",
+      sql`${t.unansweredPenalty} in (-1, 0)`,
+    ),
+  ],
+);
 export const question = pgTable(
   "question",
   {
     id: text("id").primaryKey(),
-    roundId: text("round_id")
-      .notNull()
-      .references(() => round.id, { onDelete: "restrict" }),
+    roundId: text("round_id").references(() => round.id, { onDelete: "restrict" }),
+    playoffRoundId: text("playoff_round_id").references(() => playoffRound.id, {
+      onDelete: "restrict",
+    }),
     sequence: integer("sequence").notNull(),
     type: questionType("type").notNull(),
     prompt: text("prompt"),
@@ -88,8 +135,18 @@ export const question = pgTable(
     ...audit,
   },
   (t) => [
-    uniqueIndex("question_round_sequence_unique").on(t.roundId, t.sequence),
+    uniqueIndex("question_round_sequence_unique")
+      .on(t.roundId, t.sequence)
+      .where(sql`${t.roundId} is not null`),
+    uniqueIndex("question_playoff_round_sequence_unique")
+      .on(t.playoffRoundId, t.sequence)
+      .where(sql`${t.playoffRoundId} is not null`),
+    uniqueIndex("question_id_playoff_round_unique").on(t.id, t.playoffRoundId),
     check("question_sequence_positive", sql`${t.sequence} > 0`),
+    check(
+      "question_exactly_one_parent",
+      sql`num_nonnulls(${t.roundId}, ${t.playoffRoundId}) = 1`,
+    ),
     check(
       "question_prompt_valid",
       sql`(${t.type} = 'MATCH_SCORE' and ${t.prompt} is null) or (${t.type} <> 'MATCH_SCORE' and length(trim(${t.prompt})) between 1 and 500)`,
@@ -97,6 +154,131 @@ export const question = pgTable(
     check(
       "question_deadline_shape_valid",
       sql`(${t.deadlineMode} = 'ROUND_START' and ${t.deadlineAt} is null) or (${t.deadlineMode} = 'CUSTOM' and ${t.deadlineAt} is not null)`,
+    ),
+  ],
+);
+export const playoffSeed = pgTable(
+  "playoff_seed",
+  {
+    competitionId: text("competition_id")
+      .notNull()
+      .references(() => competition.id, { onDelete: "restrict" }),
+    participantId: text("participant_id").notNull(),
+    seed: integer("seed").notNull(),
+    sourceFingerprint: text("source_fingerprint").notNull(),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("playoff_seed_competition_participant_unique").on(
+      t.competitionId,
+      t.participantId,
+    ),
+    uniqueIndex("playoff_seed_competition_position_unique").on(t.competitionId, t.seed),
+    foreignKey({
+      name: "playoff_seed_participant_competition_fk",
+      columns: [t.participantId, t.competitionId],
+      foreignColumns: [competitionParticipant.id, competitionParticipant.competitionId],
+    }).onDelete("restrict"),
+    check("playoff_seed_position_positive", sql`${t.seed} > 0`),
+    check(
+      "playoff_seed_source_fingerprint_valid",
+      sql`length(${t.sourceFingerprint}) = 64`,
+    ),
+  ],
+);
+export const playoffMatchup = pgTable(
+  "playoff_matchup",
+  {
+    id: text("id").primaryKey(),
+    competitionId: text("competition_id").notNull(),
+    playoffRoundId: text("playoff_round_id").notNull(),
+    position: integer("position").notNull(),
+    participantAId: text("participant_a_id").notNull(),
+    participantBId: text("participant_b_id").notNull(),
+    winnerParticipantId: text("winner_participant_id"),
+    winnerDecidedBy: text("winner_decided_by"),
+    sourceFingerprint: text("source_fingerprint"),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolvedByUserId: text("resolved_by_user_id").references(() => user.id, {
+      onDelete: "restrict",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("playoff_matchup_round_position_unique").on(t.playoffRoundId, t.position),
+    uniqueIndex("playoff_matchup_id_competition_unique").on(t.id, t.competitionId),
+    foreignKey({
+      name: "playoff_matchup_round_competition_fk",
+      columns: [t.playoffRoundId, t.competitionId],
+      foreignColumns: [playoffRound.id, playoffRound.competitionId],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "playoff_matchup_participant_a_fk",
+      columns: [t.participantAId, t.competitionId],
+      foreignColumns: [competitionParticipant.id, competitionParticipant.competitionId],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "playoff_matchup_participant_b_fk",
+      columns: [t.participantBId, t.competitionId],
+      foreignColumns: [competitionParticipant.id, competitionParticipant.competitionId],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "playoff_matchup_winner_fk",
+      columns: [t.winnerParticipantId, t.competitionId],
+      foreignColumns: [competitionParticipant.id, competitionParticipant.competitionId],
+    }).onDelete("restrict"),
+    check("playoff_matchup_position_positive", sql`${t.position} > 0`),
+    check(
+      "playoff_matchup_distinct_participants",
+      sql`${t.participantAId} <> ${t.participantBId}`,
+    ),
+    check(
+      "playoff_matchup_winner_valid",
+      sql`${t.winnerParticipantId} is null or ${t.winnerParticipantId} in (${t.participantAId}, ${t.participantBId})`,
+    ),
+    check(
+      "playoff_matchup_resolution_shape",
+      sql`(${t.winnerParticipantId} is null and ${t.winnerDecidedBy} is null and ${t.sourceFingerprint} is null and ${t.resolvedAt} is null) or (${t.winnerParticipantId} is not null and ${t.winnerDecidedBy} in ('SCORE','SEED','TIEBREAKER','MANUAL') and length(${t.sourceFingerprint}) = 64 and ${t.resolvedAt} is not null)`,
+    ),
+  ],
+);
+export const playoffMatchupResolutionEvent = pgTable(
+  "playoff_matchup_resolution_event",
+  {
+    id: text("id").primaryKey(),
+    matchupId: text("matchup_id")
+      .notNull()
+      .references(() => playoffMatchup.id, { onDelete: "restrict" }),
+    competitionId: text("competition_id")
+      .notNull()
+      .references(() => competition.id, { onDelete: "restrict" }),
+    action: text("action").notNull(),
+    beforeWinnerParticipantId: text("before_winner_participant_id"),
+    afterWinnerParticipantId: text("after_winner_participant_id").notNull(),
+    sourceFingerprint: text("source_fingerprint").notNull(),
+    actorUserId: text("actor_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("playoff_matchup_resolution_event_matchup_idx").on(t.matchupId, t.createdAt),
+    foreignKey({
+      name: "playoff_matchup_resolution_event_matchup_competition_fk",
+      columns: [t.matchupId, t.competitionId],
+      foreignColumns: [playoffMatchup.id, playoffMatchup.competitionId],
+    }).onDelete("restrict"),
+    check(
+      "playoff_matchup_resolution_event_action_valid",
+      sql`${t.action} in ('RESOLVED','CORRECTED')`,
+    ),
+    check(
+      "playoff_matchup_resolution_event_source_valid",
+      sql`length(${t.sourceFingerprint}) = 64`,
     ),
   ],
 );
@@ -327,6 +509,10 @@ export const roundRelations = relations(round, ({ many }) => ({
 }));
 export const questionRelations = relations(question, ({ one, many }) => ({
   round: one(round, { fields: [question.roundId], references: [round.id] }),
+  playoffRound: one(playoffRound, {
+    fields: [question.playoffRoundId],
+    references: [playoffRound.id],
+  }),
   scoring: one(questionScoring),
   match: one(matchQuestionConfig),
   options: many(questionOption),

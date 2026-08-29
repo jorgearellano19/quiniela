@@ -1,7 +1,18 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { round } from "../../src/infrastructure/db/schema";
+import {
+  competition,
+  competitionParticipant,
+  playoffMatchup,
+  playoffRound,
+  playoffSeed,
+  question,
+  questionScoring,
+  round,
+  user,
+} from "../../src/infrastructure/db/schema";
+import { createCompetitionRepository } from "../../src/infrastructure/competition/competition-repository";
 import {
   cleanupUsersByEmail,
   createIntegrationDatabase,
@@ -390,6 +401,231 @@ test("Admin configura y confirma una fase H2H móvil", async ({ browser }) => {
   } finally {
     await context.close();
     await cleanupUsersByEmail(database, [adminEmail, participantEmail]);
+    await client.end();
+  }
+});
+
+test("Admin publica y avanza un playoff móvil hasta el campeón", async ({ browser }) => {
+  test.setTimeout(90_000);
+  test.skip(!databaseUrl, "TEST_DATABASE_URL is required for deterministic cleanup.");
+  const suffix = randomUUID();
+  const adminEmail = `playoff-admin-${suffix}@example.test`;
+  const { client, database } = createIntegrationDatabase();
+  const data = new IntegrationTestData(database);
+  const context = await browser.newContext({ ...devicesForMobile });
+  try {
+    const page = await context.newPage();
+    await signUp(page, "Admin Playoffs", adminEmail);
+    const [admin] = await database
+      .select()
+      .from(user)
+      .where(eq(user.email, adminEmail))
+      .limit(1);
+    const value = data.competitionValue({
+      creatorId: admin!.id,
+      type: "LEAGUE_PLAYOFFS",
+      name: "Copa Playoffs E2E",
+    });
+    await createCompetitionRepository(database).createWithAdmin(value, randomUUID());
+    const [adminMembership] = await database
+      .select()
+      .from(competitionParticipant)
+      .where(eq(competitionParticipant.competitionId, value.id))
+      .limit(1);
+    const participants = [adminMembership!.id];
+    for (let index = 0; index < 3; index += 1) {
+      const member = await data.createUser({
+        email: `playoff-member-${suffix}-${index}@example.test`,
+        name: `Rival ${index + 1}`,
+      });
+      const membership = await data.createMembership({
+        competitionId: value.id,
+        userId: member.id,
+        status: "ACTIVE",
+        statusChangedAt: new Date(),
+        updatedByUserId: admin!.id,
+      });
+      participants.push(membership.id);
+    }
+    const roundId = randomUUID();
+    const now = new Date();
+    await database
+      .update(competition)
+      .set({ status: "STARTED", startedAt: now })
+      .where(eq(competition.id, value.id));
+    await database.insert(playoffRound).values({
+      id: roundId,
+      competitionId: value.id,
+      sequence: 1,
+      name: "Semifinal",
+      startsAt: new Date(now.valueOf() + 86_400_000),
+      status: "DRAFT",
+      unansweredPenalty: -1,
+      advancementMode: "BEST_SEED",
+      createdByUserId: admin!.id,
+      updatedByUserId: admin!.id,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await database.insert(playoffSeed).values(
+      participants.map((participantId, index) => ({
+        competitionId: value.id,
+        participantId,
+        seed: index + 1,
+        sourceFingerprint: "a".repeat(64),
+        createdByUserId: admin!.id,
+        createdAt: now,
+      })),
+    );
+    await database.insert(playoffMatchup).values([
+      {
+        id: randomUUID(),
+        competitionId: value.id,
+        playoffRoundId: roundId,
+        position: 1,
+        participantAId: participants[0]!,
+        participantBId: participants[3]!,
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: randomUUID(),
+        competitionId: value.id,
+        playoffRoundId: roundId,
+        position: 2,
+        participantAId: participants[1]!,
+        participantBId: participants[2]!,
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]);
+    await page.goto(`/app/competitions/${value.id}/playoffs`);
+    await expect(
+      page.getByRole("heading", { name: "El camino al campeonato" }),
+    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Semifinal" })).toBeVisible();
+    await expect(page.getByRole("main").getByText("Admin Playoffs")).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+
+    const nextRoundCard = page.locator('[data-slot="card"]').filter({
+      hasText: "Configura la siguiente etapa",
+    });
+    await nextRoundCard.getByLabel("Nombre").fill("Final");
+    await nextRoundCard.getByLabel("Cierre predeterminado").fill("2027-01-02T12:00");
+    await nextRoundCard.getByRole("button", { name: "Crear ronda" }).click();
+    await expect(page).toHaveURL(
+      new RegExp(`/app/competitions/${value.id}/playoffs/[^/]+$`),
+    );
+    const finalRoundId = new URL(page.url()).pathname.split("/").at(-1)!;
+    const questionIds = [randomUUID(), randomUUID()];
+    await database.insert(question).values([
+      {
+        id: questionIds[0]!,
+        playoffRoundId: roundId,
+        sequence: 1,
+        type: "EXACT_VALUE",
+        prompt: "Valor semifinal",
+        deadlineMode: "ROUND_START",
+        usesDefaultScoring: false,
+        createdByUserId: admin!.id,
+        updatedByUserId: admin!.id,
+      },
+      {
+        id: questionIds[1]!,
+        playoffRoundId: finalRoundId,
+        sequence: 1,
+        type: "EXACT_VALUE",
+        prompt: "Valor final",
+        deadlineMode: "ROUND_START",
+        usesDefaultScoring: false,
+        createdByUserId: admin!.id,
+        updatedByUserId: admin!.id,
+      },
+    ]);
+    await database
+      .insert(questionScoring)
+      .values(questionIds.map((questionId) => ({ questionId, points: 1 })));
+
+    await page.goto(`/app/competitions/${value.id}/playoffs/${roundId}`);
+    await page.getByRole("button", { name: "Publicar etapa" }).click();
+    await expect
+      .poll(async () => {
+        const [persisted] = await database
+          .select({ status: playoffRound.status })
+          .from(playoffRound)
+          .where(eq(playoffRound.id, roundId));
+        return persisted?.status;
+      })
+      .toBe("ACTIVE");
+    await database
+      .update(playoffRound)
+      .set({ startsAt: new Date(Date.now() - 1_000) })
+      .where(eq(playoffRound.id, roundId));
+    await page.goto(`/app/competitions/${value.id}/playoffs/${roundId}/results`);
+    await page.getByLabel("Valor oficial").fill("1");
+    await page.getByRole("button", { name: "Guardar resultado" }).click();
+    await expect(page.getByText("Resultado guardado.")).toBeVisible();
+    await database
+      .update(playoffRound)
+      .set({ finishedAt: new Date(Date.now() - 86_400_001) })
+      .where(eq(playoffRound.id, roundId));
+    await page.goto(`/app/competitions/${value.id}/playoffs`);
+    await page.getByRole("button", { name: "Confirmar avance" }).click();
+    await expect
+      .poll(async () => {
+        const [persisted] = await database
+          .select({ status: playoffRound.status })
+          .from(playoffRound)
+          .where(eq(playoffRound.id, roundId));
+        return persisted?.status;
+      })
+      .toBe("FINALIZED");
+    await expect
+      .poll(
+        async () =>
+          (
+            await database
+              .select()
+              .from(playoffMatchup)
+              .where(eq(playoffMatchup.playoffRoundId, finalRoundId))
+          ).length,
+      )
+      .toBe(1);
+
+    await page.goto(`/app/competitions/${value.id}/playoffs/${finalRoundId}`);
+    await page.getByRole("button", { name: "Publicar etapa" }).click();
+    await expect
+      .poll(async () => {
+        const [persisted] = await database
+          .select({ status: playoffRound.status })
+          .from(playoffRound)
+          .where(eq(playoffRound.id, finalRoundId));
+        return persisted?.status;
+      })
+      .toBe("ACTIVE");
+    await database
+      .update(playoffRound)
+      .set({ startsAt: new Date(Date.now() - 1_000) })
+      .where(eq(playoffRound.id, finalRoundId));
+    await page.goto(`/app/competitions/${value.id}/playoffs/${finalRoundId}/results`);
+    await page.getByLabel("Valor oficial").fill("2");
+    await page.getByRole("button", { name: "Guardar resultado" }).click();
+    await expect(page.getByText("Resultado guardado.")).toBeVisible();
+    await database
+      .update(playoffRound)
+      .set({ finishedAt: new Date(Date.now() - 86_400_001) })
+      .where(eq(playoffRound.id, finalRoundId));
+    await page.goto(`/app/competitions/${value.id}/playoffs`);
+    await page.getByRole("button", { name: "Confirmar avance" }).click();
+    await expect(page.getByText("Campeón oficial")).toBeVisible();
+  } finally {
+    await context.close();
+    await data.cleanup();
+    await cleanupUsersByEmail(database, [adminEmail]);
     await client.end();
   }
 });

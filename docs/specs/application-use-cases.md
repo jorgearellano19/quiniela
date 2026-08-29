@@ -605,11 +605,13 @@ ranking-based high-vs-low bracket seeding:
 3. Admin resolution
 ```
 
+Require M9 qualification readiness `OFFICIAL`. Atomically snapshot its ordered qualifiers as immutable original seeds. Once the snapshot exists, qualifier-order corrections are rejected.
+
 ## generatePlayoffBracket
 
 **Actor:** Admin/system
 
-Creates PlayoffMatchups according to the selected seeding method.
+Creates PlayoffMatchups using the locked ranking seeds. Every stage pairs the highest remaining original seed with the lowest remaining original seed.
 
 Validate bracket structure.
 
@@ -622,11 +624,13 @@ Determines the winner according to the PlayoffRound's advancement mode.
 - if tied, the lower-numbered/better seed advances.
 
 `TIEBREAKER_QUESTION`:
-- evaluate the configured tiebreaker Question.
+- after tied PlayoffRound Prediction Scores, compare derived points on the configured tiebreaker Question.
 
 If still unresolved:
 - return `UnresolvedTie`;
 - require Admin resolution.
+
+During FINISHED, return provisional winners only. Persist final advancement and permit downstream publication only after effective FINALIZED.
 
 ## resolvePlayoffTie
 
@@ -635,6 +639,8 @@ If still unresolved:
 Persists the explicit manual winner decision.
 
 Must be auditable.
+
+The decision may be corrected while no downstream PlayoffRound is published. A downstream publication freezes it.
 
 ## getPlayoffChampion
 

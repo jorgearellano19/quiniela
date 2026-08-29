@@ -40,6 +40,8 @@ export type ResultRoundAggregate = Readonly<{
   actorParticipantId: string | null;
   actorIsAdmin: boolean;
   restrictedParticipantIds: ReadonlySet<string>;
+  rivalParticipantIdByParticipant?: ReadonlyMap<string, string | null> | undefined;
+  tiebreakerQuestionId?: string | null | undefined;
 }>;
 
 export type ResultMutationDecision = Readonly<{
@@ -169,7 +171,7 @@ function questionForPublic(question: Question) {
   };
 }
 
-function review(aggregate: ResultRoundAggregate, now: Date) {
+export function reviewRoundResults(aggregate: ResultRoundAggregate, now: Date) {
   const finalized = effectiveRoundStatus(aggregate.round, now) === "FINALIZED";
   const eligibleParticipantIds = aggregate.participants
     .map((participant) => participant.id)
@@ -188,6 +190,8 @@ function review(aggregate: ResultRoundAggregate, now: Date) {
     results: aggregate.results,
     judgments: aggregate.judgments,
     unansweredPenalty: aggregate.round.unansweredPenalty,
+    rivalParticipantIdByParticipant: aggregate.rivalParticipantIdByParticipant,
+    tiebreakerQuestionId: aggregate.tiebreakerQuestionId,
     now,
   }).byParticipant;
   const questions = aggregate.questions.map((question) => {
@@ -206,7 +210,7 @@ function review(aggregate: ResultRoundAggregate, now: Date) {
         { state: "PENDING", points: null, awardedRule: null } as const,
       ]),
     );
-    if (closed && !(question.type === "CLOSEST_VALUE" && question.againstRival))
+    if (closed)
       scores = calculateQuestionScores({
         question,
         participantIds: eligibleParticipantIds,
@@ -214,6 +218,8 @@ function review(aggregate: ResultRoundAggregate, now: Date) {
         result,
         judgments: aggregate.judgments,
         unansweredPenalty: aggregate.round.unansweredPenalty,
+        isTiebreaker: question.id === aggregate.tiebreakerQuestionId,
+        rivalParticipantIdByParticipant: aggregate.rivalParticipantIdByParticipant,
       });
     const visibleParticipants = closed
       ? aggregate.participants
@@ -276,7 +282,7 @@ export async function getRoundResults(
   if (!z.uuid().safeParse(competitionId).success || !z.uuid().safeParse(roundId).success)
     return null;
   const aggregate = await repository.getRound(competitionId, roundId, actor.userId);
-  return aggregate ? review(aggregate, now) : null;
+  return aggregate ? reviewRoundResults(aggregate, now) : null;
 }
 
 async function writeResult(
@@ -327,7 +333,7 @@ async function writeResult(
   );
   if (!aggregate)
     throw new ApplicationError("UNAUTHORIZED", "No fue posible guardar el resultado.");
-  return review(aggregate, now);
+  return reviewRoundResults(aggregate, now);
 }
 
 export const recordOfficialResult = (
@@ -379,7 +385,7 @@ export async function judgeOpenTextAnswer(
   );
   if (!aggregate)
     throw new ApplicationError("UNAUTHORIZED", "No fue posible guardar el juicio.");
-  return review(aggregate, now);
+  return reviewRoundResults(aggregate, now);
 }
 
 export type RoundResultsDetail = NonNullable<Awaited<ReturnType<typeof getRoundResults>>>;

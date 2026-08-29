@@ -32,7 +32,7 @@ function answerValue(row: typeof answer.$inferSelect, type: string): AnswerValue
     return { type, value: row.textValue };
   throw new Error(`Answer persistence is invalid: ${row.id}.`);
 }
-function domainAnswer(row: typeof answer.$inferSelect, type: string): Answer {
+export function domainAnswer(row: typeof answer.$inferSelect, type: string): Answer {
   return {
     id: row.id,
     questionId: row.questionId,
@@ -42,7 +42,7 @@ function domainAnswer(row: typeof answer.$inferSelect, type: string): Answer {
     updatedAt: row.updatedAt,
   };
 }
-function fields(value: Answer) {
+export function answerFields(value: Answer) {
   const base = {
     homeScore: null as number | null,
     awayScore: null as number | null,
@@ -189,12 +189,12 @@ export function createAnswerRepository(database: typeof db): AnswerRepository {
             questionId: value.questionId,
             participantId: value.participantId,
             submittedAt: value.submittedAt,
-            ...fields(value),
+            ...answerFields(value),
           });
         else
           await tx
             .update(answer)
-            .set(fields(value))
+            .set(answerFields(value))
             .where(
               and(
                 eq(answer.id, current.id),

@@ -10,6 +10,7 @@ import {
   competitionParticipant,
   manualRankingResolution,
   manualRankingResolutionEntry,
+  playoffSeed,
   officialResult,
   openTextJudgment,
   round,
@@ -184,6 +185,17 @@ export function createStandingsRepository(database: typeof db): StandingsReposit
         const aggregate = await loadAggregate(txDb, competitionId, userId);
         if (!aggregate) return null;
         const decision = operation(aggregate);
+        if (
+          (decision.scope === "H2H_PHASE" || decision.scope === "GROUP_STANDINGS") &&
+          (
+            await tx
+              .select({ id: playoffSeed.participantId })
+              .from(playoffSeed)
+              .where(eq(playoffSeed.competitionId, competitionId))
+              .limit(1)
+          ).length
+        )
+          return null;
         await tx.insert(manualRankingResolution).values({
           id: decision.id,
           competitionId: decision.competitionId,

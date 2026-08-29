@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX "playoff_matchup_id_competition_unique" ON "playoff_matchup" USING btree ("id","competition_id");--> statement-breakpoint
+ALTER TABLE "playoff_matchup_resolution_event" ADD CONSTRAINT "playoff_matchup_resolution_event_matchup_competition_fk" FOREIGN KEY ("matchup_id","competition_id") REFERENCES "public"."playoff_matchup"("id","competition_id") ON DELETE restrict ON UPDATE no action;

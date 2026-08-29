@@ -275,7 +275,9 @@ PlayoffRound
 ├── competitionId
 ├── sequence
 ├── name
+├── startsAt
 ├── status
+├── unansweredPenalty
 ├── advancementMode
 ├── tiebreakerQuestionId
 ├── publishedAt
@@ -317,6 +319,10 @@ PlayoffMatchup
 `(playoffRoundId, position)` is unique.
 
 Supports BEST_SEED, TIEBREAKER_QUESTION, and explicit Admin resolution when approved rules leave a tie.
+
+Initial bracket generation also persists immutable `PlayoffSeed` rows with Competition, Participant, original positive seed position, M9 source fingerprint, actor, and UTC timestamp. Participant and position are each unique within the Competition. A seed snapshot rejects later qualification-order corrections.
+
+FINISHED matchup winners are provisional and remain derived during the correction window. Final source matchup winners are persisted only after effective FINALIZED. A successor PlayoffRound cannot publish before that final advancement exists.
 
 ## 12. GROUP_PLAYOFFS
 

@@ -38,27 +38,37 @@ export async function loadQuestions(
   database: typeof db,
   roundValue: Round,
   defaults: CompetitionScoringDefaults,
+  parent: "ROUND" | "PLAYOFF" = "ROUND",
 ): Promise<Question[]> {
   const roundId = roundValue.id;
+  const parentCondition =
+    parent === "ROUND"
+      ? eq(question.roundId, roundId)
+      : eq(question.playoffRoundId, roundId);
   const rows = await database
     .select({ q: question, s: questionScoring, m: matchQuestionConfig })
     .from(question)
     .leftJoin(questionScoring, eq(questionScoring.questionId, question.id))
     .leftJoin(matchQuestionConfig, eq(matchQuestionConfig.questionId, question.id))
-    .where(eq(question.roundId, roundId))
+    .where(parentCondition)
     .orderBy(asc(question.sequence));
   const optionRows = await database
     .select()
     .from(questionOption)
     .where(
-      sql`${questionOption.questionId} in (select ${question.id} from ${question} where ${question.roundId} = ${roundId})`,
+      parent === "ROUND"
+        ? sql`${questionOption.questionId} in (select ${question.id} from ${question} where ${question.roundId} = ${roundId})`
+        : sql`${questionOption.questionId} in (select ${question.id} from ${question} where ${question.playoffRoundId} = ${roundId})`,
     )
     .orderBy(asc(questionOption.sequence));
   return rows.map(({ q, s, m }) => {
+    const domainRoundId = parent === "ROUND" ? q.roundId : q.playoffRoundId;
+    if (!domainRoundId) throw new Error(`Question has no expected parent: ${q.id}.`);
     if (!s) throw new Error(`Question persistence is incomplete: ${q.id}.`);
     const inheritsDefaults = roundValue.status === "DRAFT" && q.usesDefaultScoring;
     const base = {
       ...q,
+      roundId: domainRoundId,
       deadlineAt: q.deadlineMode === "ROUND_START" ? roundValue.startsAt : q.deadlineAt!,
     };
     let value: Question;
@@ -185,13 +195,15 @@ async function saveQuestionConfiguration(
         .values(value.options.map((o) => ({ ...o, questionId: value.id })));
   }
 }
-async function saveQuestion(
+export async function saveQuestion(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   value: Question,
   isNew: boolean,
+  parent: "ROUND" | "PLAYOFF" = "ROUND",
 ) {
   const fields = {
-    roundId: value.roundId,
+    roundId: parent === "ROUND" ? value.roundId : null,
+    playoffRoundId: parent === "PLAYOFF" ? value.roundId : null,
     sequence: value.sequence,
     type: value.type,
     prompt: value.prompt,
@@ -217,7 +229,14 @@ async function saveQuestion(
     const updated = await tx
       .update(question)
       .set(fields)
-      .where(and(eq(question.id, value.id), eq(question.roundId, value.roundId)))
+      .where(
+        and(
+          eq(question.id, value.id),
+          parent === "ROUND"
+            ? eq(question.roundId, value.roundId)
+            : eq(question.playoffRoundId, value.roundId),
+        ),
+      )
       .returning({ id: question.id });
     if (updated.length !== 1) throw new Error("Question update target disappeared.");
   }

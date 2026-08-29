@@ -9,6 +9,7 @@ import {
   TargetIcon,
   UsersIcon,
   SwordsIcon,
+  TrophyIcon,
 } from "lucide-react";
 import { leaveCompetitionAction } from "@/features/competitions/membership-actions";
 import { MembershipActionButton } from "@/features/competitions/membership-action-button";
@@ -88,6 +89,16 @@ export default async function CompetitionDetailPage({
               <Link href={`/app/competitions/${detail.id}/h2h`}>
                 <SwordsIcon data-icon="inline-start" aria-hidden="true" />
                 H2H
+              </Link>
+            </Button>
+          ) : null}
+          {detail.type !== "LEAGUE" &&
+          detail.status !== "DRAFT" &&
+          (detail.membershipStatus === "ACTIVE" || detail.isAdmin) ? (
+            <Button asChild variant="outline">
+              <Link href={`/app/competitions/${detail.id}/playoffs`}>
+                <TrophyIcon data-icon="inline-start" aria-hidden="true" />
+                Playoffs
               </Link>
             </Button>
           ) : null}

@@ -21,6 +21,10 @@ import {
   updateScoringDefaultsAction,
   type RoundActionState,
 } from "./round-actions";
+import {
+  createPlayoffQuestionAction,
+  updatePlayoffQuestionAction,
+} from "@/features/playoffs/playoff-actions";
 const initial: RoundActionState = {};
 function Status({ state }: { state: RoundActionState }) {
   return state.message ? (
@@ -245,12 +249,14 @@ export function QuestionForm({
   nextSequence,
   value,
   scoringDefaults,
+  context = "round",
 }: {
   competitionId: string;
   roundId: string;
   nextSequence: number;
   value?: QuestionEditor;
   scoringDefaults: CompetitionScoringDefaults;
+  context?: "round" | "playoff";
 }) {
   const [type, setType] = useState<QuestionType>(value?.type ?? "MATCH_SCORE");
   const prefix = value?.id ?? "new-question";
@@ -261,9 +267,13 @@ export function QuestionForm({
     value?.type !== "MATCH_SCORE" || value.goalDifferencePoints !== null,
   );
   const [state, action, pending] = useActionState(
-    value
-      ? updateQuestionAction.bind(null, competitionId, roundId, value.id)
-      : createQuestionAction.bind(null, competitionId, roundId),
+    context === "playoff"
+      ? value
+        ? updatePlayoffQuestionAction.bind(null, competitionId, roundId, value.id)
+        : createPlayoffQuestionAction.bind(null, competitionId, roundId)
+      : value
+        ? updateQuestionAction.bind(null, competitionId, roundId, value.id)
+        : createQuestionAction.bind(null, competitionId, roundId),
     initial,
   );
   return (

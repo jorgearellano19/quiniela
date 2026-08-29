@@ -33,6 +33,9 @@ Prefer many focused domain tests + targeted application/integration tests + few 
 - LEAGUE_PLAYOFFS prize ordering: Prediction Score, EXACT_SCORE, H2H, then Admin resolution.
 - PlayoffRounds exercise the same Question, Answer, Official Result, deadline, correction, and effective-finalization rules as regular Rounds.
 - Seeding pairs highest against lowest and `BEST_SEED` advances the better seed only after a tied PlayoffRound Prediction Score.
+- Seeding snapshots only `OFFICIAL` qualification, remains immutable, and re-pairs the highest and lowest remaining original seeds each stage.
+- FINISHED playoff winners remain provisional; downstream publication is rejected until effective FINALIZED.
+- `TIEBREAKER_QUESTION` compares derived Question points and leaves equal points for explicit Admin resolution.
 
 ## Authorization coverage
 Every mutation must cover anonymous rejection, Participant-only capabilities, Admin capabilities, Admin+Participant coexistence, cross-participant denial, and cross-Competition denial. Frontend visibility is never authorization.

@@ -26,6 +26,10 @@ import {
   payment,
   paymentEvent,
   paymentObligation,
+  playoffMatchup,
+  playoffMatchupResolutionEvent,
+  playoffRound,
+  playoffSeed,
   prizeConfiguration,
   question,
   questionOption,
@@ -125,6 +129,99 @@ export async function cleanupUsersByEmail(
       await transaction
         .delete(h2hPhaseConfiguration)
         .where(inArray(h2hPhaseConfiguration.competitionId, competitionIds));
+      const playoffMatchups = await transaction
+        .select({ id: playoffMatchup.id })
+        .from(playoffMatchup)
+        .where(inArray(playoffMatchup.competitionId, competitionIds));
+      if (playoffMatchups.length)
+        await transaction.delete(playoffMatchupResolutionEvent).where(
+          inArray(
+            playoffMatchupResolutionEvent.matchupId,
+            playoffMatchups.map(({ id }) => id),
+          ),
+        );
+      await transaction
+        .delete(playoffMatchup)
+        .where(inArray(playoffMatchup.competitionId, competitionIds));
+      const playoffRounds = await transaction
+        .select({ id: playoffRound.id })
+        .from(playoffRound)
+        .where(inArray(playoffRound.competitionId, competitionIds));
+      if (playoffRounds.length) {
+        const playoffQuestions = await transaction
+          .select({ id: question.id })
+          .from(question)
+          .where(
+            inArray(
+              question.playoffRoundId,
+              playoffRounds.map(({ id }) => id),
+            ),
+          );
+        const ids = playoffQuestions.map(({ id }) => id);
+        await transaction
+          .update(playoffRound)
+          .set({ tiebreakerQuestionId: null })
+          .where(
+            inArray(
+              playoffRound.id,
+              playoffRounds.map(({ id }) => id),
+            ),
+          );
+        if (ids.length) {
+          const answers = await transaction
+            .select({ id: answer.id })
+            .from(answer)
+            .where(inArray(answer.questionId, ids));
+          if (answers.length) {
+            await transaction.delete(openTextJudgmentCorrectionEvent).where(
+              inArray(
+                openTextJudgmentCorrectionEvent.answerId,
+                answers.map(({ id }) => id),
+              ),
+            );
+            await transaction.delete(openTextJudgment).where(
+              inArray(
+                openTextJudgment.answerId,
+                answers.map(({ id }) => id),
+              ),
+            );
+          }
+          const results = await transaction
+            .select({ id: officialResult.id })
+            .from(officialResult)
+            .where(inArray(officialResult.questionId, ids));
+          if (results.length)
+            await transaction.delete(officialResultCorrectionEvent).where(
+              inArray(
+                officialResultCorrectionEvent.officialResultId,
+                results.map(({ id }) => id),
+              ),
+            );
+          await transaction
+            .delete(officialResult)
+            .where(inArray(officialResult.questionId, ids));
+          await transaction.delete(answer).where(inArray(answer.questionId, ids));
+          await transaction
+            .delete(questionOption)
+            .where(inArray(questionOption.questionId, ids));
+          await transaction
+            .delete(matchQuestionConfig)
+            .where(inArray(matchQuestionConfig.questionId, ids));
+          await transaction
+            .delete(questionScoring)
+            .where(inArray(questionScoring.questionId, ids));
+          await transaction.delete(question).where(inArray(question.id, ids));
+        }
+        await transaction.delete(playoffRound).where(
+          inArray(
+            playoffRound.id,
+            playoffRounds.map(({ id }) => id),
+          ),
+        );
+      }
+      await transaction
+        .delete(playoffSeed)
+        .where(inArray(playoffSeed.competitionId, competitionIds));
       const rounds = await transaction
         .select({ id: round.id })
         .from(round)
@@ -335,6 +432,99 @@ export class IntegrationTestData {
       await this.database
         .delete(h2hPhaseConfiguration)
         .where(inArray(h2hPhaseConfiguration.competitionId, competitionIds));
+      const playoffMatchups = await this.database
+        .select({ id: playoffMatchup.id })
+        .from(playoffMatchup)
+        .where(inArray(playoffMatchup.competitionId, competitionIds));
+      if (playoffMatchups.length)
+        await this.database.delete(playoffMatchupResolutionEvent).where(
+          inArray(
+            playoffMatchupResolutionEvent.matchupId,
+            playoffMatchups.map(({ id }) => id),
+          ),
+        );
+      await this.database
+        .delete(playoffMatchup)
+        .where(inArray(playoffMatchup.competitionId, competitionIds));
+      const playoffRounds = await this.database
+        .select({ id: playoffRound.id })
+        .from(playoffRound)
+        .where(inArray(playoffRound.competitionId, competitionIds));
+      if (playoffRounds.length) {
+        const playoffQuestions = await this.database
+          .select({ id: question.id })
+          .from(question)
+          .where(
+            inArray(
+              question.playoffRoundId,
+              playoffRounds.map(({ id }) => id),
+            ),
+          );
+        const ids = playoffQuestions.map(({ id }) => id);
+        await this.database
+          .update(playoffRound)
+          .set({ tiebreakerQuestionId: null })
+          .where(
+            inArray(
+              playoffRound.id,
+              playoffRounds.map(({ id }) => id),
+            ),
+          );
+        if (ids.length) {
+          const answers = await this.database
+            .select({ id: answer.id })
+            .from(answer)
+            .where(inArray(answer.questionId, ids));
+          if (answers.length) {
+            await this.database.delete(openTextJudgmentCorrectionEvent).where(
+              inArray(
+                openTextJudgmentCorrectionEvent.answerId,
+                answers.map(({ id }) => id),
+              ),
+            );
+            await this.database.delete(openTextJudgment).where(
+              inArray(
+                openTextJudgment.answerId,
+                answers.map(({ id }) => id),
+              ),
+            );
+          }
+          const results = await this.database
+            .select({ id: officialResult.id })
+            .from(officialResult)
+            .where(inArray(officialResult.questionId, ids));
+          if (results.length)
+            await this.database.delete(officialResultCorrectionEvent).where(
+              inArray(
+                officialResultCorrectionEvent.officialResultId,
+                results.map(({ id }) => id),
+              ),
+            );
+          await this.database
+            .delete(officialResult)
+            .where(inArray(officialResult.questionId, ids));
+          await this.database.delete(answer).where(inArray(answer.questionId, ids));
+          await this.database
+            .delete(questionOption)
+            .where(inArray(questionOption.questionId, ids));
+          await this.database
+            .delete(matchQuestionConfig)
+            .where(inArray(matchQuestionConfig.questionId, ids));
+          await this.database
+            .delete(questionScoring)
+            .where(inArray(questionScoring.questionId, ids));
+          await this.database.delete(question).where(inArray(question.id, ids));
+        }
+        await this.database.delete(playoffRound).where(
+          inArray(
+            playoffRound.id,
+            playoffRounds.map(({ id }) => id),
+          ),
+        );
+      }
+      await this.database
+        .delete(playoffSeed)
+        .where(inArray(playoffSeed.competitionId, competitionIds));
       const rounds = await this.database
         .select({ id: round.id })
         .from(round)
