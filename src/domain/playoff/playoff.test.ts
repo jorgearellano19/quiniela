@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   expectedPlayoffRoundCount,
   generatePlayoffPairings,
+  isCompletePlayoffBracket,
   resolvePlayoffWinner,
   validatePlayoffSeeds,
 } from "./playoff";
@@ -32,6 +33,48 @@ describe("playoffs", () => {
         { participantId: "p1", seed: 2 },
       ]),
     ).toThrow();
+  });
+
+  it("requires a contiguous finalized bracket with persisted advancement", () => {
+    expect(
+      isCompletePlayoffBracket({
+        seeds: seeds(4),
+        rounds: [
+          {
+            sequence: 1,
+            finalized: true,
+            advancementConfirmed: true,
+            matchups: [
+              { participantAId: "p1", participantBId: "p4", winnerParticipantId: "p1" },
+              { participantAId: "p2", participantBId: "p3", winnerParticipantId: "p2" },
+            ],
+          },
+          {
+            sequence: 2,
+            finalized: true,
+            advancementConfirmed: true,
+            matchups: [
+              { participantAId: "p1", participantBId: "p2", winnerParticipantId: "p1" },
+            ],
+          },
+        ],
+      }),
+    ).toBe(true);
+    expect(
+      isCompletePlayoffBracket({
+        seeds: seeds(4),
+        rounds: [
+          {
+            sequence: 1,
+            finalized: true,
+            advancementConfirmed: true,
+            matchups: [
+              { participantAId: "p1", participantBId: "p4", winnerParticipantId: "p1" },
+            ],
+          },
+        ],
+      }),
+    ).toBe(false);
   });
 
   it("uses score before either advancement mode", () => {

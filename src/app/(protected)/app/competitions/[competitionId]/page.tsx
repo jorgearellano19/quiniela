@@ -111,6 +111,15 @@ export default async function CompetitionDetailPage({
               </Link>
             </Button>
           ) : null}
+          {(detail.membershipStatus === "ACTIVE" || detail.isAdmin) &&
+          detail.status !== "DRAFT" ? (
+            <Button asChild variant="outline">
+              <Link href={`/app/competitions/${detail.id}/results`}>
+                <TrophyIcon data-icon="inline-start" aria-hidden="true" />
+                Resultados finales
+              </Link>
+            </Button>
+          ) : null}
           {detail.canManageParticipants ? (
             <Button asChild variant="outline">
               <Link href={`/app/competitions/${detail.id}/rounds`}>

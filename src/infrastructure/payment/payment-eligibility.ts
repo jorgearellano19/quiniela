@@ -15,7 +15,7 @@ export async function loadRestrictedParticipantIds(
 ) {
   const [config] = await database
     .select({
-      enabled: competition.paymentsEnabled,
+      enabled: competition.financialFeaturesEnabled,
       maximumDebt: competition.maximumDebt,
     })
     .from(competition)

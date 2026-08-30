@@ -26,6 +26,11 @@ export const prizeType = pgEnum("prize_type", [
   "PLAYOFF_CHAMPION",
 ]);
 
+export const prizeConfigurationEventAction = pgEnum("prize_configuration_event_action", [
+  "UPSERTED",
+  "REMOVED",
+]);
+
 export const paymentObligation = pgTable(
   "payment_obligation",
   {
@@ -137,5 +142,33 @@ export const prizeConfiguration = pgTable(
       table.type,
     ),
     check("prize_configuration_amount_positive", sql`${table.amount} > 0`),
+  ],
+);
+
+export const prizeConfigurationEvent = pgTable(
+  "prize_configuration_event",
+  {
+    id: text("id").primaryKey(),
+    competitionId: text("competition_id")
+      .notNull()
+      .references(() => competition.id, { onDelete: "restrict" }),
+    type: prizeType("type").notNull(),
+    action: prizeConfigurationEventAction("action").notNull(),
+    beforeAmount: integer("before_amount"),
+    afterAmount: integer("after_amount"),
+    actorUserId: text("actor_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index("prize_configuration_event_competition_time_idx").on(
+      table.competitionId,
+      table.createdAt,
+    ),
+    check(
+      "prize_configuration_event_shape",
+      sql`(${table.action} = 'UPSERTED' and ${table.afterAmount} > 0) or (${table.action} = 'REMOVED' and ${table.beforeAmount} > 0 and ${table.afterAmount} is null)`,
+    ),
   ],
 );

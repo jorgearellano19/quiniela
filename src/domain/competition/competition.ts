@@ -10,6 +10,7 @@ export type Competition = Readonly<{
   type: CompetitionType;
   status: CompetitionStatus;
   currency: CompetitionCurrency;
+  financialFeaturesEnabled?: boolean;
   rulesNote: string | null;
   createdByUserId: string;
   updatedByUserId: string;
@@ -18,6 +19,7 @@ export type Competition = Readonly<{
   invitationTokenHash: string | null;
   invitationInvalidatedAt: Date | null;
   startedAt: Date | null;
+  completedAt?: Date | null;
 }>;
 
 export class CompetitionDomainError extends Error {}
@@ -53,6 +55,7 @@ export function createCompetition(input: {
     type: input.type,
     status: "DRAFT",
     currency: "MXN",
+    financialFeaturesEnabled: false,
     rulesNote: normalizeRulesNote(input.rulesNote),
     createdByUserId: input.actorUserId,
     updatedByUserId: input.actorUserId,
@@ -61,6 +64,7 @@ export function createCompetition(input: {
     invitationTokenHash: null,
     invitationInvalidatedAt: null,
     startedAt: null,
+    completedAt: null,
   };
 }
 

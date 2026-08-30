@@ -7,6 +7,8 @@ import {
   payment,
   paymentEvent,
   paymentObligation,
+  prizeConfiguration,
+  prizeConfigurationEvent,
 } from "@/infrastructure/db/schema";
 import { createCompetitionRepository } from "@/infrastructure/competition/competition-repository";
 import { createRoundRepository } from "@/infrastructure/round/round-repository";
@@ -45,10 +47,10 @@ describe("payment persistence", () => {
       updatedAt: new Date(),
     });
     await payments.configure(value.id, admin.id, new Date(), () => ({
-      enabled: true,
+      financialFeaturesEnabled: true,
       roundFeeAmount: 5000,
       maximumDebt: 0,
-      roundWinnerPrizeAmount: 10000,
+      prizes: { ROUND_WINNER: 10000 },
     }));
     await database
       .update(competition)
@@ -155,9 +157,59 @@ describe("payment persistence", () => {
         (item) => item.participantId === participant.id,
       ),
     ).toMatchObject({ balance: 2500, restricted: true });
-    await expect(payments.getPrize(value.id, person.id)).resolves.toEqual({
+    await expect(payments.getPrizes(value.id, person.id)).resolves.toEqual({
       currency: "MXN",
-      roundWinnerPrizeAmount: 10000,
+      financialFeaturesEnabled: true,
+      prizes: [{ type: "ROUND_WINNER", amount: 10000 }],
     });
+  });
+
+  it("atomically audits prize upserts and removals", async () => {
+    const admin = await data.createUser({ email: `${randomUUID()}@example.test` });
+    const value = data.competitionValue({ creatorId: admin.id });
+    await competitions.createWithAdmin(value, randomUUID());
+    const now = new Date();
+    await payments.configure(value.id, admin.id, now, () => ({
+      financialFeaturesEnabled: true,
+      roundFeeAmount: null,
+      maximumDebt: null,
+      prizes: { LEAGUE_WINNER: 100_000 },
+    }));
+    await payments.configure(value.id, admin.id, new Date(now.valueOf() + 1), () => ({
+      financialFeaturesEnabled: false,
+      roundFeeAmount: null,
+      maximumDebt: null,
+      prizes: {},
+    }));
+    expect(
+      await database
+        .select()
+        .from(prizeConfiguration)
+        .where(eq(prizeConfiguration.competitionId, value.id)),
+    ).toHaveLength(0);
+    expect(
+      await database
+        .select({
+          action: prizeConfigurationEvent.action,
+          beforeAmount: prizeConfigurationEvent.beforeAmount,
+          afterAmount: prizeConfigurationEvent.afterAmount,
+          actorUserId: prizeConfigurationEvent.actorUserId,
+        })
+        .from(prizeConfigurationEvent)
+        .where(eq(prizeConfigurationEvent.competitionId, value.id)),
+    ).toEqual([
+      {
+        action: "UPSERTED",
+        beforeAmount: null,
+        afterAmount: 100_000,
+        actorUserId: admin.id,
+      },
+      {
+        action: "REMOVED",
+        beforeAmount: 100_000,
+        afterAmount: null,
+        actorUserId: admin.id,
+      },
+    ]);
   });
 });

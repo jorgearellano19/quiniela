@@ -26,10 +26,10 @@ function aggregate(overrides: Partial<PaymentAggregate> = {}): PaymentAggregate 
       type: "LEAGUE",
       status: "DRAFT",
       currency: "MXN",
-      paymentsEnabled: false,
+      financialFeaturesEnabled: false,
       roundFeeAmount: null,
       maximumDebt: null,
-      roundWinnerPrizeAmount: null,
+      prizes: [],
     },
     actorIsAdmin: true,
     actorParticipantId: ids.participant,
@@ -72,9 +72,10 @@ function repository(value: PaymentAggregate): PaymentRepository {
       ),
     })),
     getAdmin: vi.fn(async () => (value.actorIsAdmin ? value : null)),
-    getPrize: vi.fn(async () => ({
+    getPrizes: vi.fn(async () => ({
       currency: "MXN" as const,
-      roundWinnerPrizeAmount: value.competition.roundWinnerPrizeAmount,
+      financialFeaturesEnabled: value.competition.financialFeaturesEnabled,
+      prizes: value.competition.prizes,
     })),
     configure: vi.fn(async (_id, _user, _now, operation) => {
       const config = operation(value);
@@ -82,10 +83,13 @@ function repository(value: PaymentAggregate): PaymentRepository {
         ...value,
         competition: {
           ...value.competition,
-          paymentsEnabled: config.enabled,
+          financialFeaturesEnabled: config.financialFeaturesEnabled,
           roundFeeAmount: config.roundFeeAmount,
           maximumDebt: config.maximumDebt,
-          roundWinnerPrizeAmount: config.roundWinnerPrizeAmount,
+          prizes: Object.entries(config.prizes).map(([type, amount]) => ({
+            type: type as "ROUND_WINNER",
+            amount: Number(amount),
+          })),
         },
       };
     }),
@@ -102,7 +106,7 @@ describe("payment application", () => {
       { userId: "admin" },
       {
         competitionId: ids.competition,
-        enabled: true,
+        financialFeaturesEnabled: true,
         roundFeeAmount: "250.50",
         maximumDebt: "500",
         roundWinnerPrizeAmount: "1000",
@@ -110,10 +114,10 @@ describe("payment application", () => {
       now,
     );
     expect(result.competition).toMatchObject({
-      paymentsEnabled: true,
+      financialFeaturesEnabled: true,
       roundFeeAmount: 25050,
       maximumDebt: 50000,
-      roundWinnerPrizeAmount: 100000,
+      prizes: [{ type: "ROUND_WINNER", amount: 100000 }],
     });
   });
 
@@ -183,7 +187,7 @@ describe("payment application", () => {
         { userId: "admin" },
         {
           competitionId: ids.competition,
-          enabled: true,
+          financialFeaturesEnabled: true,
           roundFeeAmount: "21474836.48",
         },
         now,
@@ -201,7 +205,7 @@ describe("payment application", () => {
         { userId: "admin" },
         {
           competitionId: ids.competition,
-          enabled: true,
+          financialFeaturesEnabled: true,
           roundFeeAmount: "100",
         },
         now,

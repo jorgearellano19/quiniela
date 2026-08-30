@@ -22,13 +22,19 @@ export function PaymentConfigurationForm({
 }: {
   competitionId: string;
   value: {
-    paymentsEnabled: boolean;
+    type: "LEAGUE" | "LEAGUE_PLAYOFFS" | "GROUP_PLAYOFFS";
+    financialFeaturesEnabled: boolean;
     roundFeeAmount: number | null;
     maximumDebt: number | null;
-    roundWinnerPrizeAmount: number | null;
+    prizes: readonly {
+      type: "ROUND_WINNER" | "LEAGUE_WINNER" | "LEAGUE_PHASE_WINNER" | "PLAYOFF_CHAMPION";
+      amount: number;
+    }[];
   };
 }) {
-  const [enabled, setEnabled] = useState(value.paymentsEnabled);
+  const [enabled, setEnabled] = useState(value.financialFeaturesEnabled);
+  const prize = (type: NonNullable<typeof value.prizes>[number]["type"]) =>
+    value.prizes.find((item) => item.type === type)?.amount ?? null;
   const [state, action, pending] = useActionState(
     configurePaymentsAction.bind(null, competitionId),
     initial,
@@ -38,55 +44,109 @@ export function PaymentConfigurationForm({
       <label className="flex min-h-11 items-center gap-3 rounded-xl border bg-muted/50 px-4 py-3 text-sm font-medium">
         <input
           type="checkbox"
-          name="enabled"
+          name="financialFeaturesEnabled"
           checked={enabled}
           onChange={(event) => setEnabled(event.currentTarget.checked)}
           className="size-4 accent-primary"
         />
-        Cobrar una cuota por jornada
+        Activar pagos y premios
       </label>
       <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="roundFeeAmount">Cuota por jornada (MXN)</FieldLabel>
-          <Input
-            id="roundFeeAmount"
-            name="roundFeeAmount"
-            inputMode="decimal"
-            defaultValue={pesos(value.roundFeeAmount)}
-            disabled={!enabled}
-            required={enabled}
-            placeholder="250.00"
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="maximumDebt">Deuda máxima (MXN)</FieldLabel>
-          <Input
-            id="maximumDebt"
-            name="maximumDebt"
-            inputMode="decimal"
-            defaultValue={pesos(value.maximumDebt)}
-            disabled={!enabled}
-            placeholder="500.00"
-          />
-          <FieldDescription>
-            Déjalo vacío para llevar el saldo sin restringir pronósticos.
-          </FieldDescription>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="roundWinnerPrizeAmount">
-            Premio por jornada (MXN)
-          </FieldLabel>
-          <Input
-            id="roundWinnerPrizeAmount"
-            name="roundWinnerPrizeAmount"
-            inputMode="decimal"
-            defaultValue={pesos(value.roundWinnerPrizeAmount)}
-            placeholder="1000.00"
-          />
-          <FieldDescription>
-            Se muestra junto al ganador; no registra pagos.
-          </FieldDescription>
-        </Field>
+        {value.type !== "GROUP_PLAYOFFS" ? (
+          <Field>
+            <FieldLabel htmlFor="roundFeeAmount">Cuota por jornada (MXN)</FieldLabel>
+            <Input
+              id="roundFeeAmount"
+              name="roundFeeAmount"
+              inputMode="decimal"
+              defaultValue={pesos(value.roundFeeAmount)}
+              disabled={!enabled}
+              placeholder="250.00"
+            />
+            <FieldDescription>
+              Opcional. Déjalo vacío para usar solo premios.
+            </FieldDescription>
+          </Field>
+        ) : null}
+        {value.type !== "GROUP_PLAYOFFS" ? (
+          <Field>
+            <FieldLabel htmlFor="maximumDebt">Deuda máxima (MXN)</FieldLabel>
+            <Input
+              id="maximumDebt"
+              name="maximumDebt"
+              inputMode="decimal"
+              defaultValue={pesos(value.maximumDebt)}
+              disabled={!enabled}
+              placeholder="500.00"
+            />
+            <FieldDescription>
+              Déjalo vacío para llevar el saldo sin restringir pronósticos.
+            </FieldDescription>
+          </Field>
+        ) : null}
+        {value.type !== "GROUP_PLAYOFFS" ? (
+          <Field>
+            <FieldLabel htmlFor="roundWinnerPrizeAmount">
+              Premio por jornada (MXN)
+            </FieldLabel>
+            <Input
+              id="roundWinnerPrizeAmount"
+              name="roundWinnerPrizeAmount"
+              inputMode="decimal"
+              defaultValue={pesos(prize("ROUND_WINNER"))}
+              disabled={!enabled}
+              placeholder="1000.00"
+            />
+            <FieldDescription>
+              Se muestra junto al ganador; no registra pagos.
+            </FieldDescription>
+          </Field>
+        ) : null}
+        {value.type === "LEAGUE" ? (
+          <Field>
+            <FieldLabel htmlFor="leagueWinnerPrizeAmount">
+              Premio de liga (MXN)
+            </FieldLabel>
+            <Input
+              id="leagueWinnerPrizeAmount"
+              name="leagueWinnerPrizeAmount"
+              inputMode="decimal"
+              defaultValue={pesos(prize("LEAGUE_WINNER"))}
+              disabled={!enabled}
+              placeholder="5000.00"
+            />
+          </Field>
+        ) : null}
+        {value.type === "LEAGUE_PLAYOFFS" ? (
+          <Field>
+            <FieldLabel htmlFor="leaguePhaseWinnerPrizeAmount">
+              Premio de fase regular (MXN)
+            </FieldLabel>
+            <Input
+              id="leaguePhaseWinnerPrizeAmount"
+              name="leaguePhaseWinnerPrizeAmount"
+              inputMode="decimal"
+              defaultValue={pesos(prize("LEAGUE_PHASE_WINNER"))}
+              disabled={!enabled}
+              placeholder="2500.00"
+            />
+          </Field>
+        ) : null}
+        {value.type !== "LEAGUE" ? (
+          <Field>
+            <FieldLabel htmlFor="playoffChampionPrizeAmount">
+              Premio de campeón (MXN)
+            </FieldLabel>
+            <Input
+              id="playoffChampionPrizeAmount"
+              name="playoffChampionPrizeAmount"
+              inputMode="decimal"
+              defaultValue={pesos(prize("PLAYOFF_CHAMPION"))}
+              disabled={!enabled}
+              placeholder="5000.00"
+            />
+          </Field>
+        ) : null}
       </FieldGroup>
       {state.message ? (
         <p role={state.success ? "status" : "alert"} className="text-sm">
@@ -95,7 +155,7 @@ export function PaymentConfigurationForm({
       ) : null}
       <Button disabled={pending} className="w-full sm:w-auto">
         {pending ? <Spinner data-icon="inline-start" /> : null}
-        {pending ? "Guardando…" : "Guardar pagos"}
+        {pending ? "Guardando…" : "Guardar pagos y premios"}
       </Button>
     </form>
   );

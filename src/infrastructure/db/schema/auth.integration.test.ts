@@ -46,6 +46,7 @@ describe("authentication migration", () => {
       "playoff_round",
       "playoff_seed",
       "prize_configuration",
+      "prize_configuration_event",
       "question",
       "question_option",
       "question_scoring",

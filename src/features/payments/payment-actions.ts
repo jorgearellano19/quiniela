@@ -42,15 +42,18 @@ export async function configurePaymentsAction(
   try {
     await configurePayments(paymentRepository, await actor(), {
       competitionId,
-      enabled: data.get("enabled") ?? false,
+      financialFeaturesEnabled: data.get("financialFeaturesEnabled") ?? false,
       roundFeeAmount: data.get("roundFeeAmount"),
       maximumDebt: data.get("maximumDebt"),
       roundWinnerPrizeAmount: data.get("roundWinnerPrizeAmount"),
+      leagueWinnerPrizeAmount: data.get("leagueWinnerPrizeAmount"),
+      leaguePhaseWinnerPrizeAmount: data.get("leaguePhaseWinnerPrizeAmount"),
+      playoffChampionPrizeAmount: data.get("playoffChampionPrizeAmount"),
     });
     revalidatePath(`/app/competitions/${competitionId}`);
     revalidatePath(`/app/competitions/${competitionId}/payments`);
     revalidatePath(`/app/competitions/${competitionId}/edit`);
-    return { success: true, message: "Configuración de pagos guardada." };
+    return { success: true, message: "Configuración de pagos y premios guardada." };
   } catch (error) {
     return failure(error, "No fue posible guardar la configuración.");
   }

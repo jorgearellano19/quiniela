@@ -10,6 +10,8 @@ import {
   competitionParticipant,
   manualRankingResolution,
   manualRankingResolutionEntry,
+  h2hMatchup,
+  h2hPhaseConfiguration,
   playoffSeed,
   officialResult,
   openTextJudgment,
@@ -48,33 +50,51 @@ async function loadAggregate(
     .limit(1);
   if (!scope) return null;
 
-  const [roundRows, participants, resolutionRows] = await Promise.all([
-    database
-      .select()
-      .from(round)
-      .where(eq(round.competitionId, competitionId))
-      .orderBy(asc(round.sequence)),
-    database
-      .select({
-        id: competitionParticipant.id,
-        name: user.name,
-        email: user.email,
-      })
-      .from(competitionParticipant)
-      .innerJoin(user, eq(user.id, competitionParticipant.userId))
-      .where(
-        and(
-          eq(competitionParticipant.competitionId, competitionId),
-          eq(competitionParticipant.status, "ACTIVE"),
-        ),
-      )
-      .orderBy(asc(competitionParticipant.id)),
-    database
-      .select()
-      .from(manualRankingResolution)
-      .where(eq(manualRankingResolution.competitionId, competitionId))
-      .orderBy(asc(manualRankingResolution.revision)),
-  ]);
+  const [roundRows, participants, resolutionRows, h2hRows, phaseRows] = await Promise.all(
+    [
+      database
+        .select()
+        .from(round)
+        .where(eq(round.competitionId, competitionId))
+        .orderBy(asc(round.sequence)),
+      database
+        .select({
+          id: competitionParticipant.id,
+          name: user.name,
+          email: user.email,
+        })
+        .from(competitionParticipant)
+        .innerJoin(user, eq(user.id, competitionParticipant.userId))
+        .where(
+          and(
+            eq(competitionParticipant.competitionId, competitionId),
+            eq(competitionParticipant.status, "ACTIVE"),
+          ),
+        )
+        .orderBy(asc(competitionParticipant.id)),
+      database
+        .select()
+        .from(manualRankingResolution)
+        .where(eq(manualRankingResolution.competitionId, competitionId))
+        .orderBy(asc(manualRankingResolution.revision)),
+      database
+        .select({
+          roundId: h2hMatchup.roundId,
+          participantAId: h2hMatchup.participantAId,
+          participantBId: h2hMatchup.participantBId,
+        })
+        .from(h2hMatchup)
+        .where(eq(h2hMatchup.competitionId, competitionId)),
+      database
+        .select({
+          leagueRoundCount: h2hPhaseConfiguration.leagueRoundCount,
+          groupSize: h2hPhaseConfiguration.groupSize,
+        })
+        .from(h2hPhaseConfiguration)
+        .where(eq(h2hPhaseConfiguration.competitionId, competitionId))
+        .limit(1),
+    ],
+  );
   const rounds = roundRows.map(persistedRound);
   const questionGroups = await Promise.all(
     rounds.map((item) =>
@@ -137,6 +157,7 @@ async function loadAggregate(
       name: scope.competition.name,
       type: scope.competition.type,
       status: scope.competition.status,
+      completedAt: scope.competition.completedAt,
     },
     participants,
     rounds: rounds.map((roundValue, index) => {
@@ -167,6 +188,10 @@ async function loadAggregate(
     })),
     actorIsAdmin: scope.membership.isAdmin,
     restrictedParticipantIds,
+    h2hMatchups: h2hRows,
+    requiredRegularRoundCount:
+      phaseRows[0]?.leagueRoundCount ??
+      (phaseRows[0]?.groupSize ? phaseRows[0].groupSize - 1 : null),
   };
 }
 
@@ -178,7 +203,7 @@ export function createStandingsRepository(database: typeof db): StandingsReposit
     async resolve(competitionId, userId, _now, operation) {
       return database.transaction(async (tx) => {
         const locked = await tx.execute(
-          sql`select c.id from competition c join competition_participant cp on cp.competition_id = c.id and cp.user_id = ${userId} and cp.is_admin = true where c.id = ${competitionId} for update`,
+          sql`select c.id from competition c join competition_participant cp on cp.competition_id = c.id and cp.user_id = ${userId} and cp.is_admin = true where c.id = ${competitionId} and c.status <> 'COMPLETED' for update`,
         );
         if (!locked.length) return null;
         const txDb = tx as unknown as typeof db;

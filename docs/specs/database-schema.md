@@ -50,7 +50,7 @@ Competition
 ├── name
 ├── type
 ├── status
-├── paymentsEnabled
+├── financialFeaturesEnabled
 ├── roundFeeAmount
 ├── maximumDebt
 ├── currency
@@ -458,6 +458,11 @@ The restriction remains effective during the FINISHED correction window. At effe
 When payment reduces the balance to `<= maximumDebt`, the participant becomes automatically eligible again. Stored Answers remain intact.
 
 ## 17. PrizeConfiguration
+
+`Competition.financialFeaturesEnabled` is the Competition-wide gate. A round fee is
+optional when it is enabled; `maximumDebt` is valid only with a round fee. Existing rows
+with fee/payment configuration or prizes are enabled by the migration. All configuration
+is mutable only in DRAFT. `Competition.completedAt` records explicit completion.
 
 ```text
 PrizeConfiguration

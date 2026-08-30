@@ -2,7 +2,7 @@
 
 ## Status
 
-`FUTURE`
+`COMPLETED — 2026-08-29`
 
 ## Goal
 
@@ -95,30 +95,48 @@ Complete `PrizeConfiguration` with Competition/type uniqueness as required by co
 
 ## Acceptance criteria
 
-- [ ] Only approved prize types can be configured per Competition type.
-- [ ] LEAGUE displays Round and final League winners/prizes.
-- [ ] LEAGUE_PLAYOFFS displays Round, league-phase, and champion winners/prizes.
-- [ ] GROUP_PLAYOFFS displays champion/prize.
-- [ ] Final results use derived facts and explicit manual decisions.
-- [ ] No payout, settlement, or prize-paid state exists.
-- [ ] All three Competition types reach a usable final state.
-- [ ] Admin completion rejects unfinished/correctable Rounds, unresolved required winners, and incomplete playoffs.
-- [ ] Relevant tests, lint, typecheck, and build pass.
+- [x] Only approved prize types can be configured per Competition type.
+- [x] LEAGUE displays Round and final League winners/prizes.
+- [x] LEAGUE_PLAYOFFS displays Round, league-phase, and champion winners/prizes.
+- [x] GROUP_PLAYOFFS displays champion/prize.
+- [x] Final results use derived facts and explicit manual decisions.
+- [x] No payout, settlement, or prize-paid state exists.
+- [x] All three Competition types reach a usable final state.
+- [x] Admin completion rejects unfinished/correctable Rounds, unresolved required winners, and incomplete playoffs.
+- [x] Relevant tests, lint, typecheck, and build pass.
 
 ## Definition of Done
 
-- [ ] Scope implemented.
-- [ ] Out-of-scope functionality was not introduced.
-- [ ] Approved domain rules preserved.
-- [ ] Authorization enforced server-side.
-- [ ] Relevant tests added.
-- [ ] No duplicated business logic.
-- [ ] No locked specification modified.
-- [ ] lint passes.
-- [ ] typecheck passes.
-- [ ] tests pass.
-- [ ] build passes.
-- [ ] milestone code review completed.
+- [x] Scope implemented.
+- [x] Out-of-scope functionality was not introduced.
+- [x] Approved domain rules preserved.
+- [x] Authorization enforced server-side.
+- [x] Relevant tests added.
+- [x] No duplicated business logic.
+- [x] Locked specifications changed only for the approved 2026-08-29 clarification.
+- [x] lint passes.
+- [x] typecheck passes.
+- [x] tests pass.
+- [x] build passes.
+- [x] milestone code review completed.
+
+## Completion record
+
+Approved clarification recorded on 2026-08-29: financial features are optional,
+prizes and fee/debt tracking are distinct, GROUP_PLAYOFFS may use a champion prize
+without fees, configuration freezes at STARTED, and only configured secondary prizes
+block completion.
+
+Re-review on 2026-08-29 corrected DRAFT type changes that could retain unsupported
+prizes, added initial prize-configuration audit events, completed the public financial and
+completion DTO fields, removed the legacy single-prize reader, and expanded matrix,
+authorization, transaction-source, and persistence regression coverage.
+
+Final validation after re-review: migrations applied successfully; format, lint, and
+TypeScript passed; 214 unit tests, 55 PostgreSQL integration tests, and 7 mobile Chromium
+E2E flows passed. The production Next.js application compiled successfully with the
+webpack builder; the sandbox cannot run Turbopack because its CSS worker cannot bind a
+local port.
 
 ## Risks / implementation notes
 

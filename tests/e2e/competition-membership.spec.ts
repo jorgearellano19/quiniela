@@ -123,12 +123,14 @@ test("Admin publica cinco preguntas y guarda sus pronósticos como participante"
     await expect(page).toHaveURL(/\/app\/competitions\/[^/?]+\?created=1$/);
     const competitionUrl = page.url();
     await page.getByRole("link", { name: "Editar configuración" }).click();
-    await page.getByLabel("Cobrar una cuota por jornada").check();
+    await page.getByLabel("Activar pagos y premios").check();
     await page.getByLabel("Cuota por jornada (MXN)").fill("250.00");
     await page.getByLabel("Deuda máxima (MXN)").fill("0.00");
     await page.getByLabel("Premio por jornada (MXN)").fill("1000.00");
-    await page.getByRole("button", { name: "Guardar pagos" }).click();
-    await expect(page.getByText("Configuración de pagos guardada.")).toBeVisible();
+    await page.getByRole("button", { name: "Guardar pagos y premios" }).click();
+    await expect(
+      page.getByText("Configuración de pagos y premios guardada."),
+    ).toBeVisible();
     await page.goto(competitionUrl);
     await page.getByRole("link", { name: "Jornadas" }).click();
     await page.getByRole("button", { name: "Crear jornada" }).click();
@@ -629,6 +631,179 @@ test("Admin publica y avanza un playoff móvil hasta el campeón", async ({ brow
     await client.end();
   }
 });
+
+for (const type of ["LEAGUE", "LEAGUE_PLAYOFFS", "GROUP_PLAYOFFS"] as const) {
+  test(`${type} muestra premio final, completa y conserva resultados`, async ({
+    browser,
+  }) => {
+    test.skip(!databaseUrl, "TEST_DATABASE_URL is required for deterministic cleanup.");
+    const suffix = randomUUID();
+    const adminEmail = `m11-${type.toLowerCase()}-${suffix}@example.test`;
+    const { client, database } = createIntegrationDatabase();
+    const data = new IntegrationTestData(database);
+    const context = await browser.newContext({ ...devicesForMobile });
+    try {
+      const page = await context.newPage();
+      await signUp(page, `Campeón ${type}`, adminEmail);
+      const [admin] = await database
+        .select()
+        .from(user)
+        .where(eq(user.email, adminEmail))
+        .limit(1);
+      const value = data.competitionValue({
+        creatorId: admin!.id,
+        type,
+        name: `Final ${type}`,
+      });
+      await createCompetitionRepository(database).createWithAdmin(value, randomUUID(), {
+        financialFeaturesEnabled: true,
+        roundFeeAmount: null,
+        maximumDebt: null,
+        prizes:
+          type === "LEAGUE" ? { LEAGUE_WINNER: 123_456 } : { PLAYOFF_CHAMPION: 123_456 },
+      });
+      const [champion] = await database
+        .select()
+        .from(competitionParticipant)
+        .where(eq(competitionParticipant.competitionId, value.id))
+        .limit(1);
+      const now = new Date();
+      await database
+        .update(competition)
+        .set({ status: "STARTED", startedAt: now })
+        .where(eq(competition.id, value.id));
+      await database.insert(round).values({
+        id: randomUUID(),
+        competitionId: value.id,
+        sequence: 1,
+        name: "Jornada final",
+        startsAt: new Date(now.valueOf() - 172_800_000),
+        status: "FINALIZED",
+        unansweredPenalty: -1,
+        publishedAt: new Date(now.valueOf() - 172_800_000),
+        finishedAt: new Date(now.valueOf() - 90_000_000),
+        finalizedAt: new Date(now.valueOf() - 1_000),
+        createdByUserId: admin!.id,
+        updatedByUserId: admin!.id,
+        createdAt: now,
+        updatedAt: now,
+      });
+      if (type !== "LEAGUE") {
+        const participantIds = [champion!.id];
+        const fieldSize = type === "GROUP_PLAYOFFS" ? 4 : 2;
+        for (let index = 1; index < fieldSize; index += 1) {
+          const rival = await data.createUser({
+            name: `Rival final ${index}`,
+            email: `m11-rival-${suffix}-${index}@example.test`,
+          });
+          const membership = await data.createMembership({
+            competitionId: value.id,
+            userId: rival.id,
+            status: "ACTIVE",
+            updatedByUserId: admin!.id,
+          });
+          participantIds.push(membership.id);
+        }
+        await database.insert(playoffSeed).values(
+          participantIds.map((participantId, index) => ({
+            competitionId: value.id,
+            participantId,
+            seed: index + 1,
+            sourceFingerprint: "b".repeat(64),
+            createdByUserId: admin!.id,
+            createdAt: now,
+          })),
+        );
+        const stages =
+          fieldSize === 4
+            ? [
+                {
+                  name: "Semifinal",
+                  matchups: [
+                    [participantIds[0]!, participantIds[3]!, participantIds[0]!],
+                    [participantIds[1]!, participantIds[2]!, participantIds[1]!],
+                  ],
+                },
+                {
+                  name: "Final",
+                  matchups: [
+                    [participantIds[0]!, participantIds[1]!, participantIds[0]!],
+                  ],
+                },
+              ]
+            : [
+                {
+                  name: "Final",
+                  matchups: [
+                    [participantIds[0]!, participantIds[1]!, participantIds[0]!],
+                  ],
+                },
+              ];
+        for (const [stageIndex, stage] of stages.entries()) {
+          const playoffRoundId = randomUUID();
+          await database.insert(playoffRound).values({
+            id: playoffRoundId,
+            competitionId: value.id,
+            sequence: stageIndex + 1,
+            name: stage.name,
+            startsAt: new Date(now.valueOf() - 172_800_000),
+            status: "FINALIZED",
+            unansweredPenalty: -1,
+            advancementMode: "BEST_SEED",
+            publishedAt: new Date(now.valueOf() - 172_800_000),
+            finishedAt: new Date(now.valueOf() - 90_000_000),
+            finalizedAt: new Date(now.valueOf() - 1_000),
+            createdByUserId: admin!.id,
+            updatedByUserId: admin!.id,
+            createdAt: now,
+            updatedAt: now,
+          });
+          await database.insert(playoffMatchup).values(
+            stage.matchups.map(
+              ([participantAId, participantBId, winnerParticipantId], index) => ({
+                id: randomUUID(),
+                competitionId: value.id,
+                playoffRoundId,
+                position: index + 1,
+                participantAId: participantAId!,
+                participantBId: participantBId!,
+                winnerParticipantId: winnerParticipantId!,
+                winnerDecidedBy: "SEED" as const,
+                sourceFingerprint: "c".repeat(64),
+                resolvedByUserId: admin!.id,
+                resolvedAt: now,
+                createdAt: now,
+                updatedAt: now,
+              }),
+            ),
+          );
+        }
+      }
+
+      await page.goto(`/app/competitions/${value.id}/results`);
+      await expect(page.getByRole("heading", { name: `Final ${type}` })).toBeVisible();
+      await expect(page.getByText("$1,234.56", { exact: true })).toBeVisible();
+      await expect(page.getByRole("strong")).toHaveText(`Campeón ${type}`);
+      expect(
+        await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+      ).toBe(true);
+      await page.getByRole("checkbox").check();
+      await page.getByRole("button", { name: "Completar quiniela" }).click();
+      await expect(page.getByText("La quiniela quedó completada")).toBeVisible();
+      await page.reload();
+      await expect(page.getByText("$1,234.56", { exact: true })).toBeVisible();
+      await expect(page.getByText("Completada", { exact: true })).toBeVisible();
+    } finally {
+      await context.close();
+      await data.cleanup();
+      await cleanupUsersByEmail(database, [adminEmail]);
+      await client.end();
+    }
+  });
+}
 
 async function addQuestion(
   page: Page,

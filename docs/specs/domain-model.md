@@ -343,6 +343,12 @@ PLAYOFF_CHAMPION
 
 Admin configures each prize directly. The application tracks the winner and configured prize but does not process the actual prize payment.
 
+Financial features are optional and required for prizes. Fee/debt tracking remains
+separate from prizes, and an enabled Competition may be prize-only. `GROUP_PLAYOFFS`
+supports only its champion prize. All financial configuration freezes at `STARTED`.
+Only prize types that are actually configured require a resolved secondary winner before
+Competition completion.
+
 ## Payments and debt
 
 Payment tracking is optional per Competition and manual only.

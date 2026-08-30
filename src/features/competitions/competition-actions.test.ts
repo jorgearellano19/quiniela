@@ -79,10 +79,13 @@ describe("Competition Server Actions", () => {
         name: "Copa",
         type: "LEAGUE",
         rulesNote: "Nota",
-        paymentsEnabled: false,
+        financialFeaturesEnabled: false,
         roundFeeAmount: null,
         maximumDebt: null,
         roundWinnerPrizeAmount: null,
+        leagueWinnerPrizeAmount: null,
+        leaguePhaseWinnerPrizeAmount: null,
+        playoffChampionPrizeAmount: null,
       },
     );
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/app");

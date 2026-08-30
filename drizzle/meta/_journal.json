@@ -148,6 +148,20 @@
       "when": 1787985528188,
       "tag": "0020_young_lifeguard",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1787987508767,
+      "tag": "0021_magical_ultimates",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1788055230562,
+      "tag": "0022_perpetual_legion",
+      "breakpoints": true
     }
   ]
 }

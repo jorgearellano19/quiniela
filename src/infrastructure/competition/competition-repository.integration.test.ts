@@ -5,6 +5,7 @@ import {
   competition as competitionTable,
   competitionParticipant,
   prizeConfiguration,
+  prizeConfigurationEvent,
 } from "@/infrastructure/db/schema";
 import {
   createIntegrationDatabase,
@@ -56,14 +57,14 @@ describe("Competition persistence", () => {
   it("atomically includes approved payment and Round-prize configuration", async () => {
     const competition = value();
     await repository.createWithAdmin(competition, randomUUID(), {
-      enabled: true,
+      financialFeaturesEnabled: true,
       roundFeeAmount: 25_000,
       maximumDebt: 50_000,
-      roundWinnerPrizeAmount: 100_000,
+      prizes: { ROUND_WINNER: 100_000 },
     });
     const [configured] = await database
       .select({
-        paymentsEnabled: competitionTable.paymentsEnabled,
+        financialFeaturesEnabled: competitionTable.financialFeaturesEnabled,
         roundFeeAmount: competitionTable.roundFeeAmount,
         maximumDebt: competitionTable.maximumDebt,
       })
@@ -73,12 +74,38 @@ describe("Competition persistence", () => {
       .select()
       .from(prizeConfiguration)
       .where(eq(prizeConfiguration.competitionId, competition.id));
+    const [event] = await database
+      .select()
+      .from(prizeConfigurationEvent)
+      .where(eq(prizeConfigurationEvent.competitionId, competition.id));
     expect(configured).toEqual({
-      paymentsEnabled: true,
+      financialFeaturesEnabled: true,
       roundFeeAmount: 25_000,
       maximumDebt: 50_000,
     });
     expect(prize).toMatchObject({ type: "ROUND_WINNER", amount: 100_000 });
+    expect(event).toMatchObject({
+      type: "ROUND_WINNER",
+      action: "UPSERTED",
+      beforeAmount: null,
+      afterAmount: 100_000,
+      actorUserId: userOne,
+    });
+  });
+  it("rejects a DRAFT type change that would retain an unsupported prize", async () => {
+    const competition = value();
+    await repository.createWithAdmin(competition, randomUUID(), {
+      financialFeaturesEnabled: true,
+      roundFeeAmount: null,
+      maximumDebt: null,
+      prizes: { LEAGUE_WINNER: 100_000 },
+    });
+    expect(
+      await repository.updateDraft({ ...competition, type: "LEAGUE_PLAYOFFS" }, userOne),
+    ).toBe(false);
+    await expect(repository.findForUser(competition.id, userOne)).resolves.toMatchObject({
+      type: "LEAGUE",
+    });
   });
   it("enforces unique membership, restrictive foreign keys, and fixed currency", async () => {
     const competition = value();

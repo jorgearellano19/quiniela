@@ -19,6 +19,7 @@ import { competitionGroup } from "./h2h";
 export const rankingResolutionScope = pgEnum("ranking_resolution_scope", [
   "LEAGUE_STANDINGS",
   "ROUND_WINNER",
+  "LEAGUE_PHASE_PRIZE",
   "H2H_PHASE",
   "GROUP_STANDINGS",
 ]);
@@ -86,7 +87,7 @@ export const manualRankingResolution = pgTable(
     ),
     check(
       "manual_ranking_resolution_scope_shape",
-      sql`(${table.scope}::text = 'LEAGUE_STANDINGS' and ${table.roundId} is null and ${table.groupId} is null) or (${table.scope}::text = 'ROUND_WINNER' and ${table.roundId} is not null and ${table.groupId} is null) or (${table.scope}::text = 'H2H_PHASE' and ${table.roundId} is null and ${table.groupId} is null) or (${table.scope}::text = 'GROUP_STANDINGS' and ${table.roundId} is null and ${table.groupId} is not null)`,
+      sql`(${table.scope}::text in ('LEAGUE_STANDINGS', 'LEAGUE_PHASE_PRIZE') and ${table.roundId} is null and ${table.groupId} is null) or (${table.scope}::text = 'ROUND_WINNER' and ${table.roundId} is not null and ${table.groupId} is null) or (${table.scope}::text = 'H2H_PHASE' and ${table.roundId} is null and ${table.groupId} is null) or (${table.scope}::text = 'GROUP_STANDINGS' and ${table.roundId} is null and ${table.groupId} is not null)`,
     ),
     check("manual_ranking_resolution_revision_positive", sql`${table.revision} > 0`),
     check(

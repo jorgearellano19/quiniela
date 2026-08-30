@@ -64,8 +64,10 @@ export default async function PaymentsPage({
             Quiniela.
           </p>
         </div>
-        <Badge variant={value.competition.paymentsEnabled ? "default" : "outline"}>
-          {value.competition.paymentsEnabled ? "Cuotas activas" : "Sin cuotas"}
+        <Badge
+          variant={value.competition.roundFeeAmount !== null ? "default" : "outline"}
+        >
+          {value.competition.roundFeeAmount !== null ? "Cuotas activas" : "Sin cuotas"}
         </Badge>
       </div>
       {value.canManage && value.competition.status === "DRAFT" ? (
@@ -188,7 +190,7 @@ export default async function PaymentsPage({
                 </div>
                 {value.canManage &&
                 value.competition.status === "STARTED" &&
-                value.competition.paymentsEnabled ? (
+                value.competition.roundFeeAmount !== null ? (
                   <div className="rounded-2xl border border-primary/20 bg-secondary p-4">
                     <div className="mb-4 flex items-center gap-2">
                       <CircleDollarSignIcon

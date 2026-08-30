@@ -31,6 +31,7 @@ import {
   playoffRound,
   playoffSeed,
   prizeConfiguration,
+  prizeConfigurationEvent,
   question,
   questionOption,
   questionScoring,
@@ -96,6 +97,9 @@ export async function cleanupUsersByEmail(
       await transaction
         .delete(paymentObligation)
         .where(inArray(paymentObligation.competitionId, competitionIds));
+      await transaction
+        .delete(prizeConfigurationEvent)
+        .where(inArray(prizeConfigurationEvent.competitionId, competitionIds));
       await transaction
         .delete(prizeConfiguration)
         .where(inArray(prizeConfiguration.competitionId, competitionIds));
@@ -399,6 +403,9 @@ export class IntegrationTestData {
       await this.database
         .delete(paymentObligation)
         .where(inArray(paymentObligation.competitionId, competitionIds));
+      await this.database
+        .delete(prizeConfigurationEvent)
+        .where(inArray(prizeConfigurationEvent.competitionId, competitionIds));
       await this.database
         .delete(prizeConfiguration)
         .where(inArray(prizeConfiguration.competitionId, competitionIds));

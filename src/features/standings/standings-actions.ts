@@ -29,6 +29,7 @@ export async function resolveRankingTieAction(
       { competitionId, scope, roundId, participantIds },
     );
     revalidatePath(`/app/competitions/${competitionId}/standings`);
+    revalidatePath(`/app/competitions/${competitionId}/results`);
     if (roundId)
       revalidatePath(`/app/competitions/${competitionId}/rounds/${roundId}/results`);
     return { success: true, message: "Desempate guardado." };

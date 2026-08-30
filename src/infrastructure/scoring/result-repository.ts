@@ -343,8 +343,8 @@ export function createResultRepository(
       return database.transaction(async (tx) => {
         const locked = await tx.execute(
           parent === "ROUND"
-            ? sql`select r.id from round r join competition_participant cp on cp.competition_id = r.competition_id and cp.user_id = ${userId} and cp.is_admin = true where r.id = ${roundId} and r.competition_id = ${competitionId} and r.status in ('ACTIVE', 'FINISHED') for update`
-            : sql`select pr.id from playoff_round pr join competition_participant cp on cp.competition_id = pr.competition_id and cp.user_id = ${userId} and cp.is_admin = true where pr.id = ${roundId} and pr.competition_id = ${competitionId} and pr.status in ('ACTIVE', 'FINISHED') for update`,
+            ? sql`select r.id from round r join competition c on c.id = r.competition_id and c.status <> 'COMPLETED' join competition_participant cp on cp.competition_id = r.competition_id and cp.user_id = ${userId} and cp.is_admin = true where r.id = ${roundId} and r.competition_id = ${competitionId} and r.status in ('ACTIVE', 'FINISHED') for update`
+            : sql`select pr.id from playoff_round pr join competition c on c.id = pr.competition_id and c.status <> 'COMPLETED' join competition_participant cp on cp.competition_id = pr.competition_id and cp.user_id = ${userId} and cp.is_admin = true where pr.id = ${roundId} and pr.competition_id = ${competitionId} and pr.status in ('ACTIVE', 'FINISHED') for update`,
         );
         if (!locked.length) return null;
         const txDb = tx as unknown as typeof db;
@@ -409,8 +409,8 @@ export function createResultRepository(
       return database.transaction(async (tx) => {
         const locked = await tx.execute(
           parent === "ROUND"
-            ? sql`select r.id from round r join competition_participant cp on cp.competition_id = r.competition_id and cp.user_id = ${userId} and cp.is_admin = true where r.id = ${roundId} and r.competition_id = ${competitionId} and r.status in ('ACTIVE', 'FINISHED') for update`
-            : sql`select pr.id from playoff_round pr join competition_participant cp on cp.competition_id = pr.competition_id and cp.user_id = ${userId} and cp.is_admin = true where pr.id = ${roundId} and pr.competition_id = ${competitionId} and pr.status in ('ACTIVE', 'FINISHED') for update`,
+            ? sql`select r.id from round r join competition c on c.id = r.competition_id and c.status <> 'COMPLETED' join competition_participant cp on cp.competition_id = r.competition_id and cp.user_id = ${userId} and cp.is_admin = true where r.id = ${roundId} and r.competition_id = ${competitionId} and r.status in ('ACTIVE', 'FINISHED') for update`
+            : sql`select pr.id from playoff_round pr join competition c on c.id = pr.competition_id and c.status <> 'COMPLETED' join competition_participant cp on cp.competition_id = pr.competition_id and cp.user_id = ${userId} and cp.is_admin = true where pr.id = ${roundId} and pr.competition_id = ${competitionId} and pr.status in ('ACTIVE', 'FINISHED') for update`,
         );
         if (!locked.length) return null;
         const txDb = tx as unknown as typeof db;

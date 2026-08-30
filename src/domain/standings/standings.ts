@@ -36,6 +36,19 @@ export type RoundWinnerInput = Readonly<{
   completedAt: Date | null;
 }>;
 
+export type LeaguePhasePrizeInput = Readonly<{
+  participantId: string;
+  predictionScore: number;
+  exactScorePoints: number;
+}>;
+
+export type DirectH2HResult = Readonly<{
+  participantAId: string;
+  participantBId: string;
+  participantAPoints: 0 | 1 | 3;
+  participantBPoints: 0 | 1 | 3;
+}>;
+
 export type WinnerResult<T> =
   | Readonly<{ state: "notReady" }>
   | Readonly<{ state: "unresolved"; tiedParticipantIds: readonly string[] }>
@@ -150,4 +163,66 @@ export function selectRoundWinner(input: {
   return firstGroup
     ? { state: "unresolved", tiedParticipantIds: firstGroup }
     : { state: "resolved", winner: ranking.rows[0]!.participant };
+}
+
+export function selectLeaguePhasePrizeWinner(input: {
+  ready: boolean;
+  values: readonly LeaguePhasePrizeInput[];
+  directH2H: readonly DirectH2HResult[];
+  resolution?: RankingResolution;
+}): WinnerResult<LeaguePhasePrizeInput> {
+  if (!input.ready || input.values.length === 0) return { state: "notReady" };
+  assertUnique(input.values);
+  const primary = [...input.values].sort(
+    (left, right) =>
+      compareNumbers(left.predictionScore, right.predictionScore) ||
+      compareNumbers(left.exactScorePoints, right.exactScorePoints),
+  );
+  const tied = primary.filter(
+    (value) =>
+      value.predictionScore === primary[0]!.predictionScore &&
+      value.exactScorePoints === primary[0]!.exactScorePoints,
+  );
+  if (tied.length === 1) return { state: "resolved", winner: tied[0]! };
+  if (tied.length === 2) {
+    const [left, right] = tied;
+    const meetings = input.directH2H.filter(
+      (item) =>
+        (item.participantAId === left!.participantId &&
+          item.participantBId === right!.participantId) ||
+        (item.participantAId === right!.participantId &&
+          item.participantBId === left!.participantId),
+    );
+    const points = (participantId: string) =>
+      meetings.reduce(
+        (total, item) =>
+          total +
+          (item.participantAId === participantId
+            ? item.participantAPoints
+            : item.participantBPoints),
+        0,
+      );
+    if (meetings.length && points(left!.participantId) !== points(right!.participantId))
+      return {
+        state: "resolved",
+        winner:
+          points(left!.participantId) > points(right!.participantId) ? left! : right!,
+      };
+  }
+  const resolution = input.resolution;
+  if (
+    resolution &&
+    resolution.participantIds.length === tied.length &&
+    resolution.participantIds.every((id) =>
+      tied.some((value) => value.participantId === id),
+    )
+  )
+    return {
+      state: "resolved",
+      winner: tied.find((value) => value.participantId === resolution.participantIds[0])!,
+    };
+  return {
+    state: "unresolved",
+    tiedParticipantIds: tied.map((item) => item.participantId),
+  };
 }

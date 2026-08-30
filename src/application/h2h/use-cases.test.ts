@@ -90,6 +90,7 @@ function repositories(input: {
       name: "Copa",
       type: "LEAGUE_PLAYOFFS",
       status: "STARTED",
+      completedAt: null,
     },
     participants: [
       { id: participantA, name: "Ana", email: "ana@example.test" },
@@ -107,6 +108,8 @@ function repositories(input: {
     resolutions: [],
     actorIsAdmin: true,
     restrictedParticipantIds: new Set(),
+    h2hMatchups: [],
+    requiredRegularRoundCount: null,
   };
   const standings: StandingsRepository = {
     async getCompetition() {

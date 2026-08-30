@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { rankH2H, rankLeague, selectRoundWinner } from "./standings";
+import {
+  rankH2H,
+  rankLeague,
+  selectLeaguePhasePrizeWinner,
+  selectRoundWinner,
+} from "./standings";
 
 const score = (total: number, exactScorePoints: number) => ({
   total,
@@ -88,6 +93,42 @@ describe("standings", () => {
       ],
     });
     expect(result).toMatchObject({ state: "resolved", winner: { participantId: "b" } });
+  });
+
+  it("selects a league-phase prize by score, EXACT_SCORE, then direct H2H", () => {
+    const base = [
+      { participantId: "a", predictionScore: 10, exactScorePoints: 3 },
+      { participantId: "b", predictionScore: 10, exactScorePoints: 3 },
+    ];
+    expect(
+      selectLeaguePhasePrizeWinner({
+        ready: true,
+        values: base,
+        directH2H: [
+          {
+            participantAId: "a",
+            participantBId: "b",
+            participantAPoints: 0,
+            participantBPoints: 3,
+          },
+        ],
+      }),
+    ).toMatchObject({ state: "resolved", winner: { participantId: "b" } });
+    expect(
+      selectLeaguePhasePrizeWinner({
+        ready: true,
+        values: base,
+        directH2H: [],
+      }),
+    ).toEqual({ state: "unresolved", tiedParticipantIds: ["a", "b"] });
+    expect(
+      selectLeaguePhasePrizeWinner({
+        ready: true,
+        values: base,
+        directH2H: [],
+        resolution: { participantIds: ["b", "a"] },
+      }),
+    ).toMatchObject({ state: "resolved", winner: { participantId: "b" } });
   });
 
   it.each([

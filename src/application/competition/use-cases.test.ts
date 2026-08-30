@@ -100,17 +100,17 @@ describe("Competition use cases", () => {
       {
         name: "Copa con cuota",
         type: "LEAGUE",
-        paymentsEnabled: "on",
+        financialFeaturesEnabled: "on",
         roundFeeAmount: "250.50",
         maximumDebt: "500",
         roundWinnerPrizeAmount: "1000",
       },
     );
     expect(paymentConfigurations[0]).toEqual({
-      enabled: true,
+      financialFeaturesEnabled: true,
       roundFeeAmount: 25_050,
       maximumDebt: 50_000,
-      roundWinnerPrizeAmount: 100_000,
+      prizes: { ROUND_WINNER: 100_000 },
     });
   });
   it("rejects Round payment rules for GROUP_PLAYOFFS at creation", async () => {
@@ -122,7 +122,7 @@ describe("Competition use cases", () => {
         {
           name: "Grupos",
           type: "GROUP_PLAYOFFS",
-          paymentsEnabled: "on",
+          financialFeaturesEnabled: "on",
           roundFeeAmount: "100",
         },
       ),

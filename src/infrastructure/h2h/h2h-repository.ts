@@ -204,7 +204,7 @@ export function createH2HRepository(database: typeof db): H2HRepository {
     async generate(competitionId, userId, operation) {
       return database.transaction(async (tx) => {
         const locked = await tx.execute(
-          sql`select c.id from competition c join competition_participant cp on cp.competition_id = c.id and cp.user_id = ${userId} and cp.is_admin = true where c.id = ${competitionId} for update`,
+          sql`select c.id from competition c join competition_participant cp on cp.competition_id = c.id and cp.user_id = ${userId} and cp.is_admin = true where c.id = ${competitionId} and c.status = 'STARTED' for update`,
         );
         if (!locked.length) return null;
         const txDb = tx as unknown as typeof db;

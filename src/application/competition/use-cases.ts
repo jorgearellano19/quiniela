@@ -24,7 +24,9 @@ export type CompetitionSummary = Readonly<{
   status: CompetitionStatus;
   statusLabel: string;
   currency: "MXN";
+  financialFeaturesEnabled: boolean;
   updatedAt: Date;
+  completedAt: Date | null;
   capabilities: Readonly<{ canView: true; canEdit: boolean }>;
   membershipStatus: MembershipStatus;
   isAdmin: boolean;
@@ -62,10 +64,13 @@ const inputSchema = z.object({
   name: z.string(),
   type: z.enum(COMPETITION_TYPES),
   rulesNote: z.string().optional(),
-  paymentsEnabled: z.unknown().optional(),
+  financialFeaturesEnabled: z.unknown().optional(),
   roundFeeAmount: z.unknown().optional(),
   maximumDebt: z.unknown().optional(),
   roundWinnerPrizeAmount: z.unknown().optional(),
+  leagueWinnerPrizeAmount: z.unknown().optional(),
+  leaguePhaseWinnerPrizeAmount: z.unknown().optional(),
+  playoffChampionPrizeAmount: z.unknown().optional(),
 });
 const competitionIdSchema = z.uuid();
 const typeLabels: Record<CompetitionType, string> = {
@@ -103,7 +108,9 @@ function summary(
     status: row.status,
     statusLabel: statusLabels[row.status],
     currency: row.currency,
+    financialFeaturesEnabled: row.financialFeaturesEnabled ?? false,
     updatedAt: row.updatedAt,
+    completedAt: row.completedAt ?? null,
     capabilities: { canView: true, canEdit },
     membershipStatus: row.membershipStatus,
     isAdmin: row.isAdmin,
@@ -128,10 +135,13 @@ export async function createCompetition(
     }),
   );
   const paymentConfiguration = paymentConfigurationFromInput(competition.type, {
-    enabled: parsed.data.paymentsEnabled,
+    financialFeaturesEnabled: parsed.data.financialFeaturesEnabled,
     roundFeeAmount: parsed.data.roundFeeAmount,
     maximumDebt: parsed.data.maximumDebt,
     roundWinnerPrizeAmount: parsed.data.roundWinnerPrizeAmount,
+    leagueWinnerPrizeAmount: parsed.data.leagueWinnerPrizeAmount,
+    leaguePhaseWinnerPrizeAmount: parsed.data.leaguePhaseWinnerPrizeAmount,
+    playoffChampionPrizeAmount: parsed.data.playoffChampionPrizeAmount,
   });
   await repository.createWithAdmin(competition, randomUUID(), paymentConfiguration);
   return summary({ ...competition, isAdmin: true, membershipStatus: "ACTIVE" });

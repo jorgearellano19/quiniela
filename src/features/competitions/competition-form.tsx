@@ -33,7 +33,7 @@ export function CompetitionForm({
 }) {
   const [state, formAction, pending] = useActionState(action, initialState);
   const [type, setType] = useState<CompetitionType | "">(initial?.type ?? "");
-  const [paymentsEnabled, setPaymentsEnabled] = useState(false);
+  const [financialFeaturesEnabled, setFinancialFeaturesEnabled] = useState(false);
   const supportsRoundPayments = type !== "GROUP_PLAYOFFS";
   return (
     <form action={formAction} className="flex flex-col gap-6">
@@ -62,7 +62,6 @@ export function CompetitionForm({
             value={type}
             onValueChange={(value) => {
               setType(value as CompetitionType);
-              if (value === "GROUP_PLAYOFFS") setPaymentsEnabled(false);
             }}
           >
             <SelectTrigger
@@ -112,24 +111,24 @@ export function CompetitionForm({
         </Field>
         {!initial ? (
           <fieldset className="grid gap-4 rounded-2xl border bg-muted/30 p-4 sm:p-5">
-            <legend className="px-2 font-heading text-xl">
-              Pagos y premio por jornada
-            </legend>
+            <legend className="px-2 font-heading text-xl">Pagos y premios</legend>
             <p className="text-sm leading-6 text-muted-foreground">
               Registro manual en MXN. Quiniela no procesa cobros ni transfiere premios.
             </p>
+            <label className="flex min-h-11 items-center gap-3 rounded-xl border bg-background px-4 py-3 text-sm font-medium">
+              <input
+                type="checkbox"
+                name="financialFeaturesEnabled"
+                checked={financialFeaturesEnabled}
+                onChange={(event) =>
+                  setFinancialFeaturesEnabled(event.currentTarget.checked)
+                }
+                className="size-4 accent-primary"
+              />
+              Activar pagos y premios
+            </label>
             {supportsRoundPayments ? (
               <>
-                <label className="flex min-h-11 items-center gap-3 rounded-xl border bg-background px-4 py-3 text-sm font-medium">
-                  <input
-                    type="checkbox"
-                    name="paymentsEnabled"
-                    checked={paymentsEnabled}
-                    onChange={(event) => setPaymentsEnabled(event.currentTarget.checked)}
-                    className="size-4 accent-primary"
-                  />
-                  Cobrar una cuota por jornada
-                </label>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field>
                     <FieldLabel htmlFor="roundFeeAmount">
@@ -139,8 +138,7 @@ export function CompetitionForm({
                       id="roundFeeAmount"
                       name="roundFeeAmount"
                       inputMode="decimal"
-                      disabled={!paymentsEnabled}
-                      required={paymentsEnabled}
+                      disabled={!financialFeaturesEnabled}
                       placeholder="250.00"
                     />
                   </Field>
@@ -150,7 +148,7 @@ export function CompetitionForm({
                       id="maximumDebt"
                       name="maximumDebt"
                       inputMode="decimal"
-                      disabled={!paymentsEnabled}
+                      disabled={!financialFeaturesEnabled}
                       placeholder="500.00"
                     />
                     <FieldDescription>
@@ -166,18 +164,73 @@ export function CompetitionForm({
                     id="roundWinnerPrizeAmount"
                     name="roundWinnerPrizeAmount"
                     inputMode="decimal"
+                    disabled={!financialFeaturesEnabled}
                     placeholder="1000.00"
                   />
                   <FieldDescription>
                     Es independiente de las cuotas y solo se muestra junto al ganador.
                   </FieldDescription>
                 </Field>
+                {type === "LEAGUE" ? (
+                  <Field>
+                    <FieldLabel htmlFor="leagueWinnerPrizeAmount">
+                      Premio de liga (MXN)
+                    </FieldLabel>
+                    <Input
+                      id="leagueWinnerPrizeAmount"
+                      name="leagueWinnerPrizeAmount"
+                      inputMode="decimal"
+                      disabled={!financialFeaturesEnabled}
+                      placeholder="5000.00"
+                    />
+                  </Field>
+                ) : null}
+                {type === "LEAGUE_PLAYOFFS" ? (
+                  <>
+                    <Field>
+                      <FieldLabel htmlFor="leaguePhaseWinnerPrizeAmount">
+                        Premio de fase regular (MXN)
+                      </FieldLabel>
+                      <Input
+                        id="leaguePhaseWinnerPrizeAmount"
+                        name="leaguePhaseWinnerPrizeAmount"
+                        inputMode="decimal"
+                        disabled={!financialFeaturesEnabled}
+                        placeholder="2500.00"
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="playoffChampionPrizeAmount">
+                        Premio de campeón (MXN)
+                      </FieldLabel>
+                      <Input
+                        id="playoffChampionPrizeAmount"
+                        name="playoffChampionPrizeAmount"
+                        inputMode="decimal"
+                        disabled={!financialFeaturesEnabled}
+                        placeholder="5000.00"
+                      />
+                    </Field>
+                  </>
+                ) : null}
               </>
             ) : (
-              <p className="rounded-xl bg-background px-4 py-3 text-sm text-muted-foreground">
-                Grupos con eliminatorias no usa cuotas ni premio por jornada. El premio de
-                campeón se configurará con la fase final.
-              </p>
+              <Field>
+                <FieldLabel htmlFor="playoffChampionPrizeAmount">
+                  Premio de campeón (MXN)
+                </FieldLabel>
+                <Input
+                  id="playoffChampionPrizeAmount"
+                  name="playoffChampionPrizeAmount"
+                  inputMode="decimal"
+                  disabled={!financialFeaturesEnabled}
+                  required={financialFeaturesEnabled}
+                  placeholder="5000.00"
+                />
+                <FieldDescription>
+                  Este formato no usa cuotas ni control de deuda.
+                </FieldDescription>
+              </Field>
             )}
             {state.fieldErrors?.payments ? (
               <FieldError>{state.fieldErrors.payments}</FieldError>

@@ -355,7 +355,7 @@ export function createPlayoffRepository(database: typeof db): PlayoffRepository 
     async persistManualWinner(input) {
       return database.transaction(async (tx) => {
         const locked = await tx.execute(
-          sql`select pm.id from playoff_matchup pm join playoff_round pr on pr.id = pm.playoff_round_id join competition_participant cp on cp.competition_id = pr.competition_id and cp.user_id = ${input.userId} and cp.is_admin = true where pm.id = ${input.matchupId} and pm.playoff_round_id = ${input.playoffRoundId} and pm.competition_id = ${input.competitionId} and pr.status in ('FINISHED', 'FINALIZED') and ${input.participantId} in (pm.participant_a_id, pm.participant_b_id) for update`,
+          sql`select pm.id from playoff_matchup pm join playoff_round pr on pr.id = pm.playoff_round_id join competition c on c.id = pr.competition_id and c.status = 'STARTED' join competition_participant cp on cp.competition_id = pr.competition_id and cp.user_id = ${input.userId} and cp.is_admin = true where pm.id = ${input.matchupId} and pm.playoff_round_id = ${input.playoffRoundId} and pm.competition_id = ${input.competitionId} and pr.status in ('FINISHED', 'FINALIZED') and ${input.participantId} in (pm.participant_a_id, pm.participant_b_id) for update`,
         );
         if (!locked.length) return false;
         const [currentRound] = await tx
@@ -464,7 +464,7 @@ export function createPlayoffRepository(database: typeof db): PlayoffRepository 
     async persistAdvancement(input) {
       return database.transaction(async (tx) => {
         const locked = await tx.execute(
-          sql`select pr.id, pr.sequence from playoff_round pr join competition_participant cp on cp.competition_id = pr.competition_id and cp.user_id = ${input.userId} and cp.is_admin = true where pr.id = ${input.playoffRoundId} and pr.competition_id = ${input.competitionId} and pr.status = 'FINISHED' and pr.finished_at + interval '24 hours' <= ${input.now.toISOString()}::timestamptz for update`,
+          sql`select pr.id, pr.sequence from playoff_round pr join competition c on c.id = pr.competition_id and c.status = 'STARTED' join competition_participant cp on cp.competition_id = pr.competition_id and cp.user_id = ${input.userId} and cp.is_admin = true where pr.id = ${input.playoffRoundId} and pr.competition_id = ${input.competitionId} and pr.status = 'FINISHED' and pr.finished_at + interval '24 hours' <= ${input.now.toISOString()}::timestamptz for update`,
         );
         if (!locked.length) return false;
         const [current] = await tx

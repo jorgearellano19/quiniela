@@ -471,7 +471,10 @@ export function createRoundRepository(database: typeof db): RoundRepository {
             )
             .where(eq(questionScoring.questionId, item.id));
         }
-        if (competitionRow.paymentsEnabled && competitionRow.roundFeeAmount !== null) {
+        if (
+          competitionRow.financialFeaturesEnabled &&
+          competitionRow.roundFeeAmount !== null
+        ) {
           const participants = await tx
             .select({ id: competitionParticipant.id })
             .from(competitionParticipant)

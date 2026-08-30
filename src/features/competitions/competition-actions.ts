@@ -24,10 +24,13 @@ function input(formData: FormData) {
     name: String(formData.get("name") ?? ""),
     type: String(formData.get("type") ?? ""),
     rulesNote: String(formData.get("rulesNote") ?? ""),
-    paymentsEnabled: formData.get("paymentsEnabled") ?? false,
+    financialFeaturesEnabled: formData.get("financialFeaturesEnabled") ?? false,
     roundFeeAmount: formData.get("roundFeeAmount"),
     maximumDebt: formData.get("maximumDebt"),
     roundWinnerPrizeAmount: formData.get("roundWinnerPrizeAmount"),
+    leagueWinnerPrizeAmount: formData.get("leagueWinnerPrizeAmount"),
+    leaguePhaseWinnerPrizeAmount: formData.get("leaguePhaseWinnerPrizeAmount"),
+    playoffChampionPrizeAmount: formData.get("playoffChampionPrizeAmount"),
   };
 }
 async function actor() {

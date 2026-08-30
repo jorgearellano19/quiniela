@@ -112,7 +112,13 @@ Ranking-based seeding is: Prediction Score DESC, then EXACT_SCORE DESC, then Adm
 A FINISHED Playoff Round may show provisional winners while Official Results remain correctable. Its successor cannot be published or receive Answers until the preceding round is effectively FINALIZED and final advancement is persisted. A manual playoff decision may be corrected while no downstream round has been published; downstream publication freezes the upstream decision.
 
 ## 14. Payment tracking
-Payments are optional per Competition and are manual tracking only. No Stripe, PayPal, Mercado Pago, checkout, wallet, card processing, payment links, bank integrations, payment webhooks, financial ledger, or automatic prize settlement. Admin retains ownership.
+Financial features are optional per Competition. They gate fee/debt tracking and prize
+configuration, which remain distinct: a Competition may use either or both. Disabling the
+features while DRAFT removes its prize configuration atomically. All fee, debt, and prize
+configuration freezes when the Competition starts. Payments are manual tracking only. No
+Stripe, PayPal, Mercado Pago, checkout, wallet, card processing, payment links, bank
+integrations, payment webhooks, financial ledger, or automatic prize settlement. Admin
+retains ownership.
 
 ### LEAGUE
 Optional: round fee, round-winner prize, and league-winner prize.
@@ -122,6 +128,9 @@ Optional: round fee, round-winner prize, league-phase winner prize, playoff-cham
 
 ### GROUP_PLAYOFFS
 Optional: playoff-champion prize.
+
+`GROUP_PLAYOFFS` does not support round fees or debt tracking; its optional financial
+features exist solely for the champion prize.
 
 Admin configures each prize amount directly. The app may show the winner and configured prize amount but does not track whether the prize was physically paid.
 

@@ -14,6 +14,7 @@ import {
   paymentEvent,
   paymentObligation,
   prizeConfiguration,
+  prizeConfigurationEvent,
   round,
   user,
 } from "@/infrastructure/db/schema";
@@ -87,16 +88,10 @@ async function loadAggregate(
         .where(inArray(payment.competitionParticipantId, participantIds))
         .orderBy(asc(payment.paidAt), asc(payment.createdAt))
     : [];
-  const [prize] = await database
-    .select({ amount: prizeConfiguration.amount })
+  const prizes = await database
+    .select({ type: prizeConfiguration.type, amount: prizeConfiguration.amount })
     .from(prizeConfiguration)
-    .where(
-      and(
-        eq(prizeConfiguration.competitionId, competitionId),
-        eq(prizeConfiguration.type, "ROUND_WINNER"),
-      ),
-    )
-    .limit(1);
+    .where(and(eq(prizeConfiguration.competitionId, competitionId)));
   const participants: ParticipantPaymentStatus[] = participantRows.map((participant) => {
     const ownObligations = obligations.filter(
       (item) => item.participantId === participant.participantId,
@@ -111,7 +106,7 @@ async function loadAggregate(
       paid: ownPayments.reduce((sum, item) => sum + item.amount, 0),
       balance,
       restricted:
-        scope.competition.paymentsEnabled &&
+        scope.competition.financialFeaturesEnabled &&
         isRestricted(balance, scope.competition.maximumDebt),
       obligations: ownObligations.map((item) => ({
         id: item.id,
@@ -137,10 +132,10 @@ async function loadAggregate(
       type: scope.competition.type,
       status: scope.competition.status,
       currency: "MXN",
-      paymentsEnabled: scope.competition.paymentsEnabled,
+      financialFeaturesEnabled: scope.competition.financialFeaturesEnabled,
       roundFeeAmount: scope.competition.roundFeeAmount,
       maximumDebt: scope.competition.maximumDebt,
-      roundWinnerPrizeAmount: prize?.amount ?? null,
+      prizes,
     },
     actorIsAdmin: scope.membership.isAdmin,
     actorParticipantId: scope.membership.status === "ACTIVE" ? scope.membership.id : null,
@@ -156,9 +151,12 @@ export function createPaymentRepository(database: typeof db): PaymentRepository 
     getAdmin(competitionId, userId) {
       return loadAggregate(database, competitionId, userId, "ADMIN");
     },
-    async getPrize(competitionId, userId) {
+    async getPrizes(competitionId, userId) {
       const [scope] = await database
-        .select({ currency: competition.currency })
+        .select({
+          currency: competition.currency,
+          financialFeaturesEnabled: competition.financialFeaturesEnabled,
+        })
         .from(competition)
         .innerJoin(
           competitionParticipant,
@@ -178,17 +176,15 @@ export function createPaymentRepository(database: typeof db): PaymentRepository 
         )
         .limit(1);
       if (!scope || scope.currency !== "MXN") return null;
-      const [prize] = await database
-        .select({ amount: prizeConfiguration.amount })
+      const prizes = await database
+        .select({ type: prizeConfiguration.type, amount: prizeConfiguration.amount })
         .from(prizeConfiguration)
-        .where(
-          and(
-            eq(prizeConfiguration.competitionId, competitionId),
-            eq(prizeConfiguration.type, "ROUND_WINNER"),
-          ),
-        )
-        .limit(1);
-      return { currency: "MXN", roundWinnerPrizeAmount: prize?.amount ?? null };
+        .where(and(eq(prizeConfiguration.competitionId, competitionId)));
+      return {
+        currency: "MXN",
+        financialFeaturesEnabled: scope.financialFeaturesEnabled,
+        prizes,
+      };
     },
     async configure(competitionId, userId, now, operation) {
       return database.transaction(async (tx) => {
@@ -200,52 +196,80 @@ export function createPaymentRepository(database: typeof db): PaymentRepository 
         const aggregate = await loadAggregate(txDb, competitionId, userId);
         if (!aggregate) return null;
         const value = operation(aggregate);
+        const existingPrizes = await tx
+          .select({ type: prizeConfiguration.type, amount: prizeConfiguration.amount })
+          .from(prizeConfiguration)
+          .where(eq(prizeConfiguration.competitionId, competitionId));
         await tx
           .update(competition)
           .set({
-            paymentsEnabled: value.enabled,
+            financialFeaturesEnabled: value.financialFeaturesEnabled,
             roundFeeAmount: value.roundFeeAmount,
             maximumDebt: value.maximumDebt,
             updatedByUserId: userId,
             updatedAt: now,
           })
           .where(eq(competition.id, competitionId));
-        if (value.roundWinnerPrizeAmount === null)
-          await tx
-            .delete(prizeConfiguration)
-            .where(
-              and(
-                eq(prizeConfiguration.competitionId, competitionId),
-                eq(prizeConfiguration.type, "ROUND_WINNER"),
-              ),
-            );
-        else
-          await tx
-            .insert(prizeConfiguration)
-            .values({
+        await tx
+          .delete(prizeConfiguration)
+          .where(eq(prizeConfiguration.competitionId, competitionId));
+        const prizes = value.prizes;
+        const nextPrizes = new Map(
+          Object.entries(prizes) as [
+            typeof prizeConfiguration.$inferInsert.type,
+            number,
+          ][],
+        );
+        const events = [
+          ...existingPrizes
+            .filter((item) => !nextPrizes.has(item.type))
+            .map((item) => ({
               id: randomUUID(),
               competitionId,
-              type: "ROUND_WINNER",
-              amount: value.roundWinnerPrizeAmount,
-              updatedByUserId: userId,
+              type: item.type,
+              action: "REMOVED" as const,
+              beforeAmount: item.amount,
+              afterAmount: null,
+              actorUserId: userId,
               createdAt: now,
-              updatedAt: now,
-            })
-            .onConflictDoUpdate({
-              target: [prizeConfiguration.competitionId, prizeConfiguration.type],
-              set: {
-                amount: value.roundWinnerPrizeAmount,
-                updatedByUserId: userId,
-                updatedAt: now,
-              },
-            });
+            })),
+          ...[...nextPrizes].flatMap(([type, amount]) => {
+            const before =
+              existingPrizes.find((item) => item.type === type)?.amount ?? null;
+            return before === amount
+              ? []
+              : [
+                  {
+                    id: randomUUID(),
+                    competitionId,
+                    type,
+                    action: "UPSERTED" as const,
+                    beforeAmount: before,
+                    afterAmount: amount,
+                    actorUserId: userId,
+                    createdAt: now,
+                  },
+                ];
+          }),
+        ];
+        if (events.length) await tx.insert(prizeConfigurationEvent).values(events);
+        for (const [type, amount] of Object.entries(prizes))
+          await tx.insert(prizeConfiguration).values({
+            id: randomUUID(),
+            competitionId,
+            type: type as typeof prizeConfiguration.$inferInsert.type,
+            amount,
+            updatedByUserId: userId,
+            createdAt: now,
+            updatedAt: now,
+          });
         return loadAggregate(txDb, competitionId, userId);
       });
     },
     async record(competitionId, participantId, paymentId, userId, amount, paidAt, now) {
       return database.transaction(async (tx) => {
         const locked = await tx.execute(
-          sql`select c.id from competition c join competition_participant admin on admin.competition_id = c.id and admin.user_id = ${userId} and admin.is_admin = true join competition_participant target on target.competition_id = c.id and target.id = ${participantId} and target.status = 'ACTIVE' where c.id = ${competitionId} and c.status = 'STARTED' and c.payments_enabled = true for update`,
+          sql`select c.id from competition c join competition_participant admin on admin.competition_id = c.id and admin.user_id = ${userId} and admin.is_admin = true join competition_participant target on target.competition_id = c.id and target.id = ${participantId} and target.status = 'ACTIVE' where c.id = ${competitionId} and c.status = 'STARTED' and c.financial_features_enabled = true and c.round_fee_amount is not null for update`,
         );
         if (!locked.length) return null;
         const [existing] = await tx

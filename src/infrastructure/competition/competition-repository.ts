@@ -7,6 +7,7 @@ import {
   competition,
   competitionParticipant,
   prizeConfiguration,
+  prizeConfigurationEvent,
 } from "@/infrastructure/db/schema";
 
 const selection = {
@@ -15,6 +16,7 @@ const selection = {
   type: competition.type,
   status: competition.status,
   currency: competition.currency,
+  financialFeaturesEnabled: competition.financialFeaturesEnabled,
   rulesNote: competition.rulesNote,
   createdByUserId: competition.createdByUserId,
   updatedByUserId: competition.updatedByUserId,
@@ -23,6 +25,7 @@ const selection = {
   invitationTokenHash: competition.invitationTokenHash,
   invitationInvalidatedAt: competition.invitationInvalidatedAt,
   startedAt: competition.startedAt,
+  completedAt: competition.completedAt,
   isAdmin: competitionParticipant.isAdmin,
   membershipStatus: competitionParticipant.status,
 };
@@ -45,7 +48,8 @@ export function createCompetitionRepository(database: typeof db): CompetitionRep
       await database.transaction(async (tx) => {
         await tx.insert(competition).values({
           ...value,
-          paymentsEnabled: paymentConfiguration?.enabled ?? false,
+          financialFeaturesEnabled:
+            paymentConfiguration?.financialFeaturesEnabled ?? false,
           roundFeeAmount: paymentConfiguration?.roundFeeAmount ?? null,
           maximumDebt: paymentConfiguration?.maximumDebt ?? null,
         });
@@ -62,19 +66,29 @@ export function createCompetitionRepository(database: typeof db): CompetitionRep
           createdAt: value.createdAt,
           updatedAt: value.updatedAt,
         });
-        if (
-          paymentConfiguration?.roundWinnerPrizeAmount !== null &&
-          paymentConfiguration?.roundWinnerPrizeAmount !== undefined
-        )
+        const prizes = paymentConfiguration?.prizes ?? {};
+        for (const [type, amount] of Object.entries(prizes)) {
+          const prizeType = type as typeof prizeConfiguration.$inferInsert.type;
           await tx.insert(prizeConfiguration).values({
             id: randomUUID(),
             competitionId: value.id,
-            type: "ROUND_WINNER",
-            amount: paymentConfiguration.roundWinnerPrizeAmount,
+            type: prizeType,
+            amount,
             updatedByUserId: value.createdByUserId,
             createdAt: value.createdAt,
             updatedAt: value.updatedAt,
           });
+          await tx.insert(prizeConfigurationEvent).values({
+            id: randomUUID(),
+            competitionId: value.id,
+            type: prizeType,
+            action: "UPSERTED",
+            beforeAmount: null,
+            afterAmount: amount,
+            actorUserId: value.createdByUserId,
+            createdAt: value.createdAt,
+          });
+        }
       });
     },
     async listForUser(userId) {
@@ -126,7 +140,26 @@ export function createCompetitionRepository(database: typeof db): CompetitionRep
           and(
             eq(competition.id, value.id),
             eq(competition.status, "DRAFT"),
-            sql`(${value.type} <> 'GROUP_PLAYOFFS' or (not ${competition.paymentsEnabled} and not exists (select 1 from ${prizeConfiguration} where ${prizeConfiguration.competitionId} = ${competition.id} and ${prizeConfiguration.type} = 'ROUND_WINNER')))`,
+            sql`(
+              (${value.type} = 'LEAGUE' and not exists (
+                select 1 from ${prizeConfiguration}
+                where ${prizeConfiguration.competitionId} = ${competition.id}
+                  and ${prizeConfiguration.type} not in ('ROUND_WINNER', 'LEAGUE_WINNER')
+              )) or
+              (${value.type} = 'LEAGUE_PLAYOFFS' and not exists (
+                select 1 from ${prizeConfiguration}
+                where ${prizeConfiguration.competitionId} = ${competition.id}
+                  and ${prizeConfiguration.type} not in ('ROUND_WINNER', 'LEAGUE_PHASE_WINNER', 'PLAYOFF_CHAMPION')
+              )) or
+              (${value.type} = 'GROUP_PLAYOFFS'
+                and ${competition.roundFeeAmount} is null
+                and ${competition.maximumDebt} is null
+                and not exists (
+                  select 1 from ${prizeConfiguration}
+                  where ${prizeConfiguration.competitionId} = ${competition.id}
+                    and ${prizeConfiguration.type} <> 'PLAYOFF_CHAMPION'
+                ))
+            )`,
             exists(
               database
                 .select({ id: competitionParticipant.id })

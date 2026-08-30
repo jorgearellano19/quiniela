@@ -91,13 +91,13 @@ export default async function EditCompetitionPage({
           <ScoringDefaultsForm competitionId={competitionId} value={scoringDefaults} />
         </CardContent>
       </Card>
-      {detail.canEdit && detail.type !== "GROUP_PLAYOFFS" && payments ? (
+      {detail.canEdit && payments ? (
         <Card>
           <CardHeader>
-            <CardTitle>Pagos y premio por jornada</CardTitle>
+            <CardTitle>Pagos y premios</CardTitle>
             <CardDescription>
-              Define la cuota antes de iniciar. Cada publicación generará un cargo por
-              participante activo.
+              Activa solo las funciones que usarás. Los premios no registran entregas ni
+              pagos.
             </CardDescription>
           </CardHeader>
           <CardContent>

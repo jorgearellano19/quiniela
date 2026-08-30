@@ -43,7 +43,9 @@ export const competition = pgTable(
     type: competitionType("type").notNull(),
     status: competitionStatus("status").default("DRAFT").notNull(),
     currency: text("currency").default("MXN").notNull(),
-    paymentsEnabled: boolean("payments_enabled").default(false).notNull(),
+    financialFeaturesEnabled: boolean("financial_features_enabled")
+      .default(false)
+      .notNull(),
     roundFeeAmount: integer("round_fee_amount"),
     maximumDebt: integer("maximum_debt"),
     rulesNote: text("rules_note"),
@@ -52,6 +54,7 @@ export const competition = pgTable(
       withTimezone: true,
     }),
     startedAt: timestamp("started_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
     defaultMatchExactScorePoints: integer("default_match_exact_score_points")
       .default(3)
       .notNull(),
@@ -84,8 +87,8 @@ export const competition = pgTable(
     check("competition_name_nonblank", sql`length(trim(${table.name})) > 0`),
     check("competition_currency_mxn", sql`${table.currency} = 'MXN'`),
     check(
-      "competition_payment_configuration_valid",
-      sql`(${table.paymentsEnabled} and ${table.roundFeeAmount} > 0 and (${table.maximumDebt} is null or ${table.maximumDebt} >= 0)) or (not ${table.paymentsEnabled} and ${table.roundFeeAmount} is null and ${table.maximumDebt} is null)`,
+      "competition_financial_configuration_valid",
+      sql`(${table.financialFeaturesEnabled} and (${table.roundFeeAmount} is null or ${table.roundFeeAmount} > 0) and (${table.maximumDebt} is null or (${table.roundFeeAmount} is not null and ${table.maximumDebt} >= 0))) or (not ${table.financialFeaturesEnabled} and ${table.roundFeeAmount} is null and ${table.maximumDebt} is null)`,
     ),
     check(
       "competition_default_scoring_valid",

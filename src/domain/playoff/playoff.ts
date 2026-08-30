@@ -103,3 +103,56 @@ export function expectedPlayoffRoundCount(fieldSize: number): number {
     throw new PlayoffDomainError("Playoff field must be a power of two.");
   return Math.log2(fieldSize);
 }
+
+export function isCompletePlayoffBracket(input: {
+  seeds: readonly PlayoffSeed[];
+  rounds: readonly Readonly<{
+    sequence: number;
+    finalized: boolean;
+    advancementConfirmed: boolean;
+    matchups: readonly Readonly<{
+      participantAId: string;
+      participantBId: string;
+      winnerParticipantId: string | null;
+    }>[];
+  }>[];
+}) {
+  let seeds: readonly PlayoffSeed[];
+  try {
+    seeds = validatePlayoffSeeds(input.seeds);
+  } catch {
+    return false;
+  }
+  if (input.rounds.length !== expectedPlayoffRoundCount(seeds.length)) return false;
+  let expectedParticipants = new Set(seeds.map((seed) => seed.participantId));
+  for (const [index, round] of input.rounds.entries()) {
+    if (
+      round.sequence !== index + 1 ||
+      !round.finalized ||
+      !round.advancementConfirmed ||
+      round.matchups.length !== expectedParticipants.size / 2
+    )
+      return false;
+    const actualParticipants = round.matchups.flatMap((matchup) => [
+      matchup.participantAId,
+      matchup.participantBId,
+    ]);
+    if (
+      actualParticipants.length !== expectedParticipants.size ||
+      new Set(actualParticipants).size !== actualParticipants.length ||
+      actualParticipants.some((id) => !expectedParticipants.has(id)) ||
+      round.matchups.some(
+        (matchup) =>
+          !matchup.winnerParticipantId ||
+          ![matchup.participantAId, matchup.participantBId].includes(
+            matchup.winnerParticipantId,
+          ),
+      )
+    )
+      return false;
+    expectedParticipants = new Set(
+      round.matchups.map((matchup) => matchup.winnerParticipantId!),
+    );
+  }
+  return expectedParticipants.size === 1;
+}

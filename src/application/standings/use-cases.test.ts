@@ -86,6 +86,7 @@ function aggregate(tied = false): StandingsAggregate {
       name: "Liga",
       type: "LEAGUE",
       status: "STARTED",
+      completedAt: null,
     },
     participants: [
       { id: ids.participantA, name: "Ana", email: "ana@example.test" },
@@ -95,6 +96,8 @@ function aggregate(tied = false): StandingsAggregate {
     resolutions: [],
     actorIsAdmin: true,
     restrictedParticipantIds: new Set(),
+    h2hMatchups: [],
+    requiredRegularRoundCount: null,
   };
 }
 

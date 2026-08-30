@@ -17,6 +17,7 @@ import {
   rankH2H,
   rankLeague,
   selectRoundWinner,
+  selectLeaguePhasePrizeWinner,
   type H2HStandingInput,
   type RankingResolution,
   type RoundWinnerInput,
@@ -28,7 +29,11 @@ import {
 import { ApplicationError } from "@/lib/errors/application-error";
 
 export type RankingScope =
-  "LEAGUE_STANDINGS" | "ROUND_WINNER" | "H2H_PHASE" | "GROUP_STANDINGS";
+  | "LEAGUE_STANDINGS"
+  | "ROUND_WINNER"
+  | "LEAGUE_PHASE_PRIZE"
+  | "H2H_PHASE"
+  | "GROUP_STANDINGS";
 
 export type StandingParticipant = Readonly<{
   id: string;
@@ -61,12 +66,19 @@ export type StandingsAggregate = Readonly<{
     name: string;
     type: CompetitionType;
     status: CompetitionStatus;
+    completedAt: Date | null;
   }>;
   participants: readonly StandingParticipant[];
   rounds: readonly StandingRound[];
   resolutions: readonly StoredRankingResolution[];
   actorIsAdmin: boolean;
   restrictedParticipantIds: ReadonlySet<string>;
+  h2hMatchups: readonly Readonly<{
+    roundId: string;
+    participantAId: string;
+    participantBId: string | null;
+  }>[];
+  requiredRegularRoundCount: number | null;
 }>;
 
 type ResolutionWrite = Readonly<{
@@ -100,7 +112,7 @@ export interface StandingsRepository {
 
 const resolutionInput = z.object({
   competitionId: z.uuid(),
-  scope: z.enum(["LEAGUE_STANDINGS", "ROUND_WINNER"]),
+  scope: z.enum(["LEAGUE_STANDINGS", "LEAGUE_PHASE_PRIZE", "ROUND_WINNER"]),
   roundId: z.uuid().nullable().optional(),
   participantIds: z.array(z.uuid()).min(2),
 });
@@ -120,6 +132,11 @@ function fingerprint(
 ) {
   return hash({
     participants: ordered(aggregate.participants).map((participant) => participant.id),
+    h2hMatchups: [...aggregate.h2hMatchups].sort((left, right) =>
+      `${left.roundId}:${left.participantAId}`.localeCompare(
+        `${right.roundId}:${right.participantAId}`,
+      ),
+    ),
     rounds: [...rounds]
       .sort((left, right) => left.round.sequence - right.round.sequence)
       .map((item) => ({
@@ -201,7 +218,11 @@ function matchingResolutions(
   });
 }
 
-function leagueModel(aggregate: StandingsAggregate, now: Date) {
+function leagueModel(
+  aggregate: StandingsAggregate,
+  now: Date,
+  scope: "LEAGUE_STANDINGS" | "LEAGUE_PHASE_PRIZE" = "LEAGUE_STANDINGS",
+) {
   const source = fingerprint(aggregate, aggregate.rounds, now);
   const scored = scoresForRounds(aggregate, aggregate.rounds, now);
   const values = aggregate.participants.map((participant) => {
@@ -223,7 +244,7 @@ function leagueModel(aggregate: StandingsAggregate, now: Date) {
   const rawRanking = rankLeague(values);
   const resolutions = matchingResolutions(
     aggregate,
-    "LEAGUE_STANDINGS",
+    scope,
     null,
     source,
     rawRanking.unresolvedGroups,
@@ -280,6 +301,63 @@ function roundModel(aggregate: StandingsAggregate, roundId: string, now: Date) {
     rawOutcome,
     resolution,
     outcome: selectRoundWinner({ ready, values, resolution }),
+  };
+}
+
+function leaguePhasePrizeModel(aggregate: StandingsAggregate, now: Date) {
+  const source = fingerprint(aggregate, aggregate.rounds, now);
+  const scored = scoresForRounds(aggregate, aggregate.rounds, now);
+  const values = aggregate.participants.map((person) => ({
+    participantId: person.id,
+    predictionScore: [...scored.byRound.values()].reduce(
+      (total, roundScore) => total + (roundScore.get(person.id)?.total ?? 0),
+      0,
+    ),
+    exactScorePoints: [...scored.byRound.values()].reduce(
+      (total, roundScore) => total + (roundScore.get(person.id)?.exactScorePoints ?? 0),
+      0,
+    ),
+  }));
+  const directH2H = aggregate.h2hMatchups.flatMap((matchup) => {
+    if (!matchup.participantBId) return [];
+    const roundScores = scored.byRound.get(matchup.roundId);
+    const scoreA = roundScores?.get(matchup.participantAId)?.total ?? 0;
+    const scoreB = roundScores?.get(matchup.participantBId)?.total ?? 0;
+    return [
+      {
+        participantAId: matchup.participantAId,
+        participantBId: matchup.participantBId,
+        participantAPoints: (scoreA === scoreB ? 1 : scoreA > scoreB ? 3 : 0) as
+          0 | 1 | 3,
+        participantBPoints: (scoreA === scoreB ? 1 : scoreB > scoreA ? 3 : 0) as
+          0 | 1 | 3,
+      },
+    ];
+  });
+  const ready =
+    aggregate.competition.status !== "DRAFT" &&
+    aggregate.rounds.length > 0 &&
+    scored.supported &&
+    aggregate.rounds.every(
+      (item) => effectiveRoundStatus(item.round, now) === "FINALIZED",
+    );
+  const rawOutcome = selectLeaguePhasePrizeWinner({ ready, values, directH2H });
+  const resolution =
+    rawOutcome.state === "unresolved"
+      ? matchingResolutions(aggregate, "LEAGUE_PHASE_PRIZE", null, source, [
+          rawOutcome.tiedParticipantIds,
+        ])[0]
+      : undefined;
+  return {
+    source,
+    ready,
+    rawOutcome,
+    outcome: selectLeaguePhasePrizeWinner({
+      ready,
+      values,
+      directH2H,
+      ...(resolution ? { resolution } : {}),
+    }),
   };
 }
 
@@ -370,6 +448,22 @@ export async function getLeagueWinner(
   return { state: "resolved", winner: standings.winner! } as const;
 }
 
+export async function getLeaguePhasePrizeWinner(
+  repository: StandingsRepository,
+  actorValue: CompetitionActor,
+  competitionId: string,
+  now = new Date(),
+) {
+  const actor = requireCompetitionActor(actorValue);
+  if (!z.uuid().safeParse(competitionId).success) return null;
+  const aggregate = await repository.getCompetition(competitionId, actor.userId);
+  if (!aggregate || aggregate.competition.type !== "LEAGUE_PLAYOFFS") return null;
+  const model = leaguePhasePrizeModel(aggregate, now);
+  if (model.outcome.state !== "resolved") return model.outcome;
+  const winner = participant(aggregate, model.outcome.winner.participantId);
+  return { state: "resolved", winner: { id: winner.id, name: winner.name } } as const;
+}
+
 export async function getRoundWinner(
   repository: StandingsRepository,
   actorValue: CompetitionActor,
@@ -426,7 +520,9 @@ export async function resolveRankingTie(
   if (!parsed.success)
     throw new ApplicationError("INVALID_INPUT", "Revisa el orden del desempate.");
   if (
-    (parsed.data.scope === "LEAGUE_STANDINGS" && parsed.data.roundId) ||
+    ((parsed.data.scope === "LEAGUE_STANDINGS" ||
+      parsed.data.scope === "LEAGUE_PHASE_PRIZE") &&
+      parsed.data.roundId) ||
     (parsed.data.scope === "ROUND_WINNER" && !parsed.data.roundId)
   )
     throw new ApplicationError("INVALID_INPUT", "Revisa el desempate.");
@@ -442,17 +538,33 @@ export async function resolveRankingTie(
         );
       let source: string;
       let groups: readonly (readonly string[])[];
-      if (parsed.data.scope === "LEAGUE_STANDINGS") {
-        if (aggregate.competition.type !== "LEAGUE")
+      if (
+        parsed.data.scope === "LEAGUE_STANDINGS" ||
+        parsed.data.scope === "LEAGUE_PHASE_PRIZE"
+      ) {
+        if (
+          (parsed.data.scope === "LEAGUE_STANDINGS" &&
+            aggregate.competition.type !== "LEAGUE") ||
+          (parsed.data.scope === "LEAGUE_PHASE_PRIZE" &&
+            aggregate.competition.type !== "LEAGUE_PLAYOFFS")
+        )
           throw new ApplicationError("INVALID_INPUT", "Este desempate no corresponde.");
-        const model = leagueModel(aggregate, now);
+        const model =
+          parsed.data.scope === "LEAGUE_PHASE_PRIZE"
+            ? leaguePhasePrizeModel(aggregate, now)
+            : leagueModel(aggregate, now);
         if (!model.ready)
           throw new ApplicationError(
             "INVALID_INPUT",
             "La clasificación aún no es definitiva.",
           );
         source = model.source;
-        groups = model.rawRanking.unresolvedGroups;
+        groups =
+          "rawRanking" in model
+            ? model.rawRanking.unresolvedGroups
+            : model.rawOutcome.state === "unresolved"
+              ? [model.rawOutcome.tiedParticipantIds]
+              : [];
       } else {
         const model = roundModel(aggregate, parsed.data.roundId!, now);
         if (!model || model.rawOutcome.state !== "unresolved")

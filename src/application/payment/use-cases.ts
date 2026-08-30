@@ -5,6 +5,8 @@ import {
   validatePayment,
   validatePaymentConfiguration,
   type PaymentConfiguration,
+  type PrizeConfiguration,
+  type PrizeType,
 } from "@/domain/payment/payment";
 import type {
   CompetitionStatus,
@@ -57,10 +59,10 @@ export type PaymentAggregate = Readonly<{
     type: CompetitionType;
     status: CompetitionStatus;
     currency: "MXN";
-    paymentsEnabled: boolean;
+    financialFeaturesEnabled: boolean;
     roundFeeAmount: number | null;
     maximumDebt: number | null;
-    roundWinnerPrizeAmount: number | null;
+    prizes: readonly PrizeConfiguration[];
   };
   actorIsAdmin: boolean;
   actorParticipantId: string | null;
@@ -70,10 +72,14 @@ export type PaymentAggregate = Readonly<{
 export interface PaymentRepository {
   getMine(competitionId: string, userId: string): Promise<PaymentAggregate | null>;
   getAdmin(competitionId: string, userId: string): Promise<PaymentAggregate | null>;
-  getPrize(
+  getPrizes(
     competitionId: string,
     userId: string,
-  ): Promise<{ currency: "MXN"; roundWinnerPrizeAmount: number | null } | null>;
+  ): Promise<{
+    currency: "MXN";
+    financialFeaturesEnabled: boolean;
+    prizes: readonly PrizeConfiguration[];
+  } | null>;
   configure(
     competitionId: string,
     userId: string,
@@ -102,10 +108,15 @@ export interface PaymentRepository {
 const id = z.uuid();
 const configInput = z.object({
   competitionId: id,
-  enabled: z.union([z.boolean(), z.literal("on").transform(() => true)]).default(false),
+  financialFeaturesEnabled: z
+    .union([z.boolean(), z.literal("on").transform(() => true)])
+    .default(false),
   roundFeeAmount: z.unknown().optional(),
   maximumDebt: z.unknown().optional(),
   roundWinnerPrizeAmount: z.unknown().optional(),
+  leagueWinnerPrizeAmount: z.unknown().optional(),
+  leaguePhaseWinnerPrizeAmount: z.unknown().optional(),
+  playoffChampionPrizeAmount: z.unknown().optional(),
 });
 const paymentInput = z.object({
   competitionId: id,
@@ -149,19 +160,34 @@ function safeConfiguration<T>(operation: () => T): T {
 export function paymentConfigurationFromInput(
   competitionType: CompetitionType,
   input: {
-    enabled?: unknown;
+    financialFeaturesEnabled?: unknown;
     roundFeeAmount?: unknown;
     maximumDebt?: unknown;
     roundWinnerPrizeAmount?: unknown;
+    leagueWinnerPrizeAmount?: unknown;
+    leaguePhaseWinnerPrizeAmount?: unknown;
+    playoffChampionPrizeAmount?: unknown;
   },
 ) {
-  const enabled = input.enabled === true || input.enabled === "on";
+  const financialFeaturesEnabled =
+    input.financialFeaturesEnabled === true || input.financialFeaturesEnabled === "on";
+  const prizes = Object.fromEntries(
+    [
+      ["ROUND_WINNER", input.roundWinnerPrizeAmount],
+      ["LEAGUE_WINNER", input.leagueWinnerPrizeAmount],
+      ["LEAGUE_PHASE_WINNER", input.leaguePhaseWinnerPrizeAmount],
+      ["PLAYOFF_CHAMPION", input.playoffChampionPrizeAmount],
+    ].flatMap(([type, raw]) => {
+      const amount = money(raw, true);
+      return amount === null ? [] : [[type, amount]];
+    }),
+  ) as Partial<Record<PrizeType, number>>;
   return safeConfiguration(() =>
     validatePaymentConfiguration(competitionType, {
-      enabled,
-      roundFeeAmount: enabled ? money(input.roundFeeAmount)! : null,
-      maximumDebt: enabled ? money(input.maximumDebt, true) : null,
-      roundWinnerPrizeAmount: money(input.roundWinnerPrizeAmount, true),
+      financialFeaturesEnabled,
+      roundFeeAmount: financialFeaturesEnabled ? money(input.roundFeeAmount, true) : null,
+      maximumDebt: financialFeaturesEnabled ? money(input.maximumDebt, true) : null,
+      prizes: financialFeaturesEnabled ? prizes : {},
     }),
   );
 }
@@ -305,14 +331,15 @@ export async function getPaymentWinner(
   const actor = requireCompetitionActor(actorValue);
   if (!id.safeParse(competitionId).success || !id.safeParse(roundId).success) return null;
   const [payments, winner] = await Promise.all([
-    paymentRepository.getPrize(competitionId, actor.userId),
+    paymentRepository.getPrizes(competitionId, actor.userId),
     getRoundWinner(standingsRepository, actor, competitionId, roundId, now),
   ]);
   if (!payments || !winner) return null;
   return {
     ...winner,
     currency: payments.currency,
-    prizeAmount: payments.roundWinnerPrizeAmount,
+    prizeAmount:
+      payments.prizes.find((prize) => prize.type === "ROUND_WINNER")?.amount ?? null,
   };
 }
 
