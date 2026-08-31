@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { CompetitionActor } from "@/application/competition/boundary";
 import { requireCompetitionActor } from "@/application/competition/boundary";
@@ -20,6 +20,9 @@ import {
 } from "@/application/scoring/use-cases";
 import type { CompetitionType } from "@/domain/competition/competition";
 import { ApplicationError } from "@/lib/errors/application-error";
+import { sha256Json } from "@/application/shared/fingerprint";
+import { getH2HStandings, type H2HRepository } from "@/application/h2h/use-cases";
+import type { StandingsRepository } from "@/application/standings/use-cases";
 
 export type PlayoffRoundValue = Readonly<{
   round: Round;
@@ -92,14 +95,21 @@ export interface PlayoffRepository {
     userId: string,
     now: Date,
   ): Promise<boolean>;
-  snapshotBracket(input: {
-    competitionId: string;
-    playoffRoundId: string;
-    orderedParticipantIds: readonly string[];
-    sourceFingerprint: string;
-    userId: string;
-    now: Date;
-  }): Promise<boolean>;
+  snapshotBracket(
+    input: {
+      competitionId: string;
+      playoffRoundId: string;
+      userId: string;
+      now: Date;
+    },
+    verify: (sources: {
+      h2hRepository: H2HRepository;
+      standingsRepository: StandingsRepository;
+    }) => Promise<{
+      orderedParticipantIds: readonly string[];
+      sourceFingerprint: string;
+    } | null>,
+  ): Promise<boolean>;
   persistAdvancement(input: {
     competitionId: string;
     playoffRoundId: string;
@@ -124,8 +134,7 @@ export interface PlayoffRepository {
   roundRepository: Pick<
     RoundRepository,
     "getCompetitionForAdmin" | "mutateQuestion" | "reorderQuestions"
-  > &
-    Partial<RoundRepository>;
+  >;
 }
 
 const id = z.uuid();
@@ -276,13 +285,13 @@ export async function configurePlayoffRound(
 
 export async function generatePlayoffBracket(
   repository: PlayoffRepository,
+  h2hRepository: H2HRepository,
+  standingsRepository: StandingsRepository,
   actorValue: CompetitionActor,
   input: {
     competitionId: string;
     playoffRoundId: string;
-    readiness: "PROVISIONAL" | "PENDING_RESOLUTION" | "OFFICIAL";
-    orderedParticipantIds: readonly string[];
-    sourceFingerprint: string;
+    seedOrder?: readonly string[];
   },
   now = new Date(),
 ) {
@@ -290,31 +299,88 @@ export async function generatePlayoffBracket(
     .object({
       competitionId: id,
       playoffRoundId: id,
-      readiness: z.enum(["PROVISIONAL", "PENDING_RESOLUTION", "OFFICIAL"]),
-      orderedParticipantIds: z.array(id),
-      sourceFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+      seedOrder: z.array(id).optional(),
     })
     .safeParse(input);
-  if (!parsed.success || parsed.data.readiness !== "OFFICIAL")
-    invalid("La clasificación aún no es oficial.");
+  if (!parsed.success) invalid();
   const { actor, competition } = await admin(
     repository,
     actorValue,
     parsed.data.competitionId,
   );
   if (competition.status !== "STARTED") invalid();
-  validatePlayoffSeeds(
-    parsed.data.orderedParticipantIds.map((participantId, index) => ({
-      participantId,
-      seed: index + 1,
-    })),
+  const saved = await repository.snapshotBracket(
+    {
+      competitionId: parsed.data.competitionId,
+      playoffRoundId: parsed.data.playoffRoundId,
+      userId: actor.userId,
+      now,
+    },
+    async (sources) => {
+      const tables = await getH2HStandings(
+        { competitionId: parsed.data.competitionId },
+        actor,
+        sources.h2hRepository,
+        sources.standingsRepository,
+        now,
+      );
+      const decision = officialSeedDecision(tables, parsed.data.seedOrder);
+      if (!decision) return null;
+      validatePlayoffSeeds(
+        decision.orderedParticipantIds.map((participantId, index) => ({
+          participantId,
+          seed: index + 1,
+        })),
+      );
+      return decision;
+    },
   );
-  const saved = await repository.snapshotBracket({
-    ...parsed.data,
-    userId: actor.userId,
-    now,
-  });
   if (!saved) invalid("No fue posible generar el cuadro con esta clasificación.");
+}
+
+type H2HStandingsTables = Awaited<ReturnType<typeof getH2HStandings>>;
+
+export function officialSeedDecision(
+  tables: H2HStandingsTables,
+  seedOrder?: readonly string[],
+) {
+  if (!tables.length || tables.some((table) => table.readiness !== "OFFICIAL"))
+    return null;
+  const qualifiers = tables.flatMap((table) =>
+    table.rows.filter((row) => row.qualification === "OFICIAL"),
+  );
+  const natural = [...qualifiers].sort(
+    (left, right) =>
+      right.predictionScore - left.predictionScore ||
+      right.exactScorePoints - left.exactScorePoints,
+  );
+  const ordered = seedOrder?.length
+    ? seedOrder.map((participantId) =>
+        natural.find((row) => row.participantId === participantId),
+      )
+    : natural;
+  const resolved = ordered.filter(
+    (row): row is (typeof natural)[number] => row !== undefined,
+  );
+  if (
+    resolved.length !== natural.length ||
+    new Set(resolved.map((row) => row.participantId)).size !== natural.length
+  )
+    return null;
+  for (let index = 1; index < resolved.length; index += 1) {
+    const previous = resolved[index - 1]!;
+    const item = resolved[index]!;
+    if (
+      previous.predictionScore < item.predictionScore ||
+      (previous.predictionScore === item.predictionScore &&
+        previous.exactScorePoints < item.exactScorePoints)
+    )
+      return null;
+  }
+  return {
+    orderedParticipantIds: resolved.map((row) => row.participantId),
+    sourceFingerprint: fingerprint(tables.map((table) => table.sourceFingerprint).sort()),
+  };
 }
 
 export async function publishPlayoffRound(
@@ -332,7 +398,7 @@ export async function publishPlayoffRound(
 }
 
 function fingerprint(value: unknown) {
-  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  return sha256Json(value);
 }
 
 export async function resolvePlayoffTie(

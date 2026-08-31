@@ -1,6 +1,7 @@
 import { and, asc, eq, or, sql } from "drizzle-orm";
 import type { H2HRepository, H2HStructure } from "@/application/h2h/use-cases";
 import { db } from "@/infrastructure/db/client";
+import { transactionDatabase } from "@/infrastructure/db/transaction";
 import {
   competition,
   competitionGroup,
@@ -207,7 +208,7 @@ export function createH2HRepository(database: typeof db): H2HRepository {
           sql`select c.id from competition c join competition_participant cp on cp.competition_id = c.id and cp.user_id = ${userId} and cp.is_admin = true where c.id = ${competitionId} and c.status = 'STARTED' for update`,
         );
         if (!locked.length) return null;
-        const txDb = tx as unknown as typeof db;
+        const txDb = transactionDatabase(tx);
         const aggregate = await load(txDb, competitionId, userId);
         if (!aggregate) return null;
         if (aggregate.generated) return aggregate;

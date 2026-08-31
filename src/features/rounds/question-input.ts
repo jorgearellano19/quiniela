@@ -1,10 +1,6 @@
-import type { RoundActionState } from "@/features/rounds/round-actions";
+import type { ActionState } from "@/features/shared/action";
 
-export function playoffQuestionInput(
-  competitionId: string,
-  roundId: string,
-  data: FormData,
-) {
+export function questionInput(competitionId: string, roundId: string, data: FormData) {
   const type = String(data.get("type"));
   const common = {
     competitionId,
@@ -36,9 +32,9 @@ export function playoffQuestionInput(
   return { ...common, ...typed } as typeof common & Record<string, unknown>;
 }
 
-export function validatePlayoffQuestionInput(
-  value: ReturnType<typeof playoffQuestionInput>,
-): RoundActionState | null {
+export function validateQuestionInput(
+  value: ReturnType<typeof questionInput>,
+): ActionState | null {
   const fieldErrors: Record<string, string> = {};
   const sequence = Number(value.sequence);
   if (!Number.isInteger(sequence) || sequence < 1)
@@ -49,16 +45,16 @@ export function validatePlayoffQuestionInput(
   if (value.deadlineMode === "CUSTOM" && (!deadline || Number.isNaN(deadline.valueOf())))
     fieldErrors.deadlineAt = "Selecciona una fecha y hora de cierre.";
   if (value.type === "MATCH_SCORE") {
-    const home = String(value.homeLabel ?? "").trim(),
-      away = String(value.awayLabel ?? "").trim();
+    const home = String(value.homeLabel ?? "").trim();
+    const away = String(value.awayLabel ?? "").trim();
     if (!home) fieldErrors.homeLabel = "Escribe el equipo local.";
     if (!away) fieldErrors.awayLabel = "Escribe el equipo visitante.";
     if (home && away && home.toLocaleLowerCase() === away.toLocaleLowerCase())
       fieldErrors.awayLabel = "Local y visitante deben ser distintos.";
-    const exact = Number(value.exactScorePoints),
-      normal = Number(value.normalResultPoints),
-      difference =
-        value.goalDifferencePoints === null ? null : Number(value.goalDifferencePoints);
+    const exact = Number(value.exactScorePoints);
+    const normal = Number(value.normalResultPoints);
+    const difference =
+      value.goalDifferencePoints === null ? null : Number(value.goalDifferencePoints);
     if (
       !value.usesDefaultScoring &&
       (!Number.isInteger(exact) ||

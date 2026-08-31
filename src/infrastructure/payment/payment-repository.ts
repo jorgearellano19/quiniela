@@ -7,6 +7,7 @@ import type {
 } from "@/application/payment/use-cases";
 import { calculateBalance, isRestricted } from "@/domain/payment/payment";
 import { db } from "@/infrastructure/db/client";
+import { transactionDatabase } from "@/infrastructure/db/transaction";
 import {
   competition,
   competitionParticipant,
@@ -192,7 +193,7 @@ export function createPaymentRepository(database: typeof db): PaymentRepository 
           sql`select c.id from competition c join competition_participant cp on cp.competition_id = c.id and cp.user_id = ${userId} and cp.is_admin = true where c.id = ${competitionId} and c.status = 'DRAFT' for update`,
         );
         if (!locked.length) return null;
-        const txDb = tx as unknown as typeof db;
+        const txDb = transactionDatabase(tx);
         const aggregate = await loadAggregate(txDb, competitionId, userId);
         if (!aggregate) return null;
         const value = operation(aggregate);
@@ -284,7 +285,7 @@ export function createPaymentRepository(database: typeof db): PaymentRepository 
             existing.paidAt.valueOf() !== paidAt.valueOf()
           )
             return null;
-          return loadAggregate(tx as unknown as typeof db, competitionId, userId);
+          return loadAggregate(transactionDatabase(tx), competitionId, userId);
         }
         await tx.insert(payment).values({
           id: paymentId,
@@ -307,7 +308,7 @@ export function createPaymentRepository(database: typeof db): PaymentRepository 
           actorUserId: userId,
           createdAt: now,
         });
-        return loadAggregate(tx as unknown as typeof db, competitionId, userId);
+        return loadAggregate(transactionDatabase(tx), competitionId, userId);
       });
     },
     async update(competitionId, paymentId, userId, amount, paidAt, now) {
@@ -323,7 +324,7 @@ export function createPaymentRepository(database: typeof db): PaymentRepository 
           .limit(1);
         if (!current) return null;
         if (current.amount === amount && current.paidAt.valueOf() === paidAt.valueOf())
-          return loadAggregate(tx as unknown as typeof db, competitionId, userId);
+          return loadAggregate(transactionDatabase(tx), competitionId, userId);
         await tx
           .update(payment)
           .set({ amount, paidAt, updatedByUserId: userId, updatedAt: now })
@@ -339,7 +340,7 @@ export function createPaymentRepository(database: typeof db): PaymentRepository 
           actorUserId: userId,
           createdAt: now,
         });
-        return loadAggregate(tx as unknown as typeof db, competitionId, userId);
+        return loadAggregate(transactionDatabase(tx), competitionId, userId);
       });
     },
   };

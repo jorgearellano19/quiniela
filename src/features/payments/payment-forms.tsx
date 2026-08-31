@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { localDateTimeToUtcIso, toLocalDateTimeInput } from "@/lib/date-time";
 import type { PaymentActionState } from "./payment-actions";
 import {
   configurePaymentsAction,
@@ -161,11 +162,6 @@ export function PaymentConfigurationForm({
   );
 }
 
-function localValue(value: Date) {
-  const offset = value.getTimezoneOffset() * 60_000;
-  return new Date(value.valueOf() - offset).toISOString().slice(0, 16);
-}
-
 export function PaymentEntryForm({
   competitionId,
   participantId,
@@ -180,7 +176,9 @@ export function PaymentEntryForm({
   const router = useRouter();
   const [paymentId, setPaymentId] = useState(payment?.id ?? newPaymentId!);
   const [amount, setAmount] = useState(payment ? pesos(payment.amount) : "");
-  const [paidAt, setPaidAt] = useState(localValue(payment?.paidAt ?? new Date()));
+  const [paidAt, setPaidAt] = useState(
+    toLocalDateTimeInput(payment?.paidAt ?? new Date()),
+  );
   const serverAction = payment
     ? updatePaymentAction.bind(null, competitionId, payment.id)
     : recordPaymentAction.bind(null, competitionId, participantId);
@@ -190,14 +188,14 @@ export function PaymentEntryForm({
       if (nextState.success && !payment) {
         setPaymentId(crypto.randomUUID());
         setAmount("");
-        setPaidAt(localValue(new Date()));
+        setPaidAt(toLocalDateTimeInput(new Date()));
       }
       if (nextState.success) router.refresh();
       return nextState;
     },
     initial,
   );
-  const iso = paidAt ? new Date(paidAt).toISOString() : "";
+  const iso = localDateTimeToUtcIso(paidAt);
   return (
     <form
       action={action}
@@ -223,7 +221,7 @@ export function PaymentEntryForm({
           id={`${paymentId}-paidAt`}
           type="datetime-local"
           value={paidAt}
-          max={localValue(new Date())}
+          max={toLocalDateTimeInput(new Date())}
           onChange={(event) => setPaidAt(event.currentTarget.value)}
           required
         />

@@ -6,9 +6,9 @@ import {
   createCompetition,
   updateCompetition,
 } from "@/application/competition/use-cases";
-import { getServerSession } from "@/infrastructure/auth/session";
 import { competitionRepository } from "@/infrastructure/competition/competition-repository";
 import { toSafeError } from "@/lib/errors/application-error";
+import { getCompetitionActionActor as actor } from "@/features/shared/action";
 
 export type CompetitionFormState = {
   message?: string;
@@ -32,15 +32,6 @@ function input(formData: FormData) {
     leaguePhaseWinnerPrizeAmount: formData.get("leaguePhaseWinnerPrizeAmount"),
     playoffChampionPrizeAmount: formData.get("playoffChampionPrizeAmount"),
   };
-}
-async function actor() {
-  const session = await getServerSession();
-  return session
-    ? {
-        userId: session.user.id,
-        passwordChangeRequired: session.user.passwordChangeRequired,
-      }
-    : null;
 }
 function formError(error: unknown) {
   const safe = toSafeError(error);

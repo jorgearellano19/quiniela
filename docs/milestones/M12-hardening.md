@@ -134,6 +134,23 @@ Audit every mutation for anonymous, capability, cross-participant, cross-Competi
   placeholder. Production-equivalent authentication rate limits, the complete 13-test
   browser suite, and the production build were rerun successfully after that correction.
 
+Post-completion audit on 2026-08-31:
+
+- Playoff bracket generation now rederives and validates official qualification inside the
+  seed-snapshot transaction. The Server Action no longer supplies authoritative readiness
+  or source fingerprints, and stale or forged seed orders roll back without partial rows.
+- Browser-local Round, Question, PlayoffRound, and Payment date-time values now cross the
+  server boundary as explicit UTC instants. The local production build accepts the
+  documented secret only for a loopback auth origin; public production remains strict.
+- Shared Question input validation, Server Action actor/error handling, persistence
+  hydration, fingerprinting, and Drizzle transaction adaptation removed confirmed
+  duplication and unsafe boundary casts without changing product rules.
+- Formatting, ESLint, TypeScript, 223 unit tests, 57 isolated PostgreSQL integration tests,
+  and all 13 Playwright tests passed. The optimized Webpack production build passed for
+  every route. The default Turbopack build reached compilation and then hit the previously
+  documented managed-sandbox worker port restriction; it must still be run by CI or an
+  unrestricted local environment.
+
 ## Risks / implementation notes
 
 Treat M12 as verification and defect correction. Any discovered missing business capability returns to specification/milestone planning rather than entering as hidden hardening scope.

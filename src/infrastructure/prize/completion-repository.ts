@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { CompletionRepository } from "@/application/prize/use-cases";
 import { db } from "@/infrastructure/db/client";
+import { transactionDatabase } from "@/infrastructure/db/transaction";
 import { createPaymentRepository } from "@/infrastructure/payment/payment-repository";
 import { createPlayoffRepository } from "@/infrastructure/playoff/playoff-repository";
 import { createStandingsRepository } from "@/infrastructure/standings/standings-repository";
@@ -25,7 +26,7 @@ export function createCompletionRepository(database: typeof db): CompletionRepos
           select pr.id from playoff_round pr where pr.competition_id = ${competitionId}
           for update
         `);
-        const txDb = tx as unknown as typeof db;
+        const txDb = transactionDatabase(tx);
         if (
           !(await verify({
             paymentRepository: createPaymentRepository(txDb),

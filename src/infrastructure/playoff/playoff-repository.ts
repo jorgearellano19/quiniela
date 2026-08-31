@@ -4,6 +4,9 @@ import type { Round } from "@/domain/round/round";
 import { generatePlayoffPairings } from "@/domain/playoff/playoff";
 import { effectiveRoundStatus } from "@/domain/scoring/lifecycle";
 import { db } from "@/infrastructure/db/client";
+import { transactionDatabase } from "@/infrastructure/db/transaction";
+import { createH2HRepository } from "@/infrastructure/h2h/h2h-repository";
+import { createStandingsRepository } from "@/infrastructure/standings/standings-repository";
 import {
   competition,
   competitionParticipant,
@@ -151,7 +154,7 @@ export function createPlayoffRepository(database: typeof db): PlayoffRepository 
           sql`select pr.id from playoff_round pr join competition c on c.id = pr.competition_id and c.status <> 'COMPLETED' join competition_participant cp on cp.competition_id = c.id and cp.user_id = ${userId} and cp.is_admin = true where pr.id = ${roundId} and pr.status = 'DRAFT' for update`,
         );
         if (!locked.length) return null;
-        const txRepository = createPlayoffRepository(tx as unknown as typeof db);
+        const txRepository = createPlayoffRepository(transactionDatabase(tx));
         const aggregate = await txRepository.getRound(roundId, userId);
         if (!aggregate) return null;
         const write = operation(aggregate.round, aggregate.questions);
@@ -238,12 +241,18 @@ export function createPlayoffRepository(database: typeof db): PlayoffRepository 
         .returning({ id: playoffRound.id });
       return updated.length === 1;
     },
-    async snapshotBracket(input) {
+    async snapshotBracket(input, verify) {
       return database.transaction(async (tx) => {
         const locked = await tx.execute(
           sql`select pr.id from playoff_round pr join competition c on c.id = pr.competition_id and c.status = 'STARTED' join competition_participant cp on cp.competition_id = c.id and cp.user_id = ${input.userId} and cp.is_admin = true where pr.id = ${input.playoffRoundId} and pr.competition_id = ${input.competitionId} and pr.sequence = 1 and pr.status = 'DRAFT' and c.type <> 'LEAGUE' for update`,
         );
         if (!locked.length) return false;
+        const txDb = transactionDatabase(tx);
+        const decision = await verify({
+          h2hRepository: createH2HRepository(txDb),
+          standingsRepository: createStandingsRepository(txDb),
+        });
+        if (!decision) return false;
         const existing = await tx
           .select()
           .from(playoffSeed)
@@ -251,11 +260,11 @@ export function createPlayoffRepository(database: typeof db): PlayoffRepository 
           .orderBy(asc(playoffSeed.seed));
         if (existing.length)
           return (
-            existing.length === input.orderedParticipantIds.length &&
+            existing.length === decision.orderedParticipantIds.length &&
             existing.every(
               (item, index) =>
-                item.participantId === input.orderedParticipantIds[index] &&
-                item.sourceFingerprint === input.sourceFingerprint,
+                item.participantId === decision.orderedParticipantIds[index] &&
+                item.sourceFingerprint === decision.sourceFingerprint,
             )
           );
         const members = await tx
@@ -265,15 +274,15 @@ export function createPlayoffRepository(database: typeof db): PlayoffRepository 
             and(
               eq(competitionParticipant.competitionId, input.competitionId),
               eq(competitionParticipant.status, "ACTIVE"),
-              inArray(competitionParticipant.id, [...input.orderedParticipantIds]),
+              inArray(competitionParticipant.id, [...decision.orderedParticipantIds]),
             ),
           );
-        if (members.length !== input.orderedParticipantIds.length) return false;
-        const seeds = input.orderedParticipantIds.map((participantId, index) => ({
+        if (members.length !== decision.orderedParticipantIds.length) return false;
+        const seeds = decision.orderedParticipantIds.map((participantId, index) => ({
           competitionId: input.competitionId,
           participantId,
           seed: index + 1,
-          sourceFingerprint: input.sourceFingerprint,
+          sourceFingerprint: decision.sourceFingerprint,
           createdByUserId: input.userId,
           createdAt: input.now,
         }));
@@ -295,7 +304,7 @@ export function createPlayoffRepository(database: typeof db): PlayoffRepository 
     },
     async publish(competitionId, roundId, userId, now) {
       return database.transaction(async (tx) => {
-        const txRepository = createPlayoffRepository(tx as unknown as typeof db);
+        const txRepository = createPlayoffRepository(transactionDatabase(tx));
         const value = await txRepository.getRound(roundId, userId);
         if (
           !value ||

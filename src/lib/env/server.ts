@@ -29,7 +29,7 @@ const schema = z
         message: "BETTER_AUTH_URL must use HTTPS in production",
       });
     }
-    if (developmentSecrets.has(value.BETTER_AUTH_SECRET)) {
+    if (!localOrigin && developmentSecrets.has(value.BETTER_AUTH_SECRET)) {
       context.addIssue({
         code: "custom",
         path: ["BETTER_AUTH_SECRET"],

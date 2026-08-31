@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { Answer } from "@/domain/answer/answer";
 import type {
@@ -27,6 +27,7 @@ import {
   type CompetitionActor,
 } from "@/application/competition/boundary";
 import { ApplicationError } from "@/lib/errors/application-error";
+import { sha256Json } from "@/application/shared/fingerprint";
 
 export type RankingScope =
   | "LEAGUE_STANDINGS"
@@ -117,10 +118,6 @@ const resolutionInput = z.object({
   participantIds: z.array(z.uuid()).min(2),
 });
 
-function hash(value: unknown) {
-  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
-}
-
 function ordered<T extends { id: string }>(values: readonly T[]) {
   return [...values].sort((left, right) => left.id.localeCompare(right.id));
 }
@@ -130,7 +127,7 @@ function fingerprint(
   rounds: readonly StandingRound[],
   now: Date,
 ) {
-  return hash({
+  return sha256Json({
     participants: ordered(aggregate.participants).map((participant) => participant.id),
     h2hMatchups: [...aggregate.h2hMatchups].sort((left, right) =>
       `${left.roundId}:${left.participantAId}`.localeCompare(
@@ -159,7 +156,7 @@ function fingerprint(
 }
 
 function tieFingerprint(participantIds: readonly string[]) {
-  return hash([...participantIds].sort());
+  return sha256Json([...participantIds].sort());
 }
 
 function scoresForRounds(

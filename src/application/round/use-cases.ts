@@ -222,7 +222,7 @@ function domain<T>(fn: () => T): T {
   }
 }
 async function admin(
-  repository: RoundRepository,
+  repository: Pick<RoundRepository, "getCompetitionForAdmin">,
   actorValue: CompetitionActor,
   competitionId: string,
 ) {
@@ -322,7 +322,7 @@ export async function reorderRounds(
     invalid();
 }
 export async function reorderQuestions(
-  repository: RoundRepository,
+  repository: Pick<RoundRepository, "getCompetitionForAdmin" | "reorderQuestions">,
   actorValue: CompetitionActor,
   competitionId: string,
   roundId: string,

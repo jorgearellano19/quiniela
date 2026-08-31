@@ -25,6 +25,7 @@ import {
   createPlayoffQuestionAction,
   updatePlayoffQuestionAction,
 } from "@/features/playoffs/playoff-actions";
+import { localDateTimeToUtcIso, toLocalDateTimeInput } from "@/lib/date-time";
 const initial: RoundActionState = {};
 function Status({ state }: { state: RoundActionState }) {
   return state.message ? (
@@ -147,7 +148,7 @@ export function NewRoundForm({
         required
         onChange={(event) => {
           const local = event.currentTarget.value;
-          setStartsAt(local ? new Date(local).toISOString() : "");
+          setStartsAt(localDateTimeToUtcIso(local));
         }}
       />
       <input type="hidden" name="startsAt" value={startsAt} />
@@ -213,12 +214,11 @@ export function RoundSettingsForm({
         <Label htmlFor="round-starts-at">Inicio de jornada</Label>
         <Input
           id="round-starts-at"
-          name="startsAt"
           type="datetime-local"
-          value={toLocalInput(startsAt)}
+          value={toLocalDateTimeInput(startsAt)}
           onChange={(event) => {
             const local = event.currentTarget.value;
-            setStartsAt(local ? new Date(local).toISOString() : "");
+            setStartsAt(localDateTimeToUtcIso(local));
           }}
           required
         />
@@ -334,11 +334,11 @@ export function QuestionForm({
               id={`${prefix}-deadline`}
               type="datetime-local"
               required
-              value={deadlineAt ? toLocalInput(deadlineAt) : ""}
+              value={toLocalDateTimeInput(deadlineAt)}
               suppressHydrationWarning
               onChange={(event) => {
                 const localValue = event.currentTarget.value;
-                setDeadlineAt(localValue ? new Date(localValue).toISOString() : "");
+                setDeadlineAt(localDateTimeToUtcIso(localValue));
               }}
             />
             <input type="hidden" name="deadlineAt" value={deadlineAt} />
@@ -532,12 +532,6 @@ function OptionsEditor({ prefix, value }: { prefix: string; value: string[] }) {
       <input type="hidden" name="options" value={options.join("\n")} />
     </div>
   );
-}
-function toLocalInput(value: string) {
-  if (!value) return "";
-  const date = new Date(value);
-  const offset = date.getTimezoneOffset() * 60_000;
-  return new Date(date.valueOf() - offset).toISOString().slice(0, 16);
 }
 function Field({
   prefix,

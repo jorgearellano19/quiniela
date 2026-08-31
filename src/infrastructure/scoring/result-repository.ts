@@ -6,7 +6,7 @@ import type {
   ResultRepository,
   ResultRoundAggregate,
 } from "@/application/scoring/use-cases";
-import { normalizeDecimal, type Answer, type AnswerValue } from "@/domain/answer/answer";
+import { normalizeDecimal } from "@/domain/answer/answer";
 import type { Round } from "@/domain/round/round";
 import { finishRound } from "@/domain/scoring/lifecycle";
 import {
@@ -16,6 +16,7 @@ import {
   type OpenTextJudgment,
 } from "@/domain/scoring/scoring";
 import { db } from "@/infrastructure/db/client";
+import { transactionDatabase } from "@/infrastructure/db/transaction";
 import {
   answer,
   competition,
@@ -31,6 +32,9 @@ import {
 } from "@/infrastructure/db/schema";
 import { loadQuestions, scoringDefaults } from "@/infrastructure/round/round-repository";
 import { loadRestrictedParticipantIds } from "@/infrastructure/payment/payment-eligibility";
+import { domainAnswer } from "@/infrastructure/answer/answer-repository";
+
+export { domainAnswer } from "@/infrastructure/answer/answer-repository";
 
 function penalty(value: number): -1 | 0 {
   if (value !== -1 && value !== 0) throw new Error("Invalid persisted penalty.");
@@ -43,29 +47,6 @@ export function persistedRound(value: typeof round.$inferSelect): Round {
 
 function persistedPlayoffRound(value: typeof playoffRound.$inferSelect): Round {
   return { ...value, unansweredPenalty: penalty(value.unansweredPenalty) };
-}
-
-function answerValue(row: typeof answer.$inferSelect, type: string): AnswerValue {
-  if (type === "MATCH_SCORE" && row.homeScore !== null && row.awayScore !== null)
-    return { type, homeScore: row.homeScore, awayScore: row.awayScore };
-  if ((type === "CLOSEST_VALUE" || type === "EXACT_VALUE") && row.numericValue !== null)
-    return { type, value: normalizeDecimal(row.numericValue) };
-  if (type === "OPTIONS" && row.optionId !== null)
-    return { type, optionId: row.optionId };
-  if (type === "OPEN_TEXT" && row.textValue !== null)
-    return { type, value: row.textValue };
-  throw new Error(`Answer persistence is invalid: ${row.id}.`);
-}
-
-export function domainAnswer(row: typeof answer.$inferSelect, type: string): Answer {
-  return {
-    id: row.id,
-    questionId: row.questionId,
-    participantId: row.participantId,
-    value: answerValue(row, type),
-    submittedAt: row.submittedAt,
-    updatedAt: row.updatedAt,
-  };
 }
 
 function resultValue(
@@ -347,7 +328,7 @@ export function createResultRepository(
             : sql`select pr.id from playoff_round pr join competition c on c.id = pr.competition_id and c.status <> 'COMPLETED' join competition_participant cp on cp.competition_id = pr.competition_id and cp.user_id = ${userId} and cp.is_admin = true where pr.id = ${roundId} and pr.competition_id = ${competitionId} and pr.status in ('ACTIVE', 'FINISHED') for update`,
         );
         if (!locked.length) return null;
-        const txDb = tx as unknown as typeof db;
+        const txDb = transactionDatabase(tx);
         const aggregate = await loadAggregate(
           txDb,
           competitionId,
@@ -413,7 +394,7 @@ export function createResultRepository(
             : sql`select pr.id from playoff_round pr join competition c on c.id = pr.competition_id and c.status <> 'COMPLETED' join competition_participant cp on cp.competition_id = pr.competition_id and cp.user_id = ${userId} and cp.is_admin = true where pr.id = ${roundId} and pr.competition_id = ${competitionId} and pr.status in ('ACTIVE', 'FINISHED') for update`,
         );
         if (!locked.length) return null;
-        const txDb = tx as unknown as typeof db;
+        const txDb = transactionDatabase(tx);
         const aggregate = await loadAggregate(
           txDb,
           competitionId,

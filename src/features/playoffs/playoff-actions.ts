@@ -1,6 +1,5 @@
 "use server";
 
-import { createHash } from "node:crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import {
@@ -14,38 +13,17 @@ import {
   updatePlayoffQuestion,
 } from "@/application/playoff/use-cases";
 import { reorderQuestions } from "@/application/round/use-cases";
-import { getH2HStandings } from "@/application/h2h/use-cases";
-import { getServerSession } from "@/infrastructure/auth/session";
 import { h2hRepository } from "@/infrastructure/h2h/h2h-repository";
 import { playoffRepository } from "@/infrastructure/playoff/playoff-repository";
 import { playoffResultRepository } from "@/infrastructure/scoring/result-repository";
 import { standingsRepository } from "@/infrastructure/standings/standings-repository";
-import { toSafeError } from "@/lib/errors/application-error";
 import type { RoundActionState } from "@/features/rounds/round-actions";
+import { questionInput, validateQuestionInput } from "@/features/rounds/question-input";
 import {
-  playoffQuestionInput,
-  validatePlayoffQuestionInput,
-} from "./playoff-question-input";
-
-async function actor() {
-  const session = await getServerSession();
-  return session
-    ? {
-        userId: session.user.id,
-        passwordChangeRequired: session.user.passwordChangeRequired,
-      }
-    : null;
-}
-
-function error(error: unknown): RoundActionState {
-  const safe = toSafeError(error);
-  return {
-    message:
-      safe.code === "INTERNAL_ERROR"
-        ? "No fue posible completar la operación."
-        : safe.message,
-  };
-}
+  getCompetitionActionActor as actor,
+  safeActionError as error,
+} from "@/features/shared/action";
+import { toSafeError } from "@/lib/errors/application-error";
 
 export async function configurePlayoffRoundAction(
   competitionId: string,
@@ -78,56 +56,18 @@ export async function generatePlayoffBracketAction(
   playoffRoundId: string,
   data: FormData,
 ) {
-  const current = await actor();
   try {
-    const tables = await getH2HStandings(
-      { competitionId },
-      current,
+    await generatePlayoffBracket(
+      playoffRepository,
       h2hRepository,
       standingsRepository,
+      await actor(),
+      {
+        competitionId,
+        playoffRoundId,
+        seedOrder: data.getAll("seedOrder").map(String).filter(Boolean),
+      },
     );
-    const qualifiers = tables.flatMap((table) =>
-      table.rows.filter((row) => row.qualification === "OFICIAL"),
-    );
-    const readiness =
-      tables.length > 0 && tables.every((table) => table.readiness === "OFFICIAL")
-        ? ("OFFICIAL" as const)
-        : ("PROVISIONAL" as const);
-    const natural = [...qualifiers].sort(
-      (left, right) =>
-        right.predictionScore - left.predictionScore ||
-        right.exactScorePoints - left.exactScorePoints,
-    );
-    const submitted = data.getAll("seedOrder").map(String).filter(Boolean);
-    const ordered = submitted.length
-      ? submitted
-          .map((id) => natural.find((row) => row.participantId === id)!)
-          .filter(Boolean)
-      : natural;
-    if (
-      ordered.length !== natural.length ||
-      new Set(ordered.map((row) => row.participantId)).size !== natural.length
-    )
-      throw new Error("INVALID_SEED_ORDER");
-    for (let index = 1; index < ordered.length; index += 1) {
-      const previous = ordered[index - 1]!;
-      const item = ordered[index]!;
-      if (
-        previous.predictionScore < item.predictionScore ||
-        (previous.predictionScore === item.predictionScore &&
-          previous.exactScorePoints < item.exactScorePoints)
-      )
-        throw new Error("INVALID_SEED_ORDER");
-    }
-    await generatePlayoffBracket(playoffRepository, current, {
-      competitionId,
-      playoffRoundId,
-      readiness,
-      orderedParticipantIds: ordered.map((row) => row.participantId),
-      sourceFingerprint: createHash("sha256")
-        .update(JSON.stringify(tables.map((table) => table.sourceFingerprint).sort()))
-        .digest("hex"),
-    });
     revalidatePath(`/app/competitions/${competitionId}/playoffs`);
   } catch (cause) {
     throw new Error(toSafeError(cause).message);
@@ -191,8 +131,8 @@ export async function createPlayoffQuestionAction(
   _state: RoundActionState,
   data: FormData,
 ): Promise<RoundActionState> {
-  const input = playoffQuestionInput(competitionId, roundId, data);
-  const validation = validatePlayoffQuestionInput(input);
+  const input = questionInput(competitionId, roundId, data);
+  const validation = validateQuestionInput(input);
   if (validation) return validation;
   try {
     await createPlayoffQuestion(playoffRepository, await actor(), input);
@@ -210,8 +150,8 @@ export async function updatePlayoffQuestionAction(
   _state: RoundActionState,
   data: FormData,
 ): Promise<RoundActionState> {
-  const input = playoffQuestionInput(competitionId, roundId, data);
-  const validation = validatePlayoffQuestionInput(input);
+  const input = questionInput(competitionId, roundId, data);
+  const validation = validateQuestionInput(input);
   if (validation) return validation;
   try {
     await updatePlayoffQuestion(playoffRepository, await actor(), questionId, input);
@@ -249,7 +189,7 @@ export async function reorderPlayoffQuestionsAction(
 ): Promise<RoundActionState> {
   try {
     await reorderQuestions(
-      playoffRepository.roundRepository as never,
+      playoffRepository.roundRepository,
       await actor(),
       competitionId,
       roundId,

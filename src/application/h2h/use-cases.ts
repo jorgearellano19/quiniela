@@ -1,4 +1,4 @@
-import { createHash, randomInt, randomUUID } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
   classificationReadiness,
@@ -28,6 +28,7 @@ import {
   type CompetitionActor,
 } from "@/application/competition/boundary";
 import { ApplicationError } from "@/lib/errors/application-error";
+import { sha256Json } from "@/application/shared/fingerprint";
 
 export type H2HParticipant = Readonly<{ id: string; name: string }>;
 export type H2HRound = Readonly<{
@@ -438,10 +439,6 @@ function roundScoreModel(
   return { scores, states };
 }
 
-function hash(value: unknown) {
-  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
-}
-
 function h2hSourceFingerprint(
   aggregate: StandingsAggregate,
   structure: H2HStructure,
@@ -449,7 +446,7 @@ function h2hSourceFingerprint(
 ) {
   const byId = <T extends { id: string }>(values: readonly T[]) =>
     [...values].sort((left, right) => left.id.localeCompare(right.id));
-  return hash({
+  return sha256Json({
     configuration: structure.configuration,
     drawOrder: structure.drawOrder,
     groups: [...structure.groups].sort((left, right) => left.position - right.position),
@@ -485,7 +482,7 @@ function h2hSourceFingerprint(
 }
 
 function h2hTieFingerprint(participantIds: readonly string[]) {
-  return hash([...participantIds].sort());
+  return sha256Json([...participantIds].sort());
 }
 
 /** Privacy-safe derived H2H center. Answers never leave the application layer. */

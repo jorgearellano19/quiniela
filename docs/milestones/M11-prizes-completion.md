@@ -60,7 +60,7 @@ M11 depends on:
 
 ## Application use cases
 
-- `configurePrize`
+- Prize configuration through the existing combined `configurePayments` boundary
 - `getPrizeWinner`
 - `getRoundWinner`
 - `getLeagueWinner`

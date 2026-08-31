@@ -24,6 +24,9 @@ const data = new IntegrationTestData(database);
 const adminId = "m10-playoff-admin";
 
 describe("playoff persistence", () => {
+  const verifySeeds =
+    (orderedParticipantIds: readonly string[], sourceFingerprint: string) =>
+    async () => ({ orderedParticipantIds, sourceFingerprint });
   beforeEach(async () =>
     data.createUser({ id: adminId, email: "m10-playoff-admin@example.test" }),
   );
@@ -84,13 +87,12 @@ describe("playoff persistence", () => {
     const input = {
       competitionId: value.competitionId,
       playoffRoundId: value.roundId,
-      orderedParticipantIds: value.participants,
-      sourceFingerprint: "a".repeat(64),
       userId: adminId,
       now: new Date(),
     };
-    expect(await repository.snapshotBracket(input)).toBe(true);
-    expect(await repository.snapshotBracket(input)).toBe(true);
+    const verify = verifySeeds(value.participants, "a".repeat(64));
+    expect(await repository.snapshotBracket(input, verify)).toBe(true);
+    expect(await repository.snapshotBracket(input, verify)).toBe(true);
     expect(
       await database
         .select()
@@ -103,6 +105,32 @@ describe("playoff persistence", () => {
         .from(playoffMatchup)
         .where(eq(playoffMatchup.playoffRoundId, value.roundId)),
     ).toHaveLength(2);
+  });
+
+  it("rolls back bracket creation when transactional qualification is stale", async () => {
+    const value = await fixture();
+    const accepted = await repository.snapshotBracket(
+      {
+        competitionId: value.competitionId,
+        playoffRoundId: value.roundId,
+        userId: adminId,
+        now: new Date(),
+      },
+      async () => null,
+    );
+    expect(accepted).toBe(false);
+    expect(
+      await database
+        .select()
+        .from(playoffSeed)
+        .where(eq(playoffSeed.competitionId, value.competitionId)),
+    ).toHaveLength(0);
+    expect(
+      await database
+        .select()
+        .from(playoffMatchup)
+        .where(eq(playoffMatchup.playoffRoundId, value.roundId)),
+    ).toHaveLength(0);
   });
 
   it("enforces exactly one Question parent", async () => {
@@ -150,14 +178,15 @@ describe("playoff persistence", () => {
   it("does not persist winners when the next round is missing", async () => {
     const value = await fixture();
     const now = new Date();
-    await repository.snapshotBracket({
-      competitionId: value.competitionId,
-      playoffRoundId: value.roundId,
-      orderedParticipantIds: value.participants,
-      sourceFingerprint: "b".repeat(64),
-      userId: adminId,
-      now,
-    });
+    await repository.snapshotBracket(
+      {
+        competitionId: value.competitionId,
+        playoffRoundId: value.roundId,
+        userId: adminId,
+        now,
+      },
+      verifySeeds(value.participants, "b".repeat(64)),
+    );
     await database
       .update(playoffRound)
       .set({ status: "FINISHED", finishedAt: new Date(now.valueOf() - 86_400_001) })
@@ -197,14 +226,15 @@ describe("playoff persistence", () => {
   it("advances an all-manual stage and rebuilds a DRAFT successor after correction", async () => {
     const value = await fixture();
     const now = new Date();
-    await repository.snapshotBracket({
-      competitionId: value.competitionId,
-      playoffRoundId: value.roundId,
-      orderedParticipantIds: value.participants,
-      sourceFingerprint: "d".repeat(64),
-      userId: adminId,
-      now,
-    });
+    await repository.snapshotBracket(
+      {
+        competitionId: value.competitionId,
+        playoffRoundId: value.roundId,
+        userId: adminId,
+        now,
+      },
+      verifySeeds(value.participants, "d".repeat(64)),
+    );
     const final = createRound({
       id: randomUUID(),
       competitionId: value.competitionId,
@@ -301,14 +331,15 @@ describe("playoff persistence", () => {
   it("does not expose a manual final winner as champion before advancement", async () => {
     const value = await fixture();
     const now = new Date();
-    await repository.snapshotBracket({
-      competitionId: value.competitionId,
-      playoffRoundId: value.roundId,
-      orderedParticipantIds: value.participants.slice(0, 2),
-      sourceFingerprint: "2".repeat(64),
-      userId: adminId,
-      now,
-    });
+    await repository.snapshotBracket(
+      {
+        competitionId: value.competitionId,
+        playoffRoundId: value.roundId,
+        userId: adminId,
+        now,
+      },
+      verifySeeds(value.participants.slice(0, 2), "2".repeat(64)),
+    );
     await database
       .update(playoffRound)
       .set({ status: "FINISHED", finishedAt: new Date(now.valueOf() - 86_400_001) })

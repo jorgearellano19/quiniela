@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { localDateTimeToUtcIso, toLocalDateTimeInput } from "@/lib/date-time";
 
 export function PlayoffRoundForm({
   competitionId,
@@ -32,6 +33,7 @@ export function PlayoffRoundForm({
   };
 }) {
   const [mode, setMode] = useState(value?.advancementMode ?? "BEST_SEED");
+  const [startsAt, setStartsAt] = useState(value?.startsAt ?? "");
   const [state, action, pending] = useActionState(
     configurePlayoffRoundAction.bind(null, competitionId, value?.id ?? null),
     {},
@@ -66,13 +68,14 @@ export function PlayoffRoundForm({
           <FieldLabel htmlFor="playoff-start">Cierre predeterminado</FieldLabel>
           <Input
             id="playoff-start"
-            name="startsAt"
             type="datetime-local"
-            defaultValue={
-              value ? new Date(value.startsAt).toISOString().slice(0, 16) : ""
+            value={toLocalDateTimeInput(startsAt)}
+            onChange={(event) =>
+              setStartsAt(localDateTimeToUtcIso(event.currentTarget.value))
             }
             required
           />
+          <input type="hidden" name="startsAt" value={startsAt} />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field>

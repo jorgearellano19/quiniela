@@ -1,9 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import type { ResultRepository } from "@/application/scoring/use-cases";
+import type { H2HRepository } from "@/application/h2h/use-cases";
+import type { StandingsRepository } from "@/application/standings/use-cases";
 import {
   generatePlayoffBracket,
   getPlayoffRoundResults,
+  officialSeedDecision,
   type PlayoffRepository,
 } from "./use-cases";
 
@@ -20,36 +23,108 @@ function repository() {
 }
 
 describe("playoff use cases", () => {
+  const h2h = {} as H2HRepository;
+  const standings = {} as StandingsRepository;
+  const participantA = randomUUID();
+  const participantB = randomUUID();
+  const participantC = randomUUID();
+  const tables = (readiness: "PROVISIONAL" | "PENDING_RESOLUTION" | "OFFICIAL") => [
+    {
+      groupId: null,
+      groupLabel: null,
+      sourceFingerprint: "a".repeat(64),
+      readiness,
+      decisionGroups: [],
+      requiredTieGroups: [],
+      rows: [
+        {
+          participantId: participantA,
+          participantName: "A",
+          position: 1,
+          h2hPoints: 6,
+          predictionScore: 10,
+          exactScorePoints: 3,
+          played: 2,
+          wins: 2,
+          unresolved: false,
+          qualification: "OFICIAL" as const,
+        },
+        {
+          participantId: participantB,
+          participantName: "B",
+          position: 2,
+          h2hPoints: 3,
+          predictionScore: 8,
+          exactScorePoints: 2,
+          played: 2,
+          wins: 1,
+          unresolved: false,
+          qualification: "OFICIAL" as const,
+        },
+        {
+          participantId: participantC,
+          participantName: "C",
+          position: 3,
+          h2hPoints: 0,
+          predictionScore: 8,
+          exactScorePoints: 2,
+          played: 2,
+          wins: 0,
+          unresolved: false,
+          qualification: "NO_CLASIFICA" as const,
+        },
+      ],
+    },
+  ];
+
+  it("derives official seeds and permits reordering only inside an equal rank", () => {
+    expect(officialSeedDecision(tables("PROVISIONAL"))).toBeNull();
+    expect(officialSeedDecision(tables("OFFICIAL"))?.orderedParticipantIds).toEqual([
+      participantA,
+      participantB,
+    ]);
+    expect(
+      officialSeedDecision(tables("OFFICIAL"), [participantB, participantA]),
+    ).toBeNull();
+    expect(
+      officialSeedDecision(tables("OFFICIAL"), [participantA, participantC]),
+    ).toBeNull();
+
+    const tied = tables("OFFICIAL");
+    tied[0]!.rows[0]!.predictionScore = 8;
+    tied[0]!.rows[0]!.exactScorePoints = 2;
+    expect(
+      officialSeedDecision(tied, [participantB, participantA])?.orderedParticipantIds,
+    ).toEqual([participantB, participantA]);
+  });
+
   it("rejects anonymous bracket generation", async () => {
     const repo = repository();
     const competitionId = randomUUID();
     await expect(
-      generatePlayoffBracket(repo, null, {
+      generatePlayoffBracket(repo, h2h, standings, null, {
         competitionId,
         playoffRoundId: randomUUID(),
-        readiness: "OFFICIAL",
-        orderedParticipantIds: [randomUUID(), randomUUID()],
-        sourceFingerprint: "a".repeat(64),
       }),
     ).rejects.toMatchObject({ code: "UNAUTHENTICATED" });
   });
 
-  it("rejects provisional qualification before persistence", async () => {
+  it("rejects qualification that changes during the atomic snapshot", async () => {
     const repo = repository();
+    repo.snapshotBracket = vi.fn().mockResolvedValue(false);
     await expect(
       generatePlayoffBracket(
         repo,
+        h2h,
+        standings,
         { userId: randomUUID() },
         {
           competitionId: randomUUID(),
           playoffRoundId: randomUUID(),
-          readiness: "PROVISIONAL",
-          orderedParticipantIds: [randomUUID(), randomUUID()],
-          sourceFingerprint: "a".repeat(64),
         },
       ),
     ).rejects.toMatchObject({ code: "INVALID_INPUT" });
-    expect(repo.snapshotBracket).not.toHaveBeenCalled();
+    expect(repo.snapshotBracket).toHaveBeenCalledOnce();
   });
 
   it("passes a valid official power-of-two field to the atomic snapshot", async () => {
@@ -64,13 +139,13 @@ describe("playoff use cases", () => {
     const participants = Array.from({ length: 4 }, () => randomUUID());
     await generatePlayoffBracket(
       repo,
+      h2h,
+      standings,
       { userId: randomUUID() },
       {
         competitionId,
         playoffRoundId: randomUUID(),
-        readiness: "OFFICIAL",
-        orderedParticipantIds: participants,
-        sourceFingerprint: "b".repeat(64),
+        seedOrder: participants,
       },
     );
     expect(repo.snapshotBracket).toHaveBeenCalledOnce();

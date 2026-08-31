@@ -8,6 +8,7 @@ import {
   type Round,
 } from "@/domain/round/round";
 import { db } from "@/infrastructure/db/client";
+import { transactionDatabase } from "@/infrastructure/db/transaction";
 import {
   competition,
   competitionParticipant,
@@ -415,7 +416,7 @@ export function createRoundRepository(database: typeof db): RoundRepository {
           .where(eq(competition.id, currentRound.competitionId));
         if (!competitionValue) return null;
         const questions = await loadQuestions(
-          tx as unknown as typeof db,
+          transactionDatabase(tx),
           currentRound,
           scoringDefaults(competitionValue),
         );
@@ -456,11 +457,7 @@ export function createRoundRepository(database: typeof db): RoundRepository {
           .where(eq(competition.id, value.competitionId));
         if (!competitionRow) return null;
         const defaults = scoringDefaults(competitionRow);
-        const questions = await loadQuestions(
-          tx as unknown as typeof db,
-          value,
-          defaults,
-        );
+        const questions = await loadQuestions(transactionDatabase(tx), value, defaults);
         const activated = (await import("@/domain/round/round")).publishRound(
           value,
           questions,

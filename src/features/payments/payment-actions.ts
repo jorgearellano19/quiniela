@@ -6,25 +6,15 @@ import {
   recordPayment,
   updatePayment,
 } from "@/application/payment/use-cases";
-import { getServerSession } from "@/infrastructure/auth/session";
 import { paymentRepository } from "@/infrastructure/payment/payment-repository";
 import { toSafeError } from "@/lib/errors/application-error";
+import { getCompetitionActionActor as actor } from "@/features/shared/action";
 
 export type PaymentActionState = Readonly<{
   success?: boolean;
   message?: string;
   refresh?: boolean;
 }>;
-
-async function actor() {
-  const session = await getServerSession();
-  return session
-    ? {
-        userId: session.user.id,
-        passwordChangeRequired: session.user.passwordChangeRequired,
-      }
-    : null;
-}
 
 function failure(error: unknown, fallback: string): PaymentActionState {
   const safe = toSafeError(error);

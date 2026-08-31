@@ -77,6 +77,10 @@ absent; it is never reported as passing through a skip. `pnpm check` is the
 environment-neutral CI command and expects its database and authentication variables to
 already be configured.
 
+The production build inside `check:local` intentionally accepts the documented local
+secret only while `BETTER_AUTH_URL` is a loopback origin. A public deployment still
+rejects that secret and requires HTTPS plus a unique production value.
+
 CI independently provisions PostgreSQL, applies the same committed migrations, runs the
 complete validation sequence, and retains Playwright reports and failure traces. E2E
 configuration fails immediately when `TEST_DATABASE_URL` is absent; critical coverage is

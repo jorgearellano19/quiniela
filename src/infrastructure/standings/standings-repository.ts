@@ -4,6 +4,7 @@ import type {
   StandingsRepository,
 } from "@/application/standings/use-cases";
 import { db } from "@/infrastructure/db/client";
+import { transactionDatabase } from "@/infrastructure/db/transaction";
 import {
   answer,
   competition,
@@ -210,7 +211,7 @@ export function createStandingsRepository(database: typeof db): StandingsReposit
           sql`select c.id from competition c join competition_participant cp on cp.competition_id = c.id and cp.user_id = ${userId} and cp.is_admin = true where c.id = ${competitionId} and c.status <> 'COMPLETED' for update`,
         );
         if (!locked.length) return null;
-        const txDb = tx as unknown as typeof db;
+        const txDb = transactionDatabase(tx);
         const aggregate = await loadAggregate(txDb, competitionId, userId);
         if (!aggregate) return null;
         const decision = operation(aggregate);

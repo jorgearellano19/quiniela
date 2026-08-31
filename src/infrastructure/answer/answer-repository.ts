@@ -6,6 +6,7 @@ import type {
 import { normalizeDecimal, type Answer, type AnswerValue } from "@/domain/answer/answer";
 import type { Round } from "@/domain/round/round";
 import { db } from "@/infrastructure/db/client";
+import { transactionDatabase } from "@/infrastructure/db/transaction";
 import {
   answer,
   competition,
@@ -168,9 +169,11 @@ export function createAnswerRepository(database: typeof db): AnswerRepository {
           sql`select r.id from round r join competition_participant cp on cp.competition_id = r.competition_id and cp.user_id = ${userId} and cp.status = 'ACTIVE' where r.id = ${roundId} and r.competition_id = ${competitionId} and r.status = 'ACTIVE' for update`,
         );
         if (!locked.length) return null;
-        const aggregate = await createAnswerRepository(
-          tx as unknown as typeof db,
-        ).getMine(competitionId, roundId, userId);
+        const aggregate = await createAnswerRepository(transactionDatabase(tx)).getMine(
+          competitionId,
+          roundId,
+          userId,
+        );
         if (!aggregate) return null;
         const item = aggregate.questions.find((entry) => entry.id === questionId);
         if (!item) return null;

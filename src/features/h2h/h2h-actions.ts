@@ -9,31 +9,17 @@ import {
   resolveGroupTie,
   resolveH2HTie,
 } from "@/application/h2h/use-cases";
-import { getServerSession } from "@/infrastructure/auth/session";
 import { h2hRepository } from "@/infrastructure/h2h/h2h-repository";
 import { standingsRepository } from "@/infrastructure/standings/standings-repository";
-import { toSafeError } from "@/lib/errors/application-error";
+import {
+  getCompetitionActionActor as actor,
+  safeActionError,
+} from "@/features/shared/action";
 
 export type H2HActionState = { message?: string; success?: boolean };
 
-async function actor() {
-  const session = await getServerSession();
-  return session
-    ? {
-        userId: session.user.id,
-        passwordChangeRequired: session.user.passwordChangeRequired,
-      }
-    : null;
-}
-
 function failure(error: unknown): H2HActionState {
-  const safe = toSafeError(error);
-  return {
-    message:
-      safe.code === "INTERNAL_ERROR"
-        ? "No fue posible guardar la fase. Inténtalo de nuevo."
-        : safe.message,
-  };
+  return safeActionError(error, "No fue posible guardar la fase. Inténtalo de nuevo.");
 }
 
 export async function configureH2HAction(

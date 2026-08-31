@@ -7,6 +7,7 @@ import type { Answer } from "@/domain/answer/answer";
 import type { Round } from "@/domain/round/round";
 import { answerFields, domainAnswer } from "@/infrastructure/answer/answer-repository";
 import { db } from "@/infrastructure/db/client";
+import { transactionDatabase } from "@/infrastructure/db/transaction";
 import {
   answer,
   competition,
@@ -95,7 +96,7 @@ export function createPlayoffAnswerRepository(database: typeof db): AnswerReposi
         );
         if (!locked.length) return null;
         const aggregate = await createPlayoffAnswerRepository(
-          tx as unknown as typeof db,
+          transactionDatabase(tx),
         ).getMine(competitionId, roundId, userId);
         if (!aggregate) return null;
         const item = aggregate.questions.find((entry) => entry.id === questionId);

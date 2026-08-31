@@ -33,4 +33,12 @@ describe("server environment", () => {
     const { getServerEnvironment } = await import("./server");
     expect(() => getServerEnvironment()).toThrow(/unique/);
   });
+  it("allows the documented secret only for a loopback production build", async () => {
+    vi.stubEnv("DATABASE_URL", "postgresql://user:pass@localhost/quiniela");
+    vi.stubEnv("BETTER_AUTH_SECRET", "local-development-secret-change-me");
+    vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
+    vi.stubEnv("NODE_ENV", "production");
+    const { getServerEnvironment } = await import("./server");
+    expect(getServerEnvironment().BETTER_AUTH_URL).toBe("http://localhost:3000");
+  });
 });
