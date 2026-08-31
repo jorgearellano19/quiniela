@@ -17,4 +17,20 @@ describe("server environment", () => {
     const { getServerEnvironment } = await import("./server");
     expect(getServerEnvironment().DATABASE_URL).toContain("postgresql://");
   });
+  it("rejects insecure public auth origins in production", async () => {
+    vi.stubEnv("DATABASE_URL", "postgresql://user:pass@localhost/quiniela");
+    vi.stubEnv("BETTER_AUTH_SECRET", "a-unique-production-secret-with-32-characters");
+    vi.stubEnv("BETTER_AUTH_URL", "http://quiniela.example.com");
+    vi.stubEnv("NODE_ENV", "production");
+    const { getServerEnvironment } = await import("./server");
+    expect(() => getServerEnvironment()).toThrow(/HTTPS/);
+  });
+  it("rejects documented development secrets in production", async () => {
+    vi.stubEnv("DATABASE_URL", "postgresql://user:pass@localhost/quiniela");
+    vi.stubEnv("BETTER_AUTH_SECRET", "local-development-secret-change-me");
+    vi.stubEnv("BETTER_AUTH_URL", "https://quiniela.example.com");
+    vi.stubEnv("NODE_ENV", "production");
+    const { getServerEnvironment } = await import("./server");
+    expect(() => getServerEnvironment()).toThrow(/unique/);
+  });
 });

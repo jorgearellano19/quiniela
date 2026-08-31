@@ -14,6 +14,7 @@ import { resolvePlayoffWinner } from "@/domain/playoff/playoff";
 import { createRound, updateRound, type Round } from "@/domain/round/round";
 import { effectiveRoundStatus } from "@/domain/scoring/lifecycle";
 import {
+  getRoundResults,
   reviewRoundResults,
   type ResultRepository,
 } from "@/application/scoring/use-cases";
@@ -173,6 +174,51 @@ export async function getPlayoffOverview(
   const actor = requireCompetitionActor(actorValue);
   if (!id.safeParse(competitionId).success) invalid();
   return repository.getOverview(competitionId, actor.userId, now);
+}
+
+export async function getPlayoffRoundResults(
+  playoffRepository: PlayoffRepository,
+  resultRepository: ResultRepository,
+  actorValue: CompetitionActor,
+  competitionId: string,
+  playoffRoundId: string,
+  now = new Date(),
+) {
+  const actor = requireCompetitionActor(actorValue);
+  if (!id.safeParse(competitionId).success || !id.safeParse(playoffRoundId).success)
+    return null;
+  const [results, overview] = await Promise.all([
+    getRoundResults(resultRepository, actor, competitionId, playoffRoundId, now),
+    getPlayoffOverview(playoffRepository, actor, competitionId, now),
+  ]);
+  if (!results || !overview) return null;
+  const round = overview.rounds.find((item) => item.id === playoffRoundId);
+  if (!round) return null;
+  const totals = new Map(results.participants.map((item) => [item.id, item.total]));
+  const tiebreaker = results.questions.find(
+    (item) => item.id === round.tiebreakerQuestionId,
+  );
+  const decisions = round.matchups.map((matchup) => ({
+    matchup,
+    decision: resolvePlayoffWinner({
+      participantAId: matchup.participantAId,
+      participantASeed: matchup.participantASeed,
+      participantAScore: totals.get(matchup.participantAId) ?? 0,
+      participantATiebreakerPoints:
+        tiebreaker?.entries.find((item) => item.participantId === matchup.participantAId)
+          ?.score?.points ?? 0,
+      participantBId: matchup.participantBId,
+      participantBSeed: matchup.participantBSeed,
+      participantBScore: totals.get(matchup.participantBId) ?? 0,
+      participantBTiebreakerPoints:
+        tiebreaker?.entries.find((item) => item.participantId === matchup.participantBId)
+          ?.score?.points ?? 0,
+      mode: round.advancementMode,
+      manualWinnerId:
+        matchup.winnerDecidedBy === "MANUAL" ? matchup.winnerParticipantId : null,
+    }),
+  }));
+  return { results, round, decisions } as const;
 }
 
 export async function configurePlayoffRound(

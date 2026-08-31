@@ -71,6 +71,7 @@ describe("prize and completion application", () => {
       completion: { ready: false },
     });
     expect(result?.completion.blockers).toContain("La quiniela todavía no ha iniciado.");
+    expect(value.standingsRepository.getCompetition).toHaveBeenCalledOnce();
   });
 
   it("does not expose results to an anonymous actor or an unrelated viewer", async () => {

@@ -18,7 +18,10 @@ import {
   round,
   user,
 } from "@/infrastructure/db/schema";
-import { loadQuestions, scoringDefaults } from "@/infrastructure/round/round-repository";
+import {
+  loadQuestionsForRounds,
+  scoringDefaults,
+} from "@/infrastructure/round/round-repository";
 import { loadRestrictedParticipantIds } from "@/infrastructure/payment/payment-eligibility";
 import {
   domainAnswer,
@@ -96,11 +99,12 @@ async function loadAggregate(
     ],
   );
   const rounds = roundRows.map(persistedRound);
-  const questionGroups = await Promise.all(
-    rounds.map((item) =>
-      loadQuestions(database, item, scoringDefaults(scope.competition)),
-    ),
+  const questionsByRound = await loadQuestionsForRounds(
+    database,
+    rounds,
+    scoringDefaults(scope.competition),
   );
+  const questionGroups = rounds.map((item) => questionsByRound.get(item.id) ?? []);
   const questions = questionGroups.flat();
   const questionIds = questions.map((item) => item.id);
   const answerRows = questionIds.length

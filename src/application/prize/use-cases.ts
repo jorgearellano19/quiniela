@@ -6,9 +6,9 @@ import type { PlayoffRepository } from "@/application/playoff/use-cases";
 import { getPlayoffOverview } from "@/application/playoff/use-cases";
 import type { StandingsRepository } from "@/application/standings/use-cases";
 import {
-  getLeaguePhasePrizeWinner,
-  getLeagueWinner,
-  getRoundWinner,
+  leaguePhasePrizeWinnerFromAggregate,
+  leagueWinnerFromAggregate,
+  roundWinnerFromAggregate,
 } from "@/application/standings/use-cases";
 import { effectiveRoundStatus } from "@/domain/scoring/lifecycle";
 import { isCompletePlayoffBracket } from "@/domain/playoff/playoff";
@@ -97,7 +97,7 @@ export async function getFinalCompetitionResults(
       : await getPlayoffOverview(playoffRepository, actor, competitionId, now);
   const finalWinner: PrizeWinnerResult =
     aggregate.competition.type === "LEAGUE"
-      ? await getLeagueWinner(standingsRepository, actor, competitionId, now)
+      ? leagueWinnerFromAggregate(aggregate, now)
       : playoff?.champion
         ? {
             state: "resolved",
@@ -112,13 +112,7 @@ export async function getFinalCompetitionResults(
   for (const configuration of financial.prizes) {
     if (configuration.type === "ROUND_WINNER") {
       for (const item of aggregate.rounds) {
-        const detail = await getRoundWinner(
-          standingsRepository,
-          actor,
-          competitionId,
-          item.round.id,
-          now,
-        );
+        const detail = roundWinnerFromAggregate(aggregate, item.round.id, now);
         if (detail)
           prizes.push({
             configuration,
@@ -134,12 +128,9 @@ export async function getFinalCompetitionResults(
     } else {
       prizes.push({
         configuration,
-        winner: (await getLeaguePhasePrizeWinner(
-          standingsRepository,
-          actor,
-          competitionId,
-          now,
-        )) ?? { state: "notReady" },
+        winner: leaguePhasePrizeWinnerFromAggregate(aggregate, now) ?? {
+          state: "notReady",
+        },
       });
     }
   }

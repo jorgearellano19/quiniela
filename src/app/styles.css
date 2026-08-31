@@ -47,17 +47,17 @@
 
 :root {
   --background: oklch(0.974 0.013 91.5);
-  --foreground: oklch(0.235 0.025 155);
+  --foreground: #14231b;
   --card: oklch(0.995 0.007 91.5);
-  --card-foreground: oklch(0.235 0.025 155);
+  --card-foreground: #14231b;
   --popover: oklch(0.995 0.007 91.5);
-  --popover-foreground: oklch(0.235 0.025 155);
-  --primary: oklch(0.31 0.083 153);
-  --primary-foreground: oklch(0.974 0.013 91.5);
+  --popover-foreground: #14231b;
+  --primary: #163d2a;
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.92 0.035 91.5);
   --secondary-foreground: oklch(0.27 0.04 153);
   --muted: oklch(0.94 0.02 91.5);
-  --muted-foreground: oklch(0.48 0.025 155);
+  --muted-foreground: #405148;
   --accent: oklch(0.9 0.05 91.5);
   --accent-foreground: oklch(0.27 0.04 153);
   --destructive: oklch(0.55 0.19 28);
@@ -133,6 +133,25 @@
 }
 
 @layer components {
+  .skip-link {
+    position: fixed;
+    z-index: 100;
+    top: 0.75rem;
+    left: 0.75rem;
+    translate: 0 -200%;
+    border-radius: var(--radius);
+    background: var(--primary);
+    color: var(--primary-foreground);
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+  }
+
+  .skip-link:focus-visible {
+    translate: 0;
+    outline: 3px solid var(--ring);
+    outline-offset: 3px;
+  }
+
   .auth-stage {
     background-image:
       linear-gradient(
@@ -177,6 +196,17 @@
     background: var(--destructive);
     border-radius: 999px;
     box-shadow: 0 0 0 0.3rem color-mix(in oklch, var(--destructive) 18%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

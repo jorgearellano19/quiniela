@@ -144,6 +144,46 @@ describe("membership persistence", () => {
     ]);
   });
 
+  it("returns every Competition-level rule without unpublished Round data", async () => {
+    const value = competition();
+    await competitions.createWithAdmin(value, randomUUID(), {
+      financialFeaturesEnabled: true,
+      roundFeeAmount: 25_000,
+      maximumDebt: 50_000,
+      prizes: { ROUND_WINNER: 100_000, LEAGUE_WINNER: 500_000 },
+    });
+    expect(await memberships.setInvitation(value.id, adminId, "rules-hash", null)).toBe(
+      true,
+    );
+
+    await expect(
+      memberships.findInvitation("rules-hash", participantId),
+    ).resolves.toMatchObject({
+      competitionId: value.id,
+      phase: { type: "LEAGUE" },
+      scoringDefaults: {
+        matchScore: {
+          exactScorePoints: 3,
+          goalDifferencePoints: 2,
+          normalResultPoints: 1,
+        },
+        closestValuePoints: 1,
+        optionsPoints: 1,
+        openTextPoints: 1,
+        exactValuePoints: 1,
+      },
+      financial: {
+        enabled: true,
+        roundFeeAmount: 25_000,
+        maximumDebt: 50_000,
+        prizes: [
+          { type: "ROUND_WINNER", amount: 100_000 },
+          { type: "LEAGUE_WINNER", amount: 500_000 },
+        ],
+      },
+    });
+  });
+
   it("rejects cross-Competition membership IDs without writing an event", async () => {
     const first = competition();
     const second = competition(randomUUID(), otherId);

@@ -12,6 +12,8 @@ import {
   competition,
   competitionParticipant,
   competitionParticipantEvent,
+  h2hPhaseConfiguration,
+  prizeConfiguration,
   user,
 } from "@/infrastructure/db/schema";
 
@@ -54,6 +56,16 @@ export function createMembershipRepository(database: typeof db): MembershipRepos
           currency: competition.currency,
           rulesNote: competition.rulesNote,
           membershipStatus: competitionParticipant.status,
+          financialFeaturesEnabled: competition.financialFeaturesEnabled,
+          roundFeeAmount: competition.roundFeeAmount,
+          maximumDebt: competition.maximumDebt,
+          exactScorePoints: competition.defaultMatchExactScorePoints,
+          goalDifferencePoints: competition.defaultMatchGoalDifferencePoints,
+          normalResultPoints: competition.defaultMatchNormalResultPoints,
+          closestValuePoints: competition.defaultClosestValuePoints,
+          optionsPoints: competition.defaultOptionsPoints,
+          openTextPoints: competition.defaultOpenTextPoints,
+          exactValuePoints: competition.defaultExactValuePoints,
         })
         .from(competition)
         .leftJoin(
@@ -68,7 +80,71 @@ export function createMembershipRepository(database: typeof db): MembershipRepos
         )
         .limit(1);
       if (!row || row.currency !== "MXN") return null;
-      return { ...row, currency: "MXN", typeLabel: "" };
+      const [phaseRows, prizes] = await Promise.all([
+        database
+          .select({
+            leagueRoundCount: h2hPhaseConfiguration.leagueRoundCount,
+            qualifierCount: h2hPhaseConfiguration.qualifierCount,
+            groupSize: h2hPhaseConfiguration.groupSize,
+            advancersPerGroup: h2hPhaseConfiguration.advancersPerGroup,
+          })
+          .from(h2hPhaseConfiguration)
+          .where(eq(h2hPhaseConfiguration.competitionId, row.competitionId))
+          .limit(1),
+        database
+          .select({ type: prizeConfiguration.type, amount: prizeConfiguration.amount })
+          .from(prizeConfiguration)
+          .where(eq(prizeConfiguration.competitionId, row.competitionId))
+          .orderBy(asc(prizeConfiguration.type)),
+      ]);
+      const phaseRow = phaseRows[0];
+      const phase =
+        row.type === "LEAGUE"
+          ? ({ type: "LEAGUE" } as const)
+          : row.type === "LEAGUE_PLAYOFFS" &&
+              phaseRow?.leagueRoundCount &&
+              phaseRow.qualifierCount
+            ? ({
+                type: "LEAGUE_PLAYOFFS",
+                roundCount: phaseRow.leagueRoundCount,
+                qualifierCount: phaseRow.qualifierCount,
+              } as const)
+            : row.type === "GROUP_PLAYOFFS" &&
+                phaseRow?.groupSize &&
+                phaseRow.advancersPerGroup
+              ? ({
+                  type: "GROUP_PLAYOFFS",
+                  groupSize: phaseRow.groupSize,
+                  advancersPerGroup: phaseRow.advancersPerGroup,
+                } as const)
+              : null;
+      return {
+        competitionId: row.competitionId,
+        name: row.name,
+        type: row.type,
+        typeLabel: "",
+        currency: "MXN",
+        rulesNote: row.rulesNote,
+        membershipStatus: row.membershipStatus,
+        phase,
+        scoringDefaults: {
+          matchScore: {
+            exactScorePoints: row.exactScorePoints,
+            goalDifferencePoints: row.goalDifferencePoints,
+            normalResultPoints: row.normalResultPoints,
+          },
+          closestValuePoints: row.closestValuePoints,
+          optionsPoints: row.optionsPoints,
+          openTextPoints: row.openTextPoints,
+          exactValuePoints: row.exactValuePoints,
+        },
+        financial: {
+          enabled: row.financialFeaturesEnabled,
+          roundFeeAmount: row.roundFeeAmount,
+          maximumDebt: row.maximumDebt,
+          prizes,
+        },
+      };
     },
     async request(input) {
       return database.transaction(async (tx) => {

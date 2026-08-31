@@ -12,6 +12,8 @@ import type {
   CompetitionStatus,
   CompetitionType,
 } from "@/domain/competition/competition";
+import type { PrizeConfiguration } from "@/domain/payment/payment";
+import type { CompetitionScoringDefaults } from "@/domain/round/round";
 import { ApplicationError } from "@/lib/errors/application-error";
 import {
   requireCompetitionActor,
@@ -36,6 +38,26 @@ export type InvitationView = Readonly<{
   currency: "MXN";
   rulesNote: string | null;
   membershipStatus: MembershipStatus | null;
+  phase:
+    | Readonly<{ type: "LEAGUE" }>
+    | Readonly<{
+        type: "LEAGUE_PLAYOFFS";
+        roundCount: number;
+        qualifierCount: number;
+      }>
+    | Readonly<{
+        type: "GROUP_PLAYOFFS";
+        groupSize: number;
+        advancersPerGroup: number;
+      }>
+    | null;
+  scoringDefaults: CompetitionScoringDefaults;
+  financial: Readonly<{
+    enabled: boolean;
+    roundFeeAmount: number | null;
+    maximumDebt: number | null;
+    prizes: readonly PrizeConfiguration[];
+  }>;
 }>;
 export interface MembershipRepository {
   setInvitation(

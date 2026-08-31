@@ -9,7 +9,11 @@ export default async function AuthLayout({
   if (session) redirect("/app");
 
   return (
-    <main className="auth-stage min-h-svh px-4 py-5 sm:px-6 sm:py-8 lg:grid lg:grid-cols-[minmax(20rem,0.9fr)_minmax(28rem,1.1fr)] lg:gap-8 lg:p-8">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="auth-stage min-h-svh px-4 py-5 sm:px-6 sm:py-8 lg:grid lg:grid-cols-[minmax(20rem,0.9fr)_minmax(28rem,1.1fr)] lg:gap-8 lg:p-8"
+    >
       <section className="auth-editorial relative hidden min-h-[calc(100svh-4rem)] overflow-hidden rounded-3xl bg-primary p-10 text-primary-foreground lg:flex lg:flex-col lg:justify-between">
         <div className="relative flex items-center gap-3">
           <span className="match-dot" aria-hidden="true" />

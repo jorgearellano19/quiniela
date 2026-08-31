@@ -437,15 +437,25 @@ export async function getLeagueWinner(
   competitionId: string,
   now = new Date(),
 ) {
-  const standings = await getLeagueStandings(repository, actorValue, competitionId, now);
-  if (!standings || !standings.ready) return { state: "notReady" } as const;
-  const first = standings.rows[0];
+  const actor = requireCompetitionActor(actorValue);
+  if (!z.uuid().safeParse(competitionId).success) return { state: "notReady" } as const;
+  const aggregate = await repository.getCompetition(competitionId, actor.userId);
+  return aggregate
+    ? leagueWinnerFromAggregate(aggregate, now)
+    : ({ state: "notReady" } as const);
+}
+
+export function leagueWinnerFromAggregate(aggregate: StandingsAggregate, now: Date) {
+  const model = leagueModel(aggregate, now);
+  if (!model.ready) return { state: "notReady" } as const;
+  const first = model.ranking.rows[0];
   if (!first || first.unresolved)
     return {
       state: "unresolved",
-      tiedParticipantIds: standings.unresolvedGroups[0] ?? [],
+      tiedParticipantIds: model.ranking.unresolvedGroups[0] ?? [],
     } as const;
-  return { state: "resolved", winner: standings.winner! } as const;
+  const winner = participant(aggregate, first.participant.participantId);
+  return { state: "resolved", winner: { id: winner.id, name: winner.name } } as const;
 }
 
 export async function getLeaguePhasePrizeWinner(
@@ -458,6 +468,13 @@ export async function getLeaguePhasePrizeWinner(
   if (!z.uuid().safeParse(competitionId).success) return null;
   const aggregate = await repository.getCompetition(competitionId, actor.userId);
   if (!aggregate || aggregate.competition.type !== "LEAGUE_PLAYOFFS") return null;
+  return leaguePhasePrizeWinnerFromAggregate(aggregate, now);
+}
+
+export function leaguePhasePrizeWinnerFromAggregate(
+  aggregate: StandingsAggregate,
+  now: Date,
+) {
   const model = leaguePhasePrizeModel(aggregate, now);
   if (model.outcome.state !== "resolved") return model.outcome;
   const winner = participant(aggregate, model.outcome.winner.participantId);
@@ -476,6 +493,14 @@ export async function getRoundWinner(
     return null;
   const aggregate = await repository.getCompetition(competitionId, actor.userId);
   if (!aggregate || aggregate.competition.type === "GROUP_PLAYOFFS") return null;
+  return roundWinnerFromAggregate(aggregate, roundId, now);
+}
+
+export function roundWinnerFromAggregate(
+  aggregate: StandingsAggregate,
+  roundId: string,
+  now: Date,
+) {
   const model = roundModel(aggregate, roundId, now);
   if (!model) return null;
   const outcome = model.outcome;

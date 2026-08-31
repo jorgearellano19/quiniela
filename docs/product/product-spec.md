@@ -10,7 +10,13 @@ A global User can belong to multiple Competitions. Admin authorization is scoped
 
 For MVP, an Admin generates a reusable, opaque Competition invitation link. The link remains valid until the Competition starts and may be revoked earlier by the Admin. Opening it requires authentication. After authentication, the User sees the Competition rules and submits a join request. The request creates a `PENDING` membership; the Admin must approve it before the User becomes an `ACTIVE` Participant.
 
-The rules view contains both a structured summary of Competition configuration and an optional Admin-authored rules note. Viewing the rules before submitting the request is required, but MVP does not persist rule acceptance, require every Participant to accept before Competition start, or invalidate requests when DRAFT rules change.
+The rules view contains both a structured summary of all current Competition-level
+configuration and an optional Admin-authored rules note. The summary includes format and
+roster limits, configured H2H/group phase, typed scoring defaults, fee/debt rules, prizes,
+and currency. It excludes unpublished Round/PlayoffRound Questions. Viewing the rules
+before submitting the request is required, but MVP does not persist rule acceptance,
+require every Participant to accept before Competition start, or invalidate requests when
+DRAFT rules change.
 
 ## 3. Competition types
 ### LEAGUE
@@ -60,7 +66,11 @@ a closed Question is result-complete when every submitted Answer is judged, and 
 Question with no submitted Answers is complete.
 
 ## 7. Match scoring
-Match scoring is hierarchical, not cumulative: 1) EXACT_SCORE, 2) GOAL_DIFFERENCE if enabled for the Competition, 3) NORMAL_RESULT. If a higher rule succeeds, lower rules do not award additional points.
+Match scoring is hierarchical, not cumulative: 1) EXACT_SCORE, 2) GOAL_DIFFERENCE when
+enabled in the published Question's effective scoring configuration, 3) NORMAL_RESULT. A
+DRAFT Question may inherit the Competition default or override it; publication freezes the
+effective configuration. If a higher rule succeeds, lower rules do not award additional
+points.
 
 EXACT_SCORE requires both homeScore and awayScore to match. GOAL_DIFFERENCE uses signed `homeScore - awayScore`, applies only to Home/Away wins, and requires the prediction to match both difference and direction. Example official 3-1: 2-0 and 4-2 qualify; 0-2 does not. Draws do not qualify. NORMAL_RESULT predicts Home win, Draw, or Away win.
 
@@ -167,7 +177,7 @@ Use Better Auth minimally. Use Next.js App Router, Server Actions, Drizzle, Post
 
 The global Better Auth `platform_operator` role exists only for account support and never grants Competition capability. Operators may perform exact-email lookup, suspend/restore accounts, revoke sessions, issue server-generated temporary passwords after manual verification, and view authentication-security events. They may not browse users, impersonate, delete users, change roles through the UI, choose permanent passwords, or access private Competition data.
 
-MVP password recovery is operator-assisted because email delivery is not included. A temporary password expires after 15 minutes, revokes existing sessions, and permits access only to mandatory password replacement. Suspended accounts cannot authenticate. Credential endpoints are persistently rate-limited and return safe, non-enumerating errors. Email delivery, backup codes, 2FA, CAPTCHA, and authentication E2E coverage are deferred.
+MVP password recovery is operator-assisted because email delivery is not included. A temporary password expires after 15 minutes, revokes existing sessions, and permits access only to mandatory password replacement. Suspended accounts cannot authenticate. Credential endpoints are persistently rate-limited and return safe, non-enumerating errors. Email delivery, backup codes, 2FA, and CAPTCHA are out of scope. Authentication-security E2E coverage is required by M12 before the MVP release candidate is complete.
 
 Local development uses Dockerized PostgreSQL and must not require a Neon database. The mobile-responsive UI foundation uses Tailwind CSS and source-owned shadcn/ui components added incrementally. Server Components remain the default; Client Components are limited to required interactivity. Installable/offline PWA behavior is not required for MVP.
 

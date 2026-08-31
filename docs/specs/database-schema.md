@@ -153,7 +153,7 @@ current values; publication snapshots effective values into Question scoring.
 ```text
 Question
 ├── id
-├── roundId (required in M4; nullable when M10 adds PlayoffRound ownership)
+├── roundId (nullable)
 ├── playoffRoundId (nullable)
 ├── sequence
 ├── type
@@ -165,15 +165,13 @@ Question
 └── updatedAt
 ```
 
-M4 requires `roundId` and implements regular-Round ownership only. M10 adds nullable
-`playoffRoundId`, makes `roundId` nullable, and adds the exactly-one-parent constraint when
-PlayoffRound exists. Sequence is unique within the selected parent.
+`roundId` and `playoffRoundId` are nullable individually, with exactly one required for
+every Question. Sequence is unique within the selected parent.
 
 Approved types are `MATCH_SCORE`, `CLOSEST_VALUE`, `OPTIONS`, `OPEN_TEXT`, and `EXACT_VALUE`. Do not create one giant JSON structure for all question types. Use typed columns or type-specific tables where appropriate. `OPTIONS` needs ordered option rows and one official correct option. `OPEN_TEXT` needs an explicit per-Answer Admin judgment. `CLOSEST_VALUE` and `EXACT_VALUE` use numeric typed values.
 
 Typed closest/exact Answer and Result values use `NUMERIC(18,6)`. Match scores are integers
-from 0 through 999. M4 locks these future boundaries but adds no Answer or Official Result
-columns.
+from 0 through 999.
 
 For Match Questions, scores are numeric `homeScore` and `awayScore`, never only a string such as `"3-1"`.
 
@@ -497,7 +495,7 @@ Round winner:
 1. Prediction Score DESC
 2. More points from Match Questions DESC
 3. Total Prediction Score in the League/competition phase DESC
-4. Earliest submitted results
+4. Earliest complete Answer-set submission
 
 Preserve original Answer submission timestamps.
 
@@ -617,7 +615,7 @@ Persist source facts. Persist manual decisions that cannot be derived.
 12. PrizeConfiguration.
 13. Audit fields/table where required.
 
-Do not implement every future question type before the first vertical slice.
+Do not add Question types beyond the five approved MVP families.
 
 ## 26. Open implementation decisions
 

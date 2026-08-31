@@ -2,7 +2,7 @@
 
 ## Status
 
-`FUTURE`
+`COMPLETED — 2026-08-30`
 
 ## Goal
 
@@ -82,31 +82,57 @@ Audit every mutation for anonymous, capability, cross-participant, cross-Competi
 
 ## Acceptance criteria
 
-- [ ] Critical setup, Round, payment, and playoff E2E flows pass.
-- [ ] Deferred M1.1 authentication-security E2E flows pass.
-- [ ] LEAGUE, LEAGUE_PLAYOFFS, and GROUP_PLAYOFFS pass final acceptance.
-- [ ] Authorization/security audit has no unresolved critical finding.
-- [ ] Mobile, loading, empty, error, and accessibility baselines pass.
-- [ ] Migrations apply cleanly to an empty isolated database.
-- [ ] Index/query review confirms no material N+1 or missing required index.
-- [ ] Production environment and deployment validation pass.
-- [ ] No new feature scope was introduced.
-- [ ] Full validation passes without critical skips.
+- [x] Critical setup, Round, payment, and playoff E2E flows pass.
+- [x] Deferred M1.1 authentication-security E2E flows pass.
+- [x] LEAGUE, LEAGUE_PLAYOFFS, and GROUP_PLAYOFFS pass final acceptance.
+- [x] Authorization/security audit has no unresolved critical finding.
+- [x] Mobile, loading, empty, error, and accessibility baselines pass.
+- [x] Migrations apply cleanly to an empty isolated database.
+- [x] Index/query review confirms no material N+1 or missing required index.
+- [x] Production environment and deployment validation pass.
+- [x] No new feature scope was introduced.
+- [x] Full validation passes without critical skips.
 
 ## Definition of Done
 
-- [ ] Scope implemented.
-- [ ] Out-of-scope functionality was not introduced.
-- [ ] Approved domain rules preserved.
-- [ ] Authorization enforced server-side.
-- [ ] Relevant tests added.
-- [ ] No duplicated business logic.
-- [ ] No locked specification modified.
-- [ ] lint passes.
-- [ ] typecheck passes.
-- [ ] tests pass.
-- [ ] build passes.
-- [ ] milestone code review completed.
+- [x] Scope implemented.
+- [x] Out-of-scope functionality was not introduced.
+- [x] Approved domain rules preserved.
+- [x] Authorization enforced server-side.
+- [x] Relevant tests added.
+- [x] No duplicated business logic.
+- [x] Approved specification corrections recorded.
+- [x] lint passes.
+- [x] typecheck passes.
+- [x] tests pass.
+- [x] build passes.
+- [x] milestone code review completed.
+
+## Completion evidence
+
+- Documentation was reconciled with the implemented MVP. The invitation contract now
+  includes every Competition-level format, scoring, payment, debt, and prize rule while
+  preserving unpublished Round privacy.
+- Playoff result resolution now crosses an Application use-case boundary. Standings and
+  prize queries reuse one Competition aggregate, and Round question hydration is batched
+  across rounds, removing the confirmed material N+1 path. Existing foreign-key and lookup
+  indexes cover the reviewed access paths; no speculative migration was added.
+- Authentication E2E covers sign-up, sign-in, sign-out, persistent rate-limit feedback,
+  mandatory temporary-password replacement, and suspension denial. The full browser suite
+  contains 13 passing tests with no skips, including all three Competition types.
+- Automated WCAG A/AA checks and keyboard skip-link behavior pass at 320, 768, and 1280 px.
+  Semantic colors and default touch controls were corrected, and reduced-motion behavior is
+  included in the acceptance check.
+- Validation passed with Prettier, ESLint, TypeScript, 217 unit tests, 56 isolated PostgreSQL
+  integration tests, clean migration into a newly created empty database, 13 Playwright
+  tests, and a production webpack build. The temporary migration database was removed.
+- Production safeguards reject documented development secrets and non-HTTPS public auth
+  origins. README and CI now document trusted proxy headers, migration order, rollback,
+  fail-fast E2E configuration, and retained browser artifacts.
+- The final closure re-review found and corrected a CI-only configuration conflict: CI now
+  generates an ephemeral authentication secret instead of using a production-rejected
+  placeholder. Production-equivalent authentication rate limits, the complete 13-test
+  browser suite, and the production build were rerun successfully after that correction.
 
 ## Risks / implementation notes
 

@@ -20,9 +20,11 @@ import {
 } from "../../src/test/integration/database";
 
 const password = "Quiniela-test-2026";
-const databaseUrl = process.env.TEST_DATABASE_URL;
-
 async function signUp(page: Page, name: string, email: string) {
+  const ipSeed = Number.parseInt(randomUUID().slice(0, 4), 16);
+  await page.setExtraHTTPHeaders({
+    "x-real-ip": `198.18.${Math.floor(ipSeed / 256)}.${ipSeed % 256}`,
+  });
   await page.goto("/sign-up");
   await page.getByLabel("Nombre").fill(name);
   await page.getByLabel("Correo electrónico").fill(email);
@@ -33,8 +35,6 @@ async function signUp(page: Page, name: string, email: string) {
 }
 
 test("Admin invita, la persona solicita acceso y queda activa", async ({ browser }) => {
-  test.skip(!databaseUrl, "TEST_DATABASE_URL is required for deterministic cleanup.");
-
   const suffix = randomUUID();
   const adminEmail = `admin-${suffix}@example.test`;
   const participantEmail = `participant-${suffix}@example.test`;
@@ -107,7 +107,6 @@ test("Admin publica cinco preguntas y guarda sus pronósticos como participante"
   browser,
 }) => {
   test.setTimeout(90_000);
-  test.skip(!databaseUrl, "TEST_DATABASE_URL is required for deterministic cleanup.");
   const suffix = randomUUID();
   const adminEmail = `round-admin-${suffix}@example.test`;
   const { client, database } = createIntegrationDatabase();
@@ -339,7 +338,6 @@ test("Admin publica cinco preguntas y guarda sus pronósticos como participante"
 
 test("Admin configura y confirma una fase H2H móvil", async ({ browser }) => {
   test.setTimeout(90_000);
-  test.skip(!databaseUrl, "TEST_DATABASE_URL is required for deterministic cleanup.");
   const suffix = randomUUID();
   const adminEmail = `h2h-admin-${suffix}@example.test`;
   const participantEmail = `h2h-participant-${suffix}@example.test`;
@@ -409,7 +407,6 @@ test("Admin configura y confirma una fase H2H móvil", async ({ browser }) => {
 
 test("Admin publica y avanza un playoff móvil hasta el campeón", async ({ browser }) => {
   test.setTimeout(90_000);
-  test.skip(!databaseUrl, "TEST_DATABASE_URL is required for deterministic cleanup.");
   const suffix = randomUUID();
   const adminEmail = `playoff-admin-${suffix}@example.test`;
   const { client, database } = createIntegrationDatabase();
@@ -636,7 +633,6 @@ for (const type of ["LEAGUE", "LEAGUE_PLAYOFFS", "GROUP_PLAYOFFS"] as const) {
   test(`${type} muestra premio final, completa y conserva resultados`, async ({
     browser,
   }) => {
-    test.skip(!databaseUrl, "TEST_DATABASE_URL is required for deterministic cleanup.");
     const suffix = randomUUID();
     const adminEmail = `m11-${type.toLowerCase()}-${suffix}@example.test`;
     const { client, database } = createIntegrationDatabase();

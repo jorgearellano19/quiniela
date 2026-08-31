@@ -94,9 +94,8 @@ A Round owns `startsAt`, its default answer deadline. Each Question chooses the 
 or a custom absolute deadline. Round and Question sequences define display order and use
 mobile- and keyboard-accessible reorder controls while DRAFT.
 
-A Question belongs to exactly one regular Round or PlayoffRound. M4 implements required
-regular-Round ownership; M10 adds PlayoffRound ownership and the exclusive-parent
-constraint. Question-specific data is typed. Approved MVP types are `MATCH_SCORE`,
+A Question belongs to exactly one regular Round or PlayoffRound through an
+exclusive-parent constraint. Question-specific data is typed. Approved MVP types are `MATCH_SCORE`,
 `CLOSEST_VALUE`, `OPTIONS`, `OPEN_TEXT`, and `EXACT_VALUE`. Scoring belongs to each
 Question; only the unanswered penalty belongs to the Round. Match Questions use numeric
 `homeScore` and `awayScore`, not only strings. `OPTIONS` is single-select and owns multiple

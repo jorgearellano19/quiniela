@@ -59,7 +59,9 @@ Use an isolated test database/schema. Never run tests against production Neon da
 
 ## Critical E2E flows
 
-Authentication-security E2E coverage is explicitly deferred to M12. M1.1 uses unit, route/component, and PostgreSQL integration tests for the same security boundaries.
+Authentication-security E2E coverage is a required M12 release-candidate gate. M1.1
+established unit, route/component, and PostgreSQL integration tests for the same security
+boundaries.
 1. Competition setup: create → invite/join → approve.
 2. Round: create → questions/scoring → publish → answers → official results → finish → standings/winner.
 3. Payment: obligation → participant debt view → Admin payment → balance/restriction update.

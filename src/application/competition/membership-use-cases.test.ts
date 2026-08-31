@@ -16,6 +16,26 @@ const competitionId = "00000000-0000-4000-8000-000000000001";
 const membershipId = "00000000-0000-4000-8000-000000000002";
 const actor = { userId: "actor" } as const;
 const token = "a".repeat(43);
+const invitationConfiguration = {
+  phase: { type: "LEAGUE" as const },
+  scoringDefaults: {
+    matchScore: {
+      exactScorePoints: 3,
+      goalDifferencePoints: 2,
+      normalResultPoints: 1,
+    },
+    closestValuePoints: 1,
+    optionsPoints: 1,
+    openTextPoints: 1,
+    exactValuePoints: 1,
+  },
+  financial: {
+    enabled: false,
+    roundFeeAmount: null,
+    maximumDebt: null,
+    prizes: [],
+  },
+} as const;
 
 function repository(overrides: Partial<MembershipRepository> = {}): MembershipRepository {
   return {
@@ -28,6 +48,7 @@ function repository(overrides: Partial<MembershipRepository> = {}): MembershipRe
       currency: "MXN" as const,
       rulesNote: "Reglas",
       membershipStatus: null,
+      ...invitationConfiguration,
     })),
     request: vi.fn(async () => ({
       status: "PENDING" as const,
@@ -90,6 +111,9 @@ describe("membership application boundaries", () => {
       name: "Copa",
       typeLabel: "Liga",
       rulesNote: "Reglas",
+      phase: { type: "LEAGUE" },
+      scoringDefaults: { matchScore: { exactScorePoints: 3 } },
+      financial: { enabled: false },
     });
     expect(repo.request).not.toHaveBeenCalled();
   });
@@ -121,6 +145,7 @@ describe("membership application boundaries", () => {
       currency: "MXN" as const,
       rulesNote: null,
       membershipStatus: "ACTIVE" as const,
+      ...invitationConfiguration,
     }));
     await expect(
       requestToJoin(repository({ findInvitation, request }), actor, token),

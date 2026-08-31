@@ -50,7 +50,11 @@ export default async function InvitationPage({
           Revisa las reglas antes de solicitar acceso.
         </p>
       </div>
-      <RulesSummary type={invitation.type} typeLabel={invitation.typeLabel} />
+      <RulesSummary
+        type={invitation.type}
+        typeLabel={invitation.typeLabel}
+        configuration={invitation}
+      />
       <Card>
         <CardHeader>
           <CardTitle>Nota de la administración</CardTitle>

@@ -113,7 +113,11 @@ Creates or rotates one reusable opaque invitation link for a DRAFT Competition. 
 
 **Actor:** authenticated User
 
-Validates the invitation and returns the Competition name, structured rule/configuration summary, and optional Admin-authored rules note. Viewing does not create membership or persist rule acceptance.
+Validates the invitation and returns the Competition name, all current Competition-level
+configuration (format/roster, H2H/group phase, typed scoring defaults, fee/debt rules,
+prizes, and currency), and the optional Admin-authored rules note. It never returns
+unpublished Round/PlayoffRound Questions. Viewing does not create membership or persist
+rule acceptance.
 
 ## requestToJoin
 
@@ -196,7 +200,8 @@ Can modify:
 - unanswered penalty (`-1` or `0`).
 
 Question configuration and deadlines are changed only through the Question mutations.
-Payment configuration remains deferred to M8.
+Round fee/debt/prize configuration is Competition-level and is not edited through this
+use case.
 
 Once PUBLISHED, these are frozen.
 
@@ -694,10 +699,10 @@ No online payment processor is involved.
 
 **Actor:** Admin
 
-Enables/disables payment tracking and configures:
+Enables/disables the Competition's combined financial settings and configures:
 - payment per Round;
-- Round-winner prize amount for M8;
 - maximum debt.
+- every Competition-type-compatible prize amount.
 
 Configuration must match Competition type, is editable only while the Competition is DRAFT, and is frozen when it starts. A nullable maximum debt permits bookkeeping without restriction.
 
@@ -769,11 +774,12 @@ The winner receives the configured prize externally; the application only record
 
 # 17. Prize Use Cases
 
-## configurePrize
+## Prize configuration
 
-**Actor:** Admin
-
-Creates/updates a configured prize.
+Prize amounts are created, updated, or removed atomically through `configurePayments`, the
+existing combined financial-configuration boundary. Fee/debt tracking and prize
+configuration remain behaviorally distinct even though one DRAFT form/use case saves
+them together.
 
 Supported types:
 

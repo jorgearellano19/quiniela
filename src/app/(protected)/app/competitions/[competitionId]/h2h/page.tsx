@@ -38,6 +38,12 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+const matchupStateLabel = {
+  POR_JUGAR: "Por jugar",
+  PROVISIONAL: "Provisional",
+  FINAL: "Final",
+} as const;
+
 export default async function H2HPage({
   params,
 }: {
@@ -191,7 +197,7 @@ export default async function H2HPage({
               <p className="mt-2 font-medium">Tú</p>
             </div>
             <div>
-              <Badge variant="secondary">{myMatchup.state.replace("_", " ")}</Badge>
+              <Badge variant="secondary">{matchupStateLabel[myMatchup.state]}</Badge>
               <p className="mt-2 font-heading text-4xl tabular-nums">
                 {myScore} : {rivalScore ?? "—"}
               </p>
@@ -220,7 +226,7 @@ export default async function H2HPage({
             <CardTitle>Calendario</CardTitle>
             <CardDescription>
               Todos los cruces permitidos; los pronósticos privados siguen protegidos
-              hasta su deadline.
+              hasta el cierre de respuestas.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -232,7 +238,7 @@ export default async function H2HPage({
                       {matchup.groupLabel ? `${matchup.groupLabel} · ` : ""}
                       {matchup.roundLabel}
                     </span>
-                    <Badge variant="outline">{matchup.state.replace("_", " ")}</Badge>
+                    <Badge variant="outline">{matchupStateLabel[matchup.state]}</Badge>
                   </div>
                   <p className="flex justify-between font-medium">
                     <span>{matchup.participantA.name}</span>

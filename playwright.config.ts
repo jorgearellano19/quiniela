@@ -1,5 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 
+if (!process.env.TEST_DATABASE_URL) {
+  throw new Error(
+    "TEST_DATABASE_URL is required. Use `pnpm test:e2e:local` or configure the isolated CI database.",
+  );
+}
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
@@ -15,7 +21,13 @@ export default defineConfig({
   projects: [
     {
       name: "mobile-chromium",
+      testIgnore: "accessibility.spec.ts",
       use: { ...devices["Pixel 7"] },
+    },
+    {
+      name: "accessibility-chromium",
+      testMatch: "accessibility.spec.ts",
+      use: { ...devices["Desktop Chrome"] },
     },
   ],
   webServer: {
@@ -28,6 +40,7 @@ export default defineConfig({
         process.env.BETTER_AUTH_SECRET ??
         "e2e-only-secret-that-is-at-least-32-characters",
       BETTER_AUTH_URL: "http://localhost:3000",
+      E2E_RATE_LIMIT_ENABLED: "true",
     },
   },
 });

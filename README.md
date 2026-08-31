@@ -68,6 +68,7 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm test:integration:local
+pnpm test:e2e:local
 pnpm build
 ```
 
@@ -76,8 +77,30 @@ absent; it is never reported as passing through a skip. `pnpm check` is the
 environment-neutral CI command and expects its database and authentication variables to
 already be configured.
 
-CI independently provisions PostgreSQL, applies the same committed migrations, and runs
-the complete validation sequence.
+CI independently provisions PostgreSQL, applies the same committed migrations, runs the
+complete validation sequence, and retains Playwright reports and failure traces. E2E
+configuration fails immediately when `TEST_DATABASE_URL` is absent; critical coverage is
+never converted into a skip.
+
+## Production release configuration
+
+Before a controlled release:
+
+- use a unique `BETTER_AUTH_SECRET` of at least 32 characters; documented local and CI
+  values are rejected in production;
+- set `BETTER_AUTH_URL` to the public HTTPS origin (HTTP is accepted only for localhost
+  build and smoke-test environments);
+- use a least-privilege pooled Neon `DATABASE_URL` for the application and a direct,
+  migration-capable connection only while applying migrations;
+- configure the deployment proxy to replace, not append untrusted client values for
+  `X-Real-IP`; credential rate limiting uses this trusted address;
+- apply migrations before routing traffic, then run sign-in and `/app` smoke checks;
+- keep `TEST_DATABASE_URL` isolated from production and never expose server variables with
+  a `NEXT_PUBLIC_` prefix.
+
+Rollback is application-first: restore the previous immutable deployment while preserving
+the PostgreSQL data. Migrations in this MVP are additive; do not reverse or delete data
+without a separately reviewed recovery procedure.
 
 ## Local platform operator
 
@@ -96,8 +119,9 @@ credentials into a deployment.
 ## Architecture
 
 Presentation depends on Application, which depends on the framework-independent Domain.
-Infrastructure provides authentication and persistence. M0 contains only Better Auth's
-required tables—Competition and other product behavior belong to later milestones.
+Infrastructure provides authentication and persistence. The MVP implements all three
+Competition formats, rounds and questions, scoring, H2H and playoffs, payments and prizes,
+invitations, completion, and operator-assisted account security.
 
 The frontend uses these conventions:
 
@@ -111,8 +135,8 @@ The frontend uses these conventions:
   and business rules on the server.
 - Do not install the full component catalog or duplicate product behavior in UI
   components.
-- The current foundation uses the approved Radix Nova preset, neutral semantic tokens,
-  system typography, and only the Card shell component.
+- The current product uses the approved Radix Nova preset, semantic color tokens, system
+  typography, and a focused source-owned component set.
 
 Read `AGENTS.md` before making changes. Approved documents under `docs/` are locked unless
 a specification revision is explicitly approved.

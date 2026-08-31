@@ -40,30 +40,48 @@ export async function loadQuestions(
   defaults: CompetitionScoringDefaults,
   parent: "ROUND" | "PLAYOFF" = "ROUND",
 ): Promise<Question[]> {
-  const roundId = roundValue.id;
-  const parentCondition =
-    parent === "ROUND"
-      ? eq(question.roundId, roundId)
-      : eq(question.playoffRoundId, roundId);
+  return (await loadQuestionsForRounds(database, [roundValue], defaults, parent)).get(
+    roundValue.id,
+  )!;
+}
+
+export async function loadQuestionsForRounds(
+  database: typeof db,
+  roundValues: readonly Round[],
+  defaults: CompetitionScoringDefaults,
+  parent: "ROUND" | "PLAYOFF" = "ROUND",
+): Promise<ReadonlyMap<string, Question[]>> {
+  const byRound = new Map(roundValues.map((value) => [value.id, value]));
+  const result = new Map(roundValues.map((value) => [value.id, [] as Question[]]));
+  if (!roundValues.length) return result;
+  const roundIds = roundValues.map((value) => value.id);
   const rows = await database
     .select({ q: question, s: questionScoring, m: matchQuestionConfig })
     .from(question)
     .leftJoin(questionScoring, eq(questionScoring.questionId, question.id))
     .leftJoin(matchQuestionConfig, eq(matchQuestionConfig.questionId, question.id))
-    .where(parentCondition)
-    .orderBy(asc(question.sequence));
-  const optionRows = await database
-    .select()
-    .from(questionOption)
     .where(
       parent === "ROUND"
-        ? sql`${questionOption.questionId} in (select ${question.id} from ${question} where ${question.roundId} = ${roundId})`
-        : sql`${questionOption.questionId} in (select ${question.id} from ${question} where ${question.playoffRoundId} = ${roundId})`,
+        ? inArray(question.roundId, roundIds)
+        : inArray(question.playoffRoundId, roundIds),
     )
-    .orderBy(asc(questionOption.sequence));
-  return rows.map(({ q, s, m }) => {
+    .orderBy(
+      asc(parent === "ROUND" ? question.roundId : question.playoffRoundId),
+      asc(question.sequence),
+    );
+  const questionIds = rows.map(({ q }) => q.id);
+  const optionRows = questionIds.length
+    ? await database
+        .select()
+        .from(questionOption)
+        .where(inArray(questionOption.questionId, questionIds))
+        .orderBy(asc(questionOption.questionId), asc(questionOption.sequence))
+    : [];
+  for (const { q, s, m } of rows) {
     const domainRoundId = parent === "ROUND" ? q.roundId : q.playoffRoundId;
     if (!domainRoundId) throw new Error(`Question has no expected parent: ${q.id}.`);
+    const roundValue = byRound.get(domainRoundId);
+    if (!roundValue) throw new Error(`Question has an unknown parent: ${q.id}.`);
     if (!s) throw new Error(`Question persistence is incomplete: ${q.id}.`);
     const inheritsDefaults = roundValue.status === "DRAFT" && q.usesDefaultScoring;
     const base = {
@@ -164,8 +182,9 @@ export async function loadQuestions(
         cause: error,
       });
     }
-    return value;
-  });
+    result.get(domainRoundId)!.push(value);
+  }
+  return result;
 }
 async function saveQuestionConfiguration(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],

@@ -17,7 +17,7 @@ These files are delivery contracts. Locked product and implementation specificat
 | M9 | H2H & Groups | COMPLETED | M7 | H2H phases and group qualification |
 | M10 | Playoffs | COMPLETED | M9 | Playoff bracket through champion |
 | M11 | Prizes & Competition Completion | COMPLETED | M8, M10 | Final winners and configured prizes |
-| M12 | MVP Hardening & Release Readiness | FUTURE | M11 | Production-ready MVP |
+| M12 | MVP Hardening & Release Readiness | COMPLETED | M11 | Production-ready MVP |
 
 The roadmap retains the base M0–M12 sequence and inserts M1.1 as the approved security prerequisite for M2. M8 and M9 can proceed independently after M7, but both are required before M11. The 2026-08-20 specification revision also locks platform-operation, recovery, and authentication-abuse decisions. Remaining open items are implementation decisions unless a milestone explicitly says otherwise.
 

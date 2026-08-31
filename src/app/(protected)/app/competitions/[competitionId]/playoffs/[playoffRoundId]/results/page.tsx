@@ -1,21 +1,24 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  getRoundResults,
-  type RoundResultsDetail,
-} from "@/application/scoring/use-cases";
+import type { RoundResultsDetail } from "@/application/scoring/use-cases";
+import { getPlayoffRoundResults } from "@/application/playoff/use-cases";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireCompetitionPageActor } from "@/features/competitions/competition-session";
 import { JudgmentControls, OfficialResultForm } from "@/features/results/result-controls";
 import { LocalDateTime } from "@/features/rounds/local-date-time";
 import { playoffResultRepository } from "@/infrastructure/scoring/result-repository";
-import { getPlayoffOverview } from "@/application/playoff/use-cases";
-import { resolvePlayoffWinner } from "@/domain/playoff/playoff";
 import { playoffRepository } from "@/infrastructure/playoff/playoff-repository";
 import { ManualTieForm } from "@/features/playoffs/manual-tie-form";
 
 type Question = RoundResultsDetail["questions"][number];
+const statusLabel = {
+  DRAFT: "Borrador",
+  PUBLISHED: "Publicada",
+  ACTIVE: "Activa",
+  FINISHED: "Terminada",
+  FINALIZED: "Finalizada",
+} as const;
 function title(question: Question) {
   return question.type === "MATCH_SCORE" && "homeLabel" in question
     ? `${question.homeLabel} vs ${question.awayLabel}`
@@ -41,38 +44,15 @@ export default async function PlayoffResultsPage({
     params,
     requireCompetitionPageActor(),
   ]);
-  const [value, overview] = await Promise.all([
-    getRoundResults(playoffResultRepository, actor, competitionId, playoffRoundId),
-    getPlayoffOverview(playoffRepository, actor, competitionId),
-  ]);
-  if (!value || !overview) notFound();
-  const configured = overview.rounds.find((item) => item.id === playoffRoundId);
-  if (!configured) notFound();
-  const matchups = configured.matchups;
-  const totals = new Map(value.participants.map((item) => [item.id, item.total]));
-  const tiebreaker = value.questions.find(
-    (item) => item.id === configured.tiebreakerQuestionId,
+  const detail = await getPlayoffRoundResults(
+    playoffRepository,
+    playoffResultRepository,
+    actor,
+    competitionId,
+    playoffRoundId,
   );
-  const decisions = matchups.map((matchup) => ({
-    matchup,
-    decision: resolvePlayoffWinner({
-      participantAId: matchup.participantAId,
-      participantASeed: matchup.participantASeed,
-      participantAScore: totals.get(matchup.participantAId) ?? 0,
-      participantATiebreakerPoints:
-        tiebreaker?.entries.find((item) => item.participantId === matchup.participantAId)
-          ?.score?.points ?? 0,
-      participantBId: matchup.participantBId,
-      participantBSeed: matchup.participantBSeed,
-      participantBScore: totals.get(matchup.participantBId) ?? 0,
-      participantBTiebreakerPoints:
-        tiebreaker?.entries.find((item) => item.participantId === matchup.participantBId)
-          ?.score?.points ?? 0,
-      mode: configured.advancementMode,
-      manualWinnerId:
-        matchup.winnerDecidedBy === "MANUAL" ? matchup.winnerParticipantId : null,
-    }),
-  }));
+  if (!detail) notFound();
+  const { results: value, decisions } = detail;
   const unresolved = decisions
     .filter((item) => item.decision.state === "UNRESOLVED")
     .map((item) => item.matchup);
@@ -91,7 +71,7 @@ export default async function PlayoffResultsPage({
           </p>
           <h1 className="font-heading text-4xl">{value.name}</h1>
         </div>
-        <Badge>{value.status}</Badge>
+        <Badge>{statusLabel[value.status]}</Badge>
       </div>
       {value.correctionEndsAt && value.status === "FINISHED" ? (
         <p role="status" className="rounded-2xl bg-secondary p-4 text-sm">
